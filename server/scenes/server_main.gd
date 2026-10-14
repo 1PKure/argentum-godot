@@ -124,6 +124,15 @@ func _on_basic_attack_requested(
 	if target == null:
 		return
 
+	print(
+		"SERVER STATE -> HP: %d | Alive: %s | Ghost: %s"
+		% [
+			target.current_health,
+			target.is_alive,
+			target.is_ghost
+		]
+	)
+
 	PlayerNetwork.broadcast_player_stats_updated(
 		target.to_dictionary()
 	)

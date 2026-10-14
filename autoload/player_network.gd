@@ -12,8 +12,7 @@ signal move_requested(
 )
 
 signal basic_attack_requested(
-	peer_id: int,
-	target_peer_id: int
+	peer_id: int
 )
 
 signal debug_damage_requested(

@@ -103,7 +103,7 @@ func try_move_player(
 		direction
 	):
 		return null
-
+	
 	var player: PlayerState = (
 		_players[peer_id]
 	)
@@ -155,6 +155,13 @@ func try_move_player(
 			peer_id
 		)
 	):
+		print(
+		"Movement blocked -> Player: %d | Position: %s"
+		% [
+			peer_id,
+			new_position
+		]
+	)
 		return null
 
 	player.grid_position = new_position

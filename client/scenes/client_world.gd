@@ -259,6 +259,15 @@ func _on_player_stats_updated(
 	var state := PlayerState.from_dictionary(
 		player_data
 	)
+	print(
+	"CLIENT STATE -> Player: %d | HP: %d | Alive: %s | Ghost: %s"
+	% [
+		state.peer_id,
+		state.current_health,
+		state.is_alive,
+		state.is_ghost
+	]
+)
 
 	if not _avatars.has(
 		state.peer_id

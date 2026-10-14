@@ -14,7 +14,9 @@ var max_mana: int
 var current_mana: int
 
 var is_alive: bool
-var is_ghost: bool
+var is_ghost: bool:
+	get:
+		return not is_alive
 
 
 func _init(
@@ -27,7 +29,6 @@ func _init(
 	p_max_mana: int = CombatRules.DEFAULT_MAX_MANA,
 	p_current_mana: int = CombatRules.DEFAULT_MAX_MANA,
 	p_is_alive: bool = true,
-	p_is_ghost: bool = false
 ) -> void:
 	peer_id = p_peer_id
 	display_name = p_display_name
@@ -42,7 +43,6 @@ func _init(
 	current_mana = p_current_mana
 
 	is_alive = p_is_alive
-	is_ghost = p_is_ghost
 
 
 func apply_damage(amount: int) -> bool:
@@ -60,7 +60,6 @@ func apply_damage(amount: int) -> bool:
 	if current_health <= 0:
 		current_health = 0
 		is_alive = false
-		is_ghost = true
 
 	return true
 
@@ -192,10 +191,4 @@ static func from_dictionary(
 				true
 			)
 		),
-		bool(
-			data.get(
-				"is_ghost",
-				false
-			)
-		)
 	)
