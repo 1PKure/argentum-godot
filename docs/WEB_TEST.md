@@ -4,7 +4,9 @@ Esta rama prepara la **arena Godot existente** para probarla en navegador. Conse
 
 ## Obtener los cambios
 
-Desde la carpeta del repo:
+En GitHub Desktop, seleccioná el repositorio, pulsá **Fetch origin**, elegí `work/web-export-alpha` en **Current branch** y usá **Pull origin** cuando aparezca. Podés gestionar los commits, ramas, pull, push y stash desde esa aplicación.
+
+Alternativa desde una terminal en la carpeta del repo:
 
 ```bash
 git fetch origin
@@ -67,14 +69,16 @@ Para una web alojada con HTTPS usaremos un endpoint `wss://` accesible para sus 
 
 El cliente alojado ya permite ingresar `wss://`; no hace falta exportarlo nuevamente para esta prueba. El servidor se inicia con TLS y escucha solamente en `127.0.0.1`. Ambas ventanas del navegador deben estar en la misma PC donde corre el servidor.
 
-1. Detené el servidor anterior con Ctrl+C y actualizá la rama `work/web-export-alpha` mediante `git pull --ff-only`.
+1. Detené el servidor anterior con Ctrl+C y actualizá la rama `work/web-export-alpha`. En GitHub Desktop: seleccioná esa rama en **Current branch**, pulsá **Fetch origin** y después **Pull origin** cuando aparezca. Si guardaste cambios en un stash para actualizar, conservá ese stash; sus cambios pueden requerir una resolución de conflictos con `network_manager.gd` al restaurarlos.
 2. Instalá [mkcert](https://github.com/FiloSottile/mkcert), que crea certificados de desarrollo reconocidos por el navegador:
 
    ```powershell
    winget install --id FiloSottile.mkcert --exact
    ```
 
-3. Abrí una nueva ventana de PowerShell, desde la carpeta del proyecto, y ejecutá:
+3. En GitHub Desktop, usá **Repository → Show in Explorer**. Entrá a la carpeta `tools` y abrí **`Start-PrivateWebTest.cmd` con doble clic**. Se abrirá un selector: elegí el ejecutable de Godot que usás para el proyecto. El lanzador abre su propia consola y mantiene visibles los errores si falla.
+
+   También podés iniciarlo desde PowerShell si preferís indicar las rutas directamente:
 
    ```powershell
    powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Start-PrivateWebTest.ps1 -GodotExe "C:\ruta\Godot.exe"
@@ -124,6 +128,8 @@ El usuario confirmó la exportación Web y dos clientes locales sincronizados en
 Se ejecutaron con Godot 4.7.2 el smoke test de conexión/cancelación (12 comprobaciones), el smoke test TLS (incluida una conexión WebSocketMultiplayerPeer real con validación del certificado) y el arranque del servidor dedicado. También se revisaron el preset, los filtros, el diff y la sintaxis del lanzador con PowerShell. Se corrigió el tipo explícito de `server_pid` en bootstrap porque el motor rechazaba su inferencia al importar la rama.
 
 El lanzador completo se ejecutó con PowerShell 7 en Linux, mkcert y el servidor real: un cliente TLS verificó el certificado para `127.0.0.1` y recibió el upgrade WebSocket HTTP 101. La prueba incluyó rutas de certificados con espacios y una autoridad temporal sin instalarla en el sistema del entorno de preparación.
+
+El acceso de doble clic conserva ese lanzador y agrega un selector del ejecutable de Godot mediante Windows Forms. Se comprobó la sintaxis PowerShell y se repitió la prueba completa con el ejecutable indicado por parámetro. El selector gráfico y el archivo CMD requieren una comprobación en Windows.
 
 Pendiente antes de integrar en Alpha: confirmar F5/F2 en el editor y la conexión desde el navegador Windows con el certificado local instalado. Las pruebas del entorno de preparación se ejecutan en Linux y no sustituyen esa comprobación de confianza del navegador. El backend sigue sin alojamiento remoto.
 
