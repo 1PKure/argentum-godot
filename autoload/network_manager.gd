@@ -11,6 +11,7 @@ signal connection_attempt_started(url: String, attempt: int, maximum: int)
 
 const CONNECTION_RETRY_DELAY := 0.5
 const MAX_CONNECTION_ATTEMPTS := 20
+const SERVER_TLS_CONFIG := preload("res://shared/networking/server_tls_config.gd")
 
 var peer: WebSocketMultiplayerPeer
 
@@ -35,11 +36,19 @@ func start_server(
 ) -> Error:
 	stop()
 
+	var tls_config: Dictionary = SERVER_TLS_CONFIG.from_arguments(OS.get_cmdline_user_args())
+	var configuration_error: Error = tls_config["error"]
+	if configuration_error != OK:
+		return configuration_error
+	if tls_config["enabled"]:
+		bind_address = tls_config["bind_address"]
+
 	peer = WebSocketMultiplayerPeer.new()
 
 	var error: Error = peer.create_server(
 		port,
-		bind_address
+		bind_address,
+		tls_config["tls_options"]
 	)
 
 	if error != OK:
@@ -57,6 +66,8 @@ func start_server(
 		"WebSocket server started on port %d."
 		% port
 	)
+	if tls_config["enabled"]:
+		print("PRIVATE LOCAL WSS: wss://127.0.0.1:%d (loopback only)." % port)
 
 	server_started.emit()
 

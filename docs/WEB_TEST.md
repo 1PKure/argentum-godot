@@ -63,6 +63,42 @@ El cliente Web permite cambiarla en la pantalla de conexión sin volver a export
 
 Para una web alojada con HTTPS usaremos un endpoint `wss://` accesible para sus visitantes. El servidor Godot se ejecuta por separado; alojar estos archivos no inicia el servidor. `127.0.0.1` siempre se refiere a la computadora de quien juega.
 
+## Probar la web privada HTTPS desde tu PC con WSS
+
+El cliente alojado ya permite ingresar `wss://`; no hace falta exportarlo nuevamente para esta prueba. El servidor se inicia con TLS y escucha solamente en `127.0.0.1`. Ambas ventanas del navegador deben estar en la misma PC donde corre el servidor.
+
+1. Detené el servidor anterior con Ctrl+C y actualizá la rama `work/web-export-alpha` mediante `git pull --ff-only`.
+2. Instalá [mkcert](https://github.com/FiloSottile/mkcert), que crea certificados de desarrollo reconocidos por el navegador:
+
+   ```powershell
+   winget install --id FiloSottile.mkcert --exact
+   ```
+
+3. Abrí una nueva ventana de PowerShell, desde la carpeta del proyecto, y ejecutá:
+
+   ```powershell
+   powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Start-PrivateWebTest.ps1 -GodotExe "C:\ruta\Godot.exe"
+   ```
+
+   El parámetro `-GodotExe` debe apuntar al ejecutable real de tu editor. Si descargaste mkcert manualmente y no está en PATH, agregá `-MkcertExe "C:\ruta\mkcert.exe"`.
+
+   Windows puede pedir permiso para confiar en la autoridad de desarrollo de mkcert. Los certificados y la clave se generan en `%LOCALAPPDATA%\ArgentumGodot\PrivateWebTest`, fuera del repo. El lanzador prepara la cadena completa y arranca el servidor real de Argentum. Si falta mkcert, el puerto está ocupado o el certificado falla, detiene el arranque.
+
+4. Esperá los mensajes `PRIVATE LOCAL WSS: wss://127.0.0.1:7777 (loopback only).` y `Argentum server ready.`. Mantené esta terminal abierta.
+5. Reiniciá el navegador si estaba abierto durante la instalación del certificado. Abrí el sitio privado, ingresá `wss://127.0.0.1:7777` en la pantalla de conexión y pulsá **Conectar**. Repetí en una segunda ventana y comprobá movimiento y sincronización.
+
+En navegadores Chromium recientes, la página puede pedir permiso para acceder a la red local: permitilo para esta prueba. Si aparece un error de certificado, comprobá primero que `mkcert -install` terminó correctamente y reiniciá el navegador; no desactives la validación TLS.
+
+Esta prueba mantiene el backend en tu PC: no crea un túnel ni abre puertos en el router. Para jugar desde otras computadoras habrá que preparar un servidor remoto con WSS y control de acceso.
+
+Prueba adicional del servidor TLS (después de importar el proyecto):
+
+```powershell
+& "C:\ruta\Godot.exe" --headless --path . --script res://tests/server_tls_smoke.gd
+```
+
+Genera certificados temporales, comprueba el rechazo de configuraciones incompletas y verifica una conexión WebSocketMultiplayerPeer real por TLS en el puerto 17778. Elimina los certificados del test al terminar. No instala ninguna autoridad en Windows ni sustituye la prueba del navegador.
+
 ## Prueba automática en Godot
 
 Después de que el editor haya importado el proyecto, podés ejecutar:
@@ -83,6 +119,14 @@ El preset incluye `noindex`, pero esto no es un control de acceso. El alojamient
 
 ## Estado de validación de esta preparación
 
-Se revisan sintaxis GDScript con un parser externo, el preset, referencias y el alcance del diff. La ejecución del smoke test, el editor y la exportación Web requieren Godot: deben completarse en tu PC antes de integrar la rama en Alpha.
+El usuario confirmó la exportación Web y dos clientes locales sincronizados en Godot 4.7.2 el 14/10/2026. La exportación entregada está alojada de forma privada para su propietario.
+
+Se ejecutaron con Godot 4.7.2 el smoke test de conexión/cancelación (12 comprobaciones), el smoke test TLS (incluida una conexión WebSocketMultiplayerPeer real con validación del certificado) y el arranque del servidor dedicado. También se revisaron el preset, los filtros, el diff y la sintaxis del lanzador con PowerShell. Se corrigió el tipo explícito de `server_pid` en bootstrap porque el motor rechazaba su inferencia al importar la rama.
+
+El lanzador completo se ejecutó con PowerShell 7 en Linux, mkcert y el servidor real: un cliente TLS verificó el certificado para `127.0.0.1` y recibió el upgrade WebSocket HTTP 101. La prueba incluyó rutas de certificados con espacios y una autoridad temporal sin instalarla en el sistema del entorno de preparación.
+
+Pendiente antes de integrar en Alpha: confirmar F5/F2 en el editor y la conexión desde el navegador Windows con el certificado local instalado. Las pruebas del entorno de preparación se ejecutan en Linux y no sustituyen esa comprobación de confianza del navegador. El backend sigue sin alojamiento remoto.
 
 Referencias: [Exportar para Web](https://docs.godotengine.org/en/stable/tutorials/export/exporting_for_web.html), [opciones de exportación Web](https://docs.godotengine.org/en/stable/classes/class_editorexportplatformweb.html), [archivos no importados y filtros](https://docs.godotengine.org/en/stable/tutorials/export/exporting_projects.html).
+
+TLS: [WebSocketMultiplayerPeer](https://docs.godotengine.org/en/stable/classes/class_websocketmultiplayerpeer.html), [TLSOptions](https://docs.godotengine.org/en/stable/classes/class_tlsoptions.html), [mkcert](https://github.com/FiloSottile/mkcert) y [permiso de red local para WebSockets en Chromium](https://developer.chrome.com/release-notes/147).

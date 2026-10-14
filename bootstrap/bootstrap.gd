@@ -34,7 +34,7 @@ func _start_server() -> void:
 
 func _start_client() -> void:
 	if DevServerLauncher.should_auto_start_server():
-		var server_pid := (
+		var server_pid: int = (
 			DevServerLauncher.ensure_server_running()
 		)
 
