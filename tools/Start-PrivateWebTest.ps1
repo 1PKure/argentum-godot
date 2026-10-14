@@ -1,11 +1,34 @@
 param(
-    [Parameter(Mandatory = $true)]
-    [string]$GodotExe,
+    [string]$GodotExe = "",
     [string]$ProjectPath = (Split-Path -Parent $PSScriptRoot),
     [string]$MkcertExe = "mkcert"
 )
 
 $ErrorActionPreference = "Stop"
+if ([string]::IsNullOrWhiteSpace($GodotExe)) {
+    if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
+        throw "Indica el ejecutable con -GodotExe en este sistema. El selector visual requiere Windows."
+    }
+    Add-Type -AssemblyName System.Windows.Forms
+    $godotPicker = New-Object System.Windows.Forms.OpenFileDialog
+    try {
+        $godotPicker.Title = "Selecciona el ejecutable de Godot que usas para Argentum"
+        $godotPicker.Filter = "Ejecutables de Godot (*.exe)|*.exe"
+        $godotPicker.CheckFileExists = $true
+        $godotPicker.Multiselect = $false
+        $downloadsDirectory = Join-Path $env:USERPROFILE "Downloads"
+        if (Test-Path -LiteralPath $downloadsDirectory) {
+            $godotPicker.InitialDirectory = $downloadsDirectory
+        }
+        if ($godotPicker.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) {
+            Write-Host "Inicio cancelado."
+            exit 0
+        }
+        $GodotExe = $godotPicker.FileName
+    } finally {
+        $godotPicker.Dispose()
+    }
+}
 $godotPath = (Resolve-Path -LiteralPath $GodotExe).Path
 $projectDirectory = (Resolve-Path -LiteralPath $ProjectPath).Path
 if (-not (Test-Path -LiteralPath (Join-Path $projectDirectory "project.godot"))) {
