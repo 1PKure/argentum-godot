@@ -18,6 +18,9 @@ func _ready() -> void:
 
 
 func should_auto_start_server() -> bool:
+	if OS.has_feature("web"):
+		return false
+
 	var args := OS.get_cmdline_user_args()
 
 	if SERVER_FLAG in args:
@@ -30,6 +33,10 @@ func should_auto_start_server() -> bool:
 
 
 func ensure_server_running() -> int:
+	if OS.has_feature("web"):
+		push_warning("The Web client requires a separately running server.")
+		return -1
+
 	if (
 		_server_pid > 0
 		and OS.is_process_running(_server_pid)
@@ -84,6 +91,10 @@ func ensure_server_running() -> int:
 
 
 func launch_extra_client() -> int:
+	if OS.has_feature("web"):
+		push_warning("Open another browser tab to run an extra Web client.")
+		return -1
+
 	if not OS.is_debug_build():
 		push_error(
 			"Extra clients can only be launched in debug builds."
@@ -164,3 +175,4 @@ func _exit_tree() -> void:
 
 	stop_extra_clients()
 	stop_server()
+

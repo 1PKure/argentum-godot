@@ -7,6 +7,7 @@ signal connection_failed
 signal server_disconnected
 signal peer_connected(peer_id: int)
 signal peer_disconnected(peer_id: int)
+signal connection_attempt_started(url: String, attempt: int, maximum: int)
 
 const CONNECTION_RETRY_DELAY := 0.5
 const MAX_CONNECTION_ATTEMPTS := 20
@@ -16,6 +17,8 @@ var peer: WebSocketMultiplayerPeer
 var _connection_attempts := 0
 var _is_connecting := false
 var _client_url := NetworkConstants.LOCAL_WEBSOCKET_URL
+var _connection_generation := 0
+var _retry_pending := false
 
 
 func _ready() -> void:
@@ -61,7 +64,7 @@ func start_server(
 
 
 func start_client(
-	url: String = NetworkConstants.LOCAL_WEBSOCKET_URL
+	url: String = ""
 ) -> Error:
 	if is_network_connected():
 		return OK
@@ -69,8 +72,21 @@ func start_client(
 	if _is_connecting:
 		return OK
 
-	_client_url = url
+	var resolved_url := url.strip_edges()
+	if resolved_url.is_empty():
+		resolved_url = NetworkConstants.get_server_url()
+
+	if not (
+		resolved_url.begins_with("ws://")
+		or resolved_url.begins_with("wss://")
+	):
+		push_warning("Use a ws:// or wss:// server URL.")
+		return ERR_INVALID_PARAMETER
+
+	_client_url = resolved_url
 	_connection_attempts = 0
+	_connection_generation += 1
+	_retry_pending = false
 	_is_connecting = true
 
 	return _start_connection_attempt()
@@ -85,6 +101,8 @@ func stop() -> void:
 
 	_is_connecting = false
 	_connection_attempts = 0
+	_connection_generation += 1
+	_retry_pending = false
 
 	if peer != null:
 		peer.close()
@@ -126,6 +144,11 @@ func _start_connection_attempt() -> Error:
 		return ERR_UNCONFIGURED
 
 	_connection_attempts += 1
+	connection_attempt_started.emit(
+		_client_url,
+		_connection_attempts,
+		MAX_CONNECTION_ATTEMPTS
+	)
 
 	print(
 		"Connecting to WebSocket server at %s... Attempt %d/%d"
@@ -164,16 +187,24 @@ func _start_connection_attempt() -> Error:
 
 
 func _schedule_retry() -> void:
-	if not _is_connecting:
+	if not _is_connecting or _retry_pending:
 		return
 
 	if _connection_attempts >= MAX_CONNECTION_ATTEMPTS:
 		_finish_connection_failure()
 		return
 
+	_retry_pending = true
+	var generation := _connection_generation
+
 	await get_tree().create_timer(
 		CONNECTION_RETRY_DELAY
 	).timeout
+
+	if generation != _connection_generation:
+		return
+
+	_retry_pending = false
 
 	if not _is_connecting:
 		return
@@ -186,6 +217,8 @@ func _finish_connection_failure() -> void:
 		return
 
 	_is_connecting = false
+	_connection_generation += 1
+	_retry_pending = false
 
 	push_error(
 		"Could not connect to WebSocket server after %d attempts."
@@ -215,6 +248,8 @@ func _on_peer_disconnected(peer_id: int) -> void:
 
 func _on_connected_to_server() -> void:
 	_is_connecting = false
+	_connection_generation += 1
+	_retry_pending = false
 
 	print(
 		"Connected to WebSocket server. Local peer ID: %d"
@@ -241,6 +276,8 @@ func _on_connection_attempt_failed() -> void:
 
 func _on_server_disconnected() -> void:
 	_is_connecting = false
+	_connection_generation += 1
+	_retry_pending = false
 
 	print("Disconnected from WebSocket server.")
 
@@ -251,3 +288,4 @@ func _on_server_disconnected() -> void:
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 
 	server_disconnected.emit()
+
