@@ -129,9 +129,9 @@ Se ejecutaron con Godot 4.7.2 el smoke test de conexión/cancelación (12 compro
 
 El lanzador completo se ejecutó con PowerShell 7 en Linux, mkcert y el servidor real: un cliente TLS verificó el certificado para `127.0.0.1` y recibió el upgrade WebSocket HTTP 101. La prueba incluyó rutas de certificados con espacios y una autoridad temporal sin instalarla en el sistema del entorno de preparación.
 
-El acceso de doble clic conserva ese lanzador y agrega un selector del ejecutable de Godot mediante Windows Forms. Se comprobó la sintaxis PowerShell y se repitió la prueba completa con el ejecutable indicado por parámetro. El selector gráfico y el archivo CMD requieren una comprobación en Windows.
+El acceso de doble clic conserva ese lanzador y agrega un selector del ejecutable de Godot mediante Windows Forms. Se comprobó la sintaxis PowerShell y se repitió la prueba completa con el ejecutable indicado por parámetro. El 14/10/2026 el usuario confirmó en Windows el arranque del servidor mediante el archivo CMD y la conexión correcta del cliente desde la web privada a través de WSS. Esta comprobación corresponde al backend local en su PC.
 
-Pendiente antes de integrar en Alpha: confirmar F5/F2 en el editor y la conexión desde el navegador Windows con el certificado local instalado. Las pruebas del entorno de preparación se ejecutan en Linux y no sustituyen esa comprobación de confianza del navegador. El backend sigue sin alojamiento remoto.
+Pendiente antes de integrar en Alpha: confirmar F5/F2 en el editor. Las pruebas automatizadas del entorno de preparación se ejecutaron en Linux; la validación del navegador Windows fue reportada por el usuario. El backend sigue sin alojamiento remoto.
 
 Referencias: [Exportar para Web](https://docs.godotengine.org/en/stable/tutorials/export/exporting_for_web.html), [opciones de exportación Web](https://docs.godotengine.org/en/stable/classes/class_editorexportplatformweb.html), [archivos no importados y filtros](https://docs.godotengine.org/en/stable/tutorials/export/exporting_projects.html).
 
