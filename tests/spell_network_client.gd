@@ -66,9 +66,10 @@ func _run_caster() -> void:
 	_expect(await _wait(func() -> bool: return _world._local_state.current_mana == 70 and _world._spell_input.pending_request == 0, 3000), "Combat mode uses the same authoritative spell pipeline.")
 	_world._spell_panel._combat.toggled.emit(false)
 	_world._spell_panel._launch.pressed.emit()
+	await _wait(func() -> bool: return Time.get_ticks_msec() >= _world._spell_input.cooldown_until_msec, 2000)
 	_world._request_spell(get_multiplayer().get_unique_id())
 	_expect(await _wait(func() -> bool: return _world._spell_input.pending_request == 0, 3000), "A rejected request is acknowledged and releases the pending state.")
-	_expect(_world._local_state.current_mana == 70 and _world._spell_input.manual_armed, "Rejected self-damage consumes no mana and keeps manual aiming active.")
+	_expect(_world._local_state.current_mana == 70 and _world._spell_input.manual_armed and _world._spell_panel._status.text == SpellRules.get_message("self_target"), "The server's self-target rejection consumes no mana and keeps manual aiming active.")
 	_world._cancel_spell()
 	_expect(not _world._spell_input.is_targeting(), "Cancel exits targeting after a real network rejection.")
 
