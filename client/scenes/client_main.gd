@@ -85,4 +85,3 @@ func _on_server_disconnected() -> void:
 	print("CLIENT MAIN: Server disconnected.")
 	_local_input.set_process(false)
 	_connection_panel.show_connection("Se perdió la conexión con el servidor.", true)
-

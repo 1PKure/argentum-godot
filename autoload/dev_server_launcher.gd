@@ -175,4 +175,3 @@ func _exit_tree() -> void:
 
 	stop_extra_clients()
 	stop_server()
-

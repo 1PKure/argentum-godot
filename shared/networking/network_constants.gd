@@ -23,4 +23,3 @@ static func get_server_url() -> String:
 		return LOCAL_WEBSOCKET_URL
 
 	return configured_url
-

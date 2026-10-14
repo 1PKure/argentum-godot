@@ -299,4 +299,3 @@ func _on_server_disconnected() -> void:
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 
 	server_disconnected.emit()
-
