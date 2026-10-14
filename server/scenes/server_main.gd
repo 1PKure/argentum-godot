@@ -7,6 +7,7 @@ extends Node
 
 func _ready() -> void:
 	print("Starting Argentum server...")
+	PlayerNetwork.spell_requested.connect(_on_spell_requested)
 
 	NetworkManager.peer_connected.connect(
 		_on_peer_connected
@@ -45,6 +46,17 @@ func _ready() -> void:
 		return
 
 	print("Argentum server ready.")
+
+
+func _on_spell_requested(peer_id: int, spell_id: int, target_id: int, request_id: int) -> void:
+	var result := player_registry.try_cast_spell(peer_id, spell_id, target_id)
+	PlayerNetwork.send_spell_result(peer_id, request_id, result)
+	if not result["success"]:
+		return
+	PlayerNetwork.broadcast_player_stats_updated(result["caster"])
+	if target_id != peer_id:
+		PlayerNetwork.broadcast_player_stats_updated(result["target"])
+	PlayerNetwork.broadcast_spell(result["event"])
 
 
 func _on_peer_connected(

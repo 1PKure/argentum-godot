@@ -75,6 +75,9 @@ $chain = [System.IO.File]::ReadAllText($certificatePath) + "`n" + [System.IO.Fil
 
 Write-Host "Servidor privado: wss://127.0.0.1:7777"
 Write-Host "En la web, ingresa esa direccion y pulsa Conectar. Deja esta terminal abierta; Ctrl+C detiene el servidor."
+Write-Host "Importando los recursos y las clases de la rama actual..."
+& $godotPath --headless --editor --import --path $projectDirectory
+if ($LASTEXITCODE -ne 0) { throw "Godot no pudo importar el proyecto. Revisa los mensajes de esta terminal." }
 $godotArguments = @(
     "--headless", "--path", $projectDirectory, "--", "--server", "--server-local-wss",
     "--server-tls-cert=$chainPath", "--server-tls-key=$keyPath"

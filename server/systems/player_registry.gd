@@ -5,6 +5,7 @@ var _players: Dictionary[int, PlayerState] = {}
 
 var _last_move_time: Dictionary[int, int] = {}
 var _last_attack_time: Dictionary[int, int] = {}
+var _next_spell_time: Dictionary[int, int] = {}
 
 var _arena_id: String = (
 	ArenaData.DEFAULT_ARENA_ID
@@ -90,6 +91,44 @@ func remove_player(
 	_players.erase(peer_id)
 	_last_move_time.erase(peer_id)
 	_last_attack_time.erase(peer_id)
+	_next_spell_time.erase(peer_id)
+
+
+func try_cast_spell(caster_id: int, spell_id: int, target_id: int, now_msec: int = -1) -> Dictionary:
+	# Shared authoritative entry point. Future bots call this method directly.
+	var now := Time.get_ticks_msec() if now_msec < 0 else now_msec
+	var caster: PlayerState = get_player(caster_id)
+	var target: PlayerState = get_player(target_id)
+	var spell: SpellDefinition = SpellCatalog.get_spell(spell_id)
+	var reason := SpellRules.validate(caster, target, spell, _arena_id)
+	var remaining := maxi(0, int(_next_spell_time.get(caster_id, 0)) - now)
+	if reason.is_empty() and remaining > 0:
+		reason = "cooldown"
+	if not reason.is_empty():
+		return {"success": false, "reason": reason, "retry_after_msec": remaining}
+
+	var before := target.current_health
+	# Validation finishes before any resource or cooldown is consumed.
+	if not caster.spend_mana(spell.mana_cost):
+		return {"success": false, "reason": "mana", "retry_after_msec": 0}
+	if spell.effect == SpellDefinition.Effect.DAMAGE:
+		target.apply_damage(spell.amount)
+	else:
+		target.restore_health(spell.amount)
+	_next_spell_time[caster_id] = now + spell.cooldown_msec
+	return {
+		"success": true,
+		"reason": "",
+		"retry_after_msec": spell.cooldown_msec,
+		"caster": caster.to_dictionary(),
+		"target": target.to_dictionary(),
+		"event": {
+			"caster_id": caster_id, "target_id": target_id, "spell_id": spell_id,
+			"amount": absi(target.current_health - before),
+			"caster_x": caster.grid_position.x, "caster_y": caster.grid_position.y,
+			"target_x": target.grid_position.x, "target_y": target.grid_position.y,
+		},
+	}
 
 
 func try_move_player(

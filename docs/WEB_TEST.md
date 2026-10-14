@@ -1,6 +1,6 @@
 # Primera prueba Web de la Arena
 
-Esta rama prepara la **arena Godot existente** para probarla en navegador. Conserva sus gráficos de AO, movimiento por casillas, colisiones, RPC y combate. Los lobbies, bots y PvE se implementarán después.
+Esta rama prepara la **arena Godot existente** para probarla en navegador. Conserva sus gráficos de AO, movimiento por casillas, colisiones, RPC y combate. El alcance vigente es PvP con un bot opcional cuando falte rival; PvE queda fuera por ahora. La siguiente iteración de gameplay se documenta en [PVP_GAMEPLAY.md](PVP_GAMEPLAY.md).
 
 ## Obtener los cambios
 

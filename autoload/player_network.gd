@@ -5,6 +5,43 @@ signal player_spawned(player_data: Dictionary)
 signal player_despawned(peer_id: int)
 signal player_moved(player_data: Dictionary)
 signal player_stats_updated(player_data: Dictionary)
+signal spell_cast(event: Dictionary)
+signal spell_result_received(request_id: int, success: bool, reason: String, retry_after_msec: int)
+signal spell_requested(peer_id: int, spell_id: int, target_id: int, request_id: int)
+
+
+func request_spell(spell_id: int, target_id: int, request_id: int) -> void:
+	if multiplayer.is_server() or not _can_send_to_server():
+		return
+	_request_spell.rpc_id(NetworkConstants.SERVER_PEER_ID, spell_id, target_id, request_id)
+
+
+func send_spell_result(peer_id: int, request_id: int, result: Dictionary) -> void:
+	if not multiplayer.is_server():
+		return
+	_receive_spell_result.rpc_id(peer_id, request_id, bool(result["success"]), str(result["reason"]), int(result["retry_after_msec"]))
+
+
+func broadcast_spell(event: Dictionary) -> void:
+	if multiplayer.is_server():
+		_receive_spell.rpc(event)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _request_spell(spell_id: int, target_id: int, request_id: int) -> void:
+	if multiplayer.is_server():
+		# The actor identity comes from the transport, never from client input.
+		spell_requested.emit(multiplayer.get_remote_sender_id(), spell_id, target_id, request_id)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _receive_spell_result(request_id: int, success: bool, reason: String, retry_after_msec: int) -> void:
+	spell_result_received.emit(request_id, success, reason, retry_after_msec)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _receive_spell(event: Dictionary) -> void:
+	spell_cast.emit(event)
 
 signal move_requested(
 	peer_id: int,
