@@ -8,24 +8,20 @@ const MIN_REPEAT_INTERVAL_SECONDS: float = (
 )
 
 var _move_timer: float = 0.0
-var _last_direction: int = -1
 
 
 func _process(delta: float) -> void:
+	var previous_timer := _move_timer
 	_move_timer -= delta
 
 	var direction: int = _get_input_direction()
 
 	if direction == -1:
-		_move_timer = 0.0
-		_last_direction = -1
+		# Keep the remaining cooldown across release/repress. A fresh press before
+		# the server interval must not send early and postpone the next valid step.
+		_move_timer = maxf(_move_timer, 0.0)
 		return
-
-	if direction != _last_direction:
-		_move_timer = 0.0
-
 	if _move_timer > 0.000001:
-		_last_direction = direction
 		return
 
 	_send_move_request(direction)
@@ -33,13 +29,17 @@ func _process(delta: float) -> void:
 	# Preserve the fraction of a frame instead of adding that delay to every step.
 	# After a stalled/background frame, discard catch-up requests rather than
 	# sending a burst of old inputs when the game resumes.
-	_move_timer += INPUT_INTERVAL_SECONDS
+	if previous_timer <= 0.0:
+		# The first request starts a new interval; time before it was sent must
+		# not shorten its next repeat (notably after startup/import stutters).
+		_move_timer = INPUT_INTERVAL_SECONDS
+	else:
+		_move_timer += INPUT_INTERVAL_SECONDS
 	if _move_timer <= 0.0:
 		_move_timer = INPUT_INTERVAL_SECONDS
 	else:
 		# At low frame rates, do not carry more catch-up than the server can accept.
 		_move_timer = maxf(_move_timer, MIN_REPEAT_INTERVAL_SECONDS)
-	_last_direction = direction
 
 
 func _send_move_request(direction: int) -> void:

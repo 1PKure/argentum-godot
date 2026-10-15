@@ -5,6 +5,7 @@ var event: Dictionary
 var origin := Vector2.ZERO
 var target := Vector2.ZERO
 var _elapsed := 0.0
+var _lifetime := 1.1
 var _sprite: AnimatedSprite2D
 var _text: Label
 var _words: Label
@@ -23,6 +24,7 @@ func _ready() -> void:
 		var section := "FX%d" % fx_id
 		var animation := AOResources.get_grh_animation(int(fx.get_value(section, "Animacion", 0)))
 		if not animation.is_empty():
+			_lifetime = maxf(_lifetime, float(animation.frames.size()) / float(animation.fps))
 			_sprite = AnimatedSprite2D.new()
 			var frames := SpriteFrames.new()
 			frames.set_animation_loop("default", false)
@@ -38,11 +40,17 @@ func _ready() -> void:
 			_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 			add_child(_sprite)
 			_sprite.play()
-	_text = _make_label(("+" if spell.effect == "healing" else "−") + str(event.amount), target + Vector2(-35, -75), 22)
+	var value := ("+" if spell.effect == "healing" else "−") + str(event.amount)
+	if spell.effect in ["status", "periodic"]:
+		value = str(event.get("status_message", spell.name))
+	_text = _make_label(value, target + Vector2(-80, -75), 16)
+	_text.size.x = 160
 	_text.modulate = Color("a8f0a4") if spell.effect == "healing" else Color("ffb49c")
 	_words = _make_label(str(event.words), origin + Vector2(-100, -97), 15)
 	_words.size.x = 200
 	var sound_path := "res://assets/argentum/source/audio/%d.wav" % int(spell.sound_id)
+	if int(spell.sound_id) > 0 and not ResourceLoader.exists(sound_path):
+		sound_path = "res://assets/argentum/source/audio/16.wav"
 	if ResourceLoader.exists(sound_path):
 		_audio = AudioStreamPlayer.new()
 		_audio.stream = load(sound_path)
@@ -54,9 +62,10 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_elapsed += delta
 	_text.position.y -= delta * 24.0
-	if _elapsed > 0.7:
-		modulate.a = maxf(0.0, 1.0 - (_elapsed - 0.7) / 0.4)
-	if _elapsed >= 1.1:
+	var fade_start := _lifetime - 0.4
+	if _elapsed > fade_start:
+		modulate.a = maxf(0.0, 1.0 - (_elapsed - fade_start) / 0.4)
+	if _elapsed >= _lifetime:
 		queue_free()
 
 

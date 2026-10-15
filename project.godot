@@ -22,11 +22,12 @@ PlayerNetwork="*uid://q1b820kls4vu"
 DevServerLauncher="*uid://c5lbr7cu8i63u"
 AOResources="*uid://cqc86kpi0ald7"
 SpellNetwork="*res://autoload/spell_network.gd"
+RecoveryNetwork="*res://autoload/recovery_network.gd"
 
 [display]
 
 window/size/viewport_width=1280
-window/size/viewport_height=720
+window/size/viewport_height=800
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 

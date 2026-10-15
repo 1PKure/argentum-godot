@@ -14,6 +14,8 @@ var max_mana: int
 var current_mana: int
 
 var is_alive: bool
+var is_meditating := false
+var active_effects: Array[String] = []
 var is_ghost: bool:
 	get:
 		return not is_alive
@@ -56,6 +58,7 @@ func apply_damage(amount: int) -> bool:
 		current_health - amount,
 		0
 	)
+	is_meditating = false
 
 	if current_health <= 0:
 		current_health = 0
@@ -121,14 +124,16 @@ func to_dictionary() -> Dictionary:
 		"max_mana": max_mana,
 		"current_mana": current_mana,
 		"is_alive": is_alive,
-		"is_ghost": is_ghost
+		"is_ghost": is_ghost,
+		"is_meditating": is_meditating,
+		"active_effects": active_effects.duplicate(),
 	}
 
 
 static func from_dictionary(
 	data: Dictionary
 ) -> PlayerState:
-	return PlayerState.new(
+	var state := PlayerState.new(
 		int(
 			data.get(
 				"peer_id",
@@ -192,3 +197,6 @@ static func from_dictionary(
 			)
 		),
 	)
+	state.is_meditating = bool(data.get("is_meditating", false))
+	state.active_effects.assign(data.get("active_effects", []))
+	return state

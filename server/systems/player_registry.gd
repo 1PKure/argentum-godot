@@ -7,6 +7,11 @@ var _last_move_time: Dictionary[int, int] = {}
 var _last_attack_time: Dictionary[int, int] = {}
 var _last_spell_time: Dictionary[int, int] = {}
 var _last_spell_request: Dictionary[int, int] = {}
+var _last_recovery_request: Dictionary[int, int] = {}
+var _last_potion_time: Dictionary[int, int] = {}
+var _next_meditation_tick: Dictionary[int, int] = {}
+var _spell_cooldowns: Dictionary = {}
+var _status_system := ArenaStatusSystem.new()
 
 var _arena_id: String = (
 	ArenaData.DEFAULT_ARENA_ID
@@ -58,12 +63,19 @@ func add_player(
 		spawn_position
 	)
 
+	player.max_health = RecoveryRules.ARENA_MAX_HEALTH
+	player.current_health = player.max_health
+	player.max_mana = RecoveryRules.ARENA_MAX_MANA
+	player.current_mana = player.max_mana
 	_players[peer_id] = player
 
 	_last_move_time[peer_id] = 0
 	_last_attack_time[peer_id] = -SpellCatalog.ATTACK_SPELL_GAP_MSEC
 	_last_spell_time[peer_id] = -SpellCatalog.CAST_INTERVAL_MSEC
 	_last_spell_request[peer_id] = 0
+	_last_recovery_request[peer_id] = 0
+	_last_potion_time[peer_id] = -RecoveryRules.POTION_INTERVAL_MSEC
+	_spell_cooldowns[peer_id] = {}
 
 	print(
 		"Player registered: %s at tile %s"
@@ -91,7 +103,12 @@ func remove_player(
 		% player.display_name
 	)
 
+	_status_system.clear_player(player)
 	_players.erase(peer_id)
+	_last_recovery_request.erase(peer_id)
+	_last_potion_time.erase(peer_id)
+	_next_meditation_tick.erase(peer_id)
+	_spell_cooldowns.erase(peer_id)
 	_last_move_time.erase(peer_id)
 	_last_attack_time.erase(peer_id)
 	_last_spell_time.erase(peer_id)
@@ -131,6 +148,8 @@ func try_move_player(
 		)
 	)
 
+	if _status_system.is_rooted(peer_id, current_time):
+		return null
 	if not MovementRules.is_move_ready(current_time, last_move_time):
 		return null
 
@@ -167,6 +186,7 @@ func try_move_player(
 	)
 		return null
 
+	player.is_meditating = false
 	player.grid_position = new_position
 	player.facing_direction = direction
 
@@ -214,6 +234,7 @@ func try_basic_attack(
 	if current_time - _last_spell_time.get(attacker_peer_id, -SpellCatalog.SPELL_ATTACK_GAP_MSEC) < SpellCatalog.SPELL_ATTACK_GAP_MSEC:
 		return null
 
+	attacker.is_meditating = false
 	_last_attack_time[
 		attacker_peer_id
 	] = current_time
@@ -274,14 +295,15 @@ func try_cast_spell(caster_id: int, spell_id: int, target_position: Vector2i, re
 	if not caster.is_alive:
 		return _spell_error("No podés lanzar hechizos mientras sos un fantasma.")
 	if not SpellCatalog.is_available(spell_id):
-		return _spell_error("No tenés ese hechizo disponible.")
+		return _spell_error("Este hechizo todavía no está habilitado en la arena.")
 	if not MovementRules.is_inside_bounds(target_position):
 		return _spell_error("El objetivo está fuera de la arena.")
 	var target: PlayerState = _find_player_at_position(target_position, -1)
 	if target == null or not target.is_alive:
 		return _spell_error("No hay un objetivo vivo en esa casilla.")
 	var spell := SpellCatalog.get_spell(spell_id)
-	if spell.effect == "damage" and caster_id == target.peer_id:
+	var offensive: bool = int(spell.raw.get("TargetEffectType", "0")) == 2 or spell.effect == "damage" or spell_id == 243
+	if offensive and caster_id == target.peer_id:
 		return _spell_error("Elegí a un rival para un hechizo ofensivo.")
 	if caster.current_mana < int(spell.mana):
 		return _spell_error("No tenés suficiente maná para %s." % spell.name)
@@ -292,37 +314,122 @@ func try_cast_spell(caster_id: int, spell_id: int, target_position: Vector2i, re
 	remaining = SpellCatalog.ATTACK_SPELL_GAP_MSEC - (now - _last_attack_time.get(caster_id, -SpellCatalog.ATTACK_SPELL_GAP_MSEC))
 	if remaining > 0:
 		return _spell_error("Esperá el intervalo entre golpe y magia.", remaining)
-	# No await occurs between validation and mutation: cost and effect are atomic.
-	var rolled := randi_range(int(spell.min_amount), int(spell.max_amount))
+	var cooldown_key := str(spell.raw.get("CdEffectId", spell_id))
+	var cooldown: int = int(float(spell.cooldown) * 1000.0)
+	remaining = cooldown - (now - int(_spell_cooldowns[caster_id].get(cooldown_key, -cooldown)))
+	if remaining > 0:
+		return _spell_error("%s todavía está en recarga (%d s)." % [spell.name, ceili(remaining / 1000.0)], remaining)
+	var status_message := ""
+	if SpellCatalog.STATUS_HANDLERS.has(spell_id) or SpellCatalog.PERIODIC_HANDLERS.has(spell_id):
+		var status_result := _status_system.apply_spell(caster, target, spell, now)
+		if not status_result.ok:
+			return _spell_error(str(status_result.message))
+		status_message = str(status_result.message)
+	# No await between validation and mutation: one authoritative cost/effect.
 	var previous_health := target.current_health
-	if spell.effect == "healing":
-		target.restore_health(rolled)
-	else:
-		target.apply_damage(rolled)
+	if int(spell.max_amount) > 0:
+		var rolled := randi_range(int(spell.min_amount), int(spell.max_amount))
+		if spell.effect == "healing":
+			target.restore_health(rolled)
+		else:
+			target.apply_damage(rolled)
 	caster.spend_mana(int(spell.mana))
+	caster.is_meditating = false
 	_last_spell_time[caster_id] = now
+	_spell_cooldowns[caster_id][cooldown_key] = now
+	if not target.is_alive:
+		_status_system.clear_player(target)
 	return {
-		"ok": true,
-		"caster_state": caster.to_dictionary(),
-		"target_state": target.to_dictionary(),
-		"event": {
-			"request_id": request_id,
-			"caster_id": caster_id,
-			"target_id": target.peer_id,
-			"caster_name": caster.display_name,
-			"target_name": target.display_name,
-			"spell_id": spell_id,
-			"spell_name": spell.name,
-			"words": spell.words,
-			"effect": spell.effect,
-			"amount": absi(target.current_health - previous_health),
-			"mana_cost": int(spell.mana),
-			"origin_x": caster.grid_position.x,
-			"origin_y": caster.grid_position.y,
-			"target_x": target.grid_position.x,
-			"target_y": target.grid_position.y,
-		}
+		"ok": true, "caster_state": caster.to_dictionary(), "target_state": target.to_dictionary(),
+		"event": {"request_id": request_id, "caster_id": caster_id, "target_id": target.peer_id,
+			"caster_name": caster.display_name, "target_name": target.display_name,
+			"spell_id": spell_id, "spell_name": spell.name, "words": spell.words,
+			"effect": spell.effect, "amount": absi(target.current_health - previous_health),
+			"status_message": status_message, "mana_cost": int(spell.mana),
+			"origin_x": caster.grid_position.x, "origin_y": caster.grid_position.y,
+			"target_x": target.grid_position.x, "target_y": target.grid_position.y}
 	}
+
+
+func try_recovery_action(peer_id: int, action: String, request_id: int, now: int = -1) -> Dictionary:
+	if now < 0:
+		now = Time.get_ticks_msec()
+	var player: PlayerState = _players.get(peer_id)
+	if player == null:
+		return _spell_error("No hay un personaje conectado.")
+	if not action in ["meditate", "health_potion", "mana_potion", "respawn"]:
+		return _spell_error("Acción desconocida.")
+	if request_id <= _last_recovery_request.get(peer_id, 0):
+		return _spell_error("La acción ya fue procesada.")
+	_last_recovery_request[peer_id] = request_id
+	var amount := 0
+	var message := ""
+	if action == "respawn":
+		if player.is_alive:
+			return _spell_error("Sólo podés reaparecer después de morir.")
+		_status_system.clear_player(player)
+		player.grid_position = _get_spawn_position()
+		player.is_alive = true
+		player.current_health = player.max_health
+		player.current_mana = player.max_mana
+		player.is_meditating = false
+		_last_spell_time[peer_id] = now
+		_last_attack_time[peer_id] = now
+		_spell_cooldowns[peer_id].clear()
+		_last_potion_time[peer_id] = -RecoveryRules.POTION_INTERVAL_MSEC
+		message = "Reapareció en la arena."
+	elif not player.is_alive:
+		return _spell_error("No podés meditar ni usar pociones mientras sos un fantasma. Usá Reaparecer.")
+	elif action == "meditate":
+		if not player.is_meditating and player.current_mana >= player.max_mana:
+			return _spell_error("Ya tenés el maná completo.")
+		player.is_meditating = not player.is_meditating
+		_next_meditation_tick[peer_id] = now + RecoveryRules.MEDITATION_WARMUP_MSEC
+		message = "Comenzó a meditar." if player.is_meditating else "Dejó de meditar."
+	else:
+		if now - _last_potion_time.get(peer_id, -RecoveryRules.POTION_INTERVAL_MSEC) < RecoveryRules.POTION_INTERVAL_MSEC:
+			return _spell_error("Esperá el intervalo de pociones.")
+		if now - _last_attack_time.get(peer_id, -RecoveryRules.ATTACK_POTION_GAP_MSEC) < RecoveryRules.ATTACK_POTION_GAP_MSEC:
+			return _spell_error("Esperá el intervalo entre golpe y poción.")
+		var potion := RecoveryRules.get_potion(action)
+		if potion.is_empty():
+			return _spell_error("Faltan los datos de la poción.")
+		if action == "health_potion":
+			if player.current_health >= player.max_health:
+				return _spell_error("Ya tenés la vida completa.")
+			var previous := player.current_health
+			player.restore_health(randi_range(int(potion.min), int(potion.max)))
+			amount = player.current_health - previous
+		else:
+			if player.current_mana >= player.max_mana:
+				return _spell_error("Ya tenés el maná completo.")
+			var previous := player.current_mana
+			player.restore_mana(maxi(1, int(player.max_mana * int(potion.percent) / 100.0)))
+			amount = player.current_mana - previous
+		player.is_meditating = false
+		_last_potion_time[peer_id] = now
+		message = "Usó %s (+%d)." % [potion.name, amount]
+	return {"ok": true, "state": player.to_dictionary(), "event": {
+		"peer_id": peer_id, "player_name": player.display_name, "action": action,
+		"amount": amount, "message": message, "is_meditating": player.is_meditating}}
+
+
+func advance_runtime(now: int = -1) -> Array[PlayerState]:
+	if now < 0:
+		now = Time.get_ticks_msec()
+	var changed := _status_system.tick(_players, now)
+	for player: PlayerState in _players.values():
+		if not player.is_alive or not player.is_meditating:
+			continue
+		if now < _next_meditation_tick.get(player.peer_id, now):
+			continue
+		player.restore_mana(maxi(1, int(player.max_mana * RecoveryRules.MEDITATION_PERCENT / 100.0)))
+		_next_meditation_tick[player.peer_id] = now + RecoveryRules.MEDITATION_INTERVAL_MSEC
+		if player.current_mana >= player.max_mana:
+			player.is_meditating = false
+		if not changed.has(player):
+			changed.append(player)
+	return changed
 
 
 func _spell_error(message: String, remaining_msec: int = 0) -> Dictionary:

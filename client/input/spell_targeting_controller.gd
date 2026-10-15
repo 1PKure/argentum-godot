@@ -49,10 +49,11 @@ func end_session() -> void:
 	pending_request = 0
 	cancel_targeting()
 	SpellNetwork.clear_session()
+	RecoveryNetwork.clear_session()
 
 
 func select_spell(id: int) -> void:
-	if not SpellCatalog.is_available(id):
+	if SpellCatalog.get_spell(id).is_empty():
 		return
 	selected_spell_id = id
 	cancel_targeting()
@@ -64,7 +65,7 @@ func aim_selected() -> void:
 
 
 func can_launch() -> bool:
-	return session_active and server_ready and _alive and pending_request == 0
+	return session_active and server_ready and _alive and pending_request == 0 and SpellCatalog.is_available(selected_spell_id)
 
 
 func aim_hotkey(slot: int) -> void:
@@ -113,6 +114,12 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		cancel_targeting()
 		get_viewport().set_input_as_handled()
 	elif not event.ctrl_pressed and not event.alt_pressed and not event.meta_pressed:
+		var recovery_action := {KEY_M: "meditate", KEY_Q: "health_potion", KEY_E: "mana_potion"}
+		if recovery_action.has(event.keycode):
+			cancel_targeting()
+			RecoveryNetwork.request_action(recovery_action[event.keycode])
+			get_viewport().set_input_as_handled()
+			return
 		var index := -1
 		if event.keycode >= KEY_1 and event.keycode <= KEY_9:
 			index = event.keycode - KEY_1
@@ -180,6 +187,8 @@ func _on_stats_updated(data: Dictionary) -> void:
 		_alive = bool(data.get("is_alive", true))
 		if not _alive:
 			cancel_targeting()
+		else:
+			changed.emit()
 
 
 func _load_bindings() -> void:

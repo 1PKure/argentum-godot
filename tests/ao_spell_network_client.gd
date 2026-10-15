@@ -34,34 +34,38 @@ func _run() -> void:
 		if id != local_id:
 			opponent = id
 	if "--spell-target" in OS.get_cmdline_user_args():
-		await _wait_for(func() -> bool: return hud._players[local_id].current_health < 100)
+		await _wait_for(func() -> bool: return hud._players[local_id].current_health < 500)
 		await create_timer(0.1).timeout
-		_check(hud._players[local_id].current_health >= 90 and hud._players[local_id].current_health <= 95, "Target receives AO20 Dart damage")
+		_check(hud._players[local_id].current_health >= 490 and hud._players[local_id].current_health <= 495, "Target receives AO20 Dart damage")
 		_check(hud.console.get_parsed_text().contains("Dardo Mágico"), "Target console identifies the actual spell")
 		var after_dart: int = hud._players[local_id].current_health
 		network.request_cast(1, hud._players[opponent].grid_position, 1)
-		await _wait_for(func() -> bool: return hud._players[local_id].current_mana == 90)
-		_check(hud._players[local_id].current_mana == 90, "Opponent can cast independently with its own resource state")
+		await _wait_for(func() -> bool: return hud._players[local_id].current_mana == 2990)
+		_check(hud._players[local_id].current_mana == 2990, "Opponent can cast independently with its own resource state")
 		await _wait_for(func() -> bool: return hud._players[local_id].current_health <= after_dart - 10)
 		_check(hud._players[local_id].current_health == after_dart - 10, "Physical attack remains separate from magic")
 		await create_timer(1.0).timeout
 		_finish()
 		return
+	_key(KEY_D, true)
+	await create_timer(0.26).timeout
+	_key(KEY_D, false)
+	await create_timer(0.15).timeout
 	controller.bindings.assign([1, 2, 12, 13, 0, 0, 0, 0, 0, 0])
 	controller.changed.emit()
 	await _click(hud._spell_button)
 	await _click(hud._spell_buttons[1])
 	_check(controller.selected_spell_id == 1 and controller.aimed_spell_id == 0, "Clicking a spell only selects it")
-	_check(hud._players[local_id].current_mana == 100, "Selecting a spell does not consume mana")
+	_check(hud._players[local_id].current_mana == 3000, "Selecting a spell does not consume mana")
 	await _click(hud._launch_button)
-	_check(controller.aimed_spell_id == 1 and hud._players[local_id].current_mana == 100, "Launch activates targeting without spending mana")
+	_check(controller.aimed_spell_id == 1 and hud._players[local_id].current_mana == 3000, "Launch activates targeting without spending mana")
 	await _click_world(opponent)
-	await _wait_for(func() -> bool: return controller.pending_request == 0 and hud._players[local_id].current_mana == 90)
-	_check(hud._players[local_id].current_mana == 90, "Target click consumes the original spell cost exactly once")
-	_check(hud._players[opponent].current_health < 100, "Manual Launch actually affects the rival")
+	await _wait_for(func() -> bool: return controller.pending_request == 0 and hud._players[local_id].current_mana == 2990)
+	_check(hud._players[local_id].current_mana == 2990, "Target click consumes the original spell cost exactly once")
+	_check(hud._players[opponent].current_health < 500, "Manual Launch actually affects the rival")
 	_check(world._spell_effects.size() > 0, "Confirmed spell spawns its visible AO effect")
 	await _capture("ao-manual-cast.png")
-	await _wait_for(func() -> bool: return hud._players[local_id].current_health < 100)
+	await _wait_for(func() -> bool: return hud._players[local_id].current_health < 500)
 	await create_timer(1.3).timeout
 	var health_before: int = hud._players[local_id].current_health
 	_key(KEY_3, true)
@@ -73,11 +77,11 @@ func _run() -> void:
 	_key(KEY_D, false)
 	await create_timer(0.08).timeout
 	_check(hud._players[local_id].grid_position.x > 4 and controller.aimed_spell_id == 12, "Holding movement remains responsive while the spell cursor is active")
-	_check(hud._players[local_id].current_mana == 90, "Moving and aiming do not consume mana")
+	_check(hud._players[local_id].current_mana == 2990, "Moving and aiming do not consume mana")
 	await _click_world(local_id)
-	await _wait_for(func() -> bool: return controller.pending_request == 0 and hud._players[local_id].current_mana == 85)
+	await _wait_for(func() -> bool: return controller.pending_request == 0 and hud._players[local_id].current_mana == 2985)
 	_check(hud._players[local_id].current_health > health_before, "Macro-targeted heal actually restores health")
-	_check(hud._players[local_id].current_mana == 85, "Minor heal consumes five mana")
+	_check(hud._players[local_id].current_mana == 2985, "Minor heal consumes five mana")
 	await _capture("ao-macro-heal.png")
 	_key(KEY_1, true)
 	_key(KEY_1, false)
@@ -85,7 +89,7 @@ func _run() -> void:
 	var point: Vector2 = world.get_global_transform() * (world.WORLD_ORIGIN + Vector2(24, 24))
 	await _click_at(point)
 	await _wait_for(func() -> bool: return controller.pending_request == 0)
-	_check(hud._players[local_id].current_mana == 85, "Empty-target rejection does not spend mana")
+	_check(hud._players[local_id].current_mana == 2985, "Empty-target rejection does not spend mana")
 	_check(hud.console.get_parsed_text().contains("No hay un objetivo vivo"), "Invalid targeting gives an understandable console message")
 	_key(KEY_1, true)
 	_key(KEY_1, false)
@@ -112,7 +116,7 @@ func _run() -> void:
 	_key(KEY_CTRL, false)
 	await _wait_for(func() -> bool: return hud._players[opponent].current_health < rival_health)
 	_check(hud._players[opponent].current_health == rival_health - 10, "CTRL retains its physical attack after using spells and menus")
-	_check(hud._players[local_id].current_mana == 85, "CTRL does not consume mana after magic")
+	_check(hud._players[local_id].current_mana == 2985, "CTRL does not consume mana after magic")
 	_check(root.gui_get_focus_owner() == null, "Combat UI interactions do not capture movement keys")
 	await create_timer(0.2).timeout
 	main._disconnect_from_arena()

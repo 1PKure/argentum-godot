@@ -14,11 +14,17 @@ func _run() -> void:
 	_check(catalog.get_spell(1).mana == 10 and catalog.get_spell(1).min_amount == 5 and catalog.get_spell(1).max_amount == 10, "Dart keeps original AO20 cost and damage")
 	_check(catalog.get_spell(12).mana == 5 and catalog.get_spell(12).effect == "healing", "Minor heal keeps original AO20 cost and effect")
 	_check(catalog.get_spell(13).mana == 60 and catalog.get_spell(13).max_amount == 40, "Major heal keeps original AO20 values")
-	_check(not catalog.is_available(53), "Unsupported spells cannot be granted by a request")
+	_check(not catalog.is_available(7), "Unsupported spells cannot be granted by a request")
 	var registry = load("res://server/systems/player_registry.gd").new()
 	root.add_child(registry)
 	var caster: PlayerState = registry.add_player(101)
 	var target: PlayerState = registry.add_player(102)
+	caster.max_health = 100
+	caster.current_health = 100
+	caster.max_mana = 100
+	caster.current_mana = 100
+	target.max_health = 100
+	target.current_health = 100
 	var result: Dictionary = registry.try_cast_spell(101, 1, target.grid_position, 1)
 	_check(result.ok, "A valid spell resolves on the server")
 	_check(target.current_health >= 90 and target.current_health <= 95, "Server applies the original random damage range")
@@ -34,7 +40,7 @@ func _run() -> void:
 	_check(not result.ok and caster.current_mana == 90, "Empty target does not consume mana")
 	result = registry.try_cast_spell(101, 1, Vector2i(50, 50), 4)
 	_check(not result.ok, "Targets outside the arena are rejected")
-	result = registry.try_cast_spell(101, 53, target.grid_position, 5)
+	result = registry.try_cast_spell(101, 7, target.grid_position, 5)
 	_check(not result.ok, "A spell outside the loadout is rejected")
 	result = registry.try_cast_spell(101, 1, caster.grid_position, 6)
 	_check(not result.ok, "Offensive targeting requires a rival")
@@ -89,7 +95,7 @@ func _run() -> void:
 	controller.server_ready = false
 	controller.aim_hotkey(0)
 	_check(controller.aimed_spell_id == 0, "Unavailable server cannot enable casting")
-	_check(hud._spell_buttons.size() == 4 and hud._hotkey_buttons.size() == 10, "Spellbook and hotkey bar are populated")
+	_check(hud._spell_buttons.size() == 213 and hud._hotkey_buttons.size() == 10, "Spellbook and hotkey bar are populated")
 	var player_network = root.get_node("PlayerNetwork")
 	var sample := PlayerState.new(101, "Mati", Vector2i(4, 5))
 	player_network.snapshot_received.emit([sample.to_dictionary()])

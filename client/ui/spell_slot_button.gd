@@ -15,21 +15,19 @@ func configure(id: int, slot: int = -1) -> void:
 	toggle_mode = true
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	expand_icon = true
+	clip_text = true
 	add_theme_font_size_override("font_size", 12)
 	add_theme_constant_override("icon_max_width", 28)
 	var spell := SpellCatalog.get_spell(id)
 	if not spell.is_empty():
-		text = "%s\n%d maná" % [spell.name, spell.mana] if slot < 0 else ""
+		text = "%s\n%d maná%s" % [spell.name, spell.mana, " · Pendiente" if not SpellCatalog.is_available(id) else ""] if slot < 0 else ""
 		tooltip_text = "%s\n%s\n%d maná · Arrastrá el hechizo a un acceso para asignarlo." % [spell.name, spell.description, spell.mana]
 		# The DAT's minor-heal icon points to a blank cell in the public atlas.
 		# Use its existing blue healing icon without modifying the source data.
-		var icon_grh := 74686 if id == 12 else int(spell.icon_grh)
-		var grh := AOResources.get_grh_definition(icon_grh)
-		if not grh.is_empty():
-			var texture := AtlasTexture.new()
-			texture.atlas = AOResources.get_texture(grh.file_num)
-			texture.region = grh.region
-			icon = texture
+		var icon_grh := SpellCatalog.display_icon_grh(id)
+		icon = AOResources.get_icon_texture(icon_grh) if icon_grh > 0 else null
+		if not SpellCatalog.is_available(id):
+			tooltip_text += "\n" + str(spell.unavailable_reason)
 	else:
 		text = ""
 		icon = null

@@ -1,44 +1,29 @@
 # Hechizos y Lanzar
 
-Esta entrega continúa la interfaz validada de `work/ao20-combat-ui`. No integra la prueba descartada de `work/pvp-spells`. Usa recursos y datos originales de AO20 para probar el flujo clásico dentro de la arena Godot.
+La arena continúa la interfaz validada de AO20, sin incorporar la prueba retirada de `work/pvp-spells`. El libro importa las 213 entradas de Hechizos.dat y habilita 39 que tienen resolución de servidor. La lista exacta, con cada dependencia pendiente, está en [SPELL_CATALOG.md](SPELL_CATALOG.md).
 
 ## Controles
 
 - Manual: abrir Hechizos, seleccionar una fila, pulsar Lanzar y hacer clic sobre un personaje. Seleccionar o apuntar no gasta maná.
-- Accesos: 1 Dardo Mágico, 2 Flecha Mágica, 3 Curar Heridas Leves, 4 Curar Heridas Graves. El número selecciona el hechizo y activa directamente el cursor. El clic define el objetivo.
-- Arrastrar una fila sobre un casillero de la barra para asignarla a 1–9/0. Se conserva la asignación en `user://spell_hotkeys.cfg` (almacenamiento local del navegador en web).
-- Escape o clic derecho cancela el cursor. WASD permite caminar mientras se apunta. CTRL conserva el golpe físico y no consume maná.
+- Accesos iniciales: 1 Dardo Mágico, 2 Flecha Mágica, 3 Curar Heridas Leves y 4 Curar Heridas Graves. El número selecciona y activa el cursor.
+- Arrastrar una fila habilitada sobre un casillero para asignarla a 1–9/0. Se conserva en user://spell_hotkeys.cfg.
+- Escape o clic derecho cancela. WASD permite caminar mientras se apunta. CTRL golpea sin maná. M medita; Q/E usan pociones.
+- Buscar por nombre o ID filtra el libro. Ver catálogo completo permite consultar las entradas pendientes: muestran su motivo y no habilitan Lanzar ni asignación a macros.
 
-## Datos reutilizados
+## Resolución y recursos
 
-| ID | Hechizo | Maná | Efecto base de vida |
-| --- | --- | --- | --- |
-| 1 | Dardo Mágico | 10 | Daño aleatorio 5–10 |
-| 2 | Flecha Mágica (PVP) | 20 | Daño aleatorio 10–20 |
-| 12 | Curar Heridas Leves | 5 | Curación aleatoria 5–20 |
-| 13 | Curar Heridas Graves | 60 | Curación aleatoria 20–40 |
+El servidor identifica al lanzador por su conexión y valida personaje vivo, libro disponible, objetivo, maná, intervalo global 1230 ms, cruce golpe/magia 800 ms y cooldown individual. Rechazos y solicitudes repetidas no gastan recursos. Daño requiere rival; curación y remover admiten al propio jugador. Una cura directa sobre vida completa puede gastar maná con efecto cero. Las raíces bloquean caminar; permiten lanzar remover o beber. Los efectos periódicos usan valores y tiempos de EffectsOverTime.dat.
 
-`SpellCatalog` lee nombre, descripción, palabras mágicas, coste y rangos del `Hechizos.dat` original. No se portó el código Visual Basic: el servidor Godot resuelve este subconjunto. `intervalos.ini` aporta 1230 ms entre hechizos y 800 ms entre golpe y hechizo en ambas direcciones. El golpe conserva su intervalo de 750 ms.
+Los objetivos se admiten dentro de toda la arena 20×12. Falta portar visión, línea de visión y las reglas completas de mapas de AO. El perfil de prueba de 500 vida/3000 maná no representa una clase ni balance final. No aplica requisitos de clase, skills, estamina, equipo ni multiplicadores. Los hechizos cuyo efecto depende de esos sistemas quedan pendientes. Invocaciones, bot y lobbies siguen pendientes; PvE está fuera del alcance acordado.
 
-Los efectos, palabras mágicas y sonidos se muestran después de la confirmación del servidor. Curar Heridas Leves no define FXgrh en el DAT; se presenta con el FX de curación 9. Su icono de origen apunta a una celda vacía del atlas público, por lo que se muestra el icono de curación azul GRH 74686 del mismo atlas. Son adaptaciones visuales explícitas; no alteran los datos ni las reglas.
+PlayerNetwork conserva su tabla RPC. SpellNetwork usa un protocolo separado, versión 2, y comprueba soporte. Un servidor anterior deshabilita Lanzar/recuperación y muestra una instrucción de actualización. Actualizar work/ao20-spells y reiniciar el servidor es necesario.
 
-Procedencia y hashes: `assets/argentum/source/data/spells_sources.json`.
-Datos y gráficos: [ao-org/Recursos, commit 89615f3](https://github.com/ao-org/Recursos/tree/89615f34162d9fa0bf0fae4242cd6639edbf772f).
-Intervalos: [ao-org/argentum-online-server, commit 9d381f2](https://github.com/ao-org/argentum-online-server/tree/9d381f280c10b680cf1f84be5372f8c1dce42840).
-Se mantienen los avisos y la licencia de los recursos en `assets/argentum/interface/ao20/`.
+## Procedencia y adaptaciones visuales
 
-## Resolución y alcance
+Datos, iconos, FX y audio proceden de [ao-org/Recursos, commit 89615f3](https://github.com/ao-org/Recursos/tree/89615f34162d9fa0bf0fae4242cd6639edbf772f). Los intervalos y reglas consultadas proceden de [ao-org/argentum-online-server, commit 9d381f2](https://github.com/ao-org/argentum-online-server/tree/9d381f280c10b680cf1f84be5372f8c1dce42840). No es un port del servidor entero. Se conservan los avisos de los recursos en assets/argentum/interface/ao20/. Hashes y excepciones están en assets/argentum/source/data/spells_sources.json.
 
-El servidor determina al lanzador por su conexión. Valida que esté vivo, que el hechizo pertenezca al libro, que exista un objetivo vivo dentro de la arena, el maná y los intervalos. El daño requiere un rival; la curación admite al propio personaje. Una solicitud repetida no vuelve a gastar recursos. Un rechazo no consume maná ni produce efectos visuales. Una curación válida sobre vida completa puede consumir maná con efecto real cero.
-
-Se admiten objetivos en toda la arena visible de 20×12. No se añadió un alcance arbitrario ni una regla de línea de visión; falta portar la visión y las reglas completas de mapas de AO. Las estadísticas siguen siendo las del prototipo (100 vida/100 maná), sin clases, skills, equipo, resistencia, estamina, meditación ni multiplicadores. Tampoco incluye estados, invocaciones, catálogo completo, bot o lobbies. PvE está fuera del alcance acordado.
-
-`PlayerNetwork` no cambia su tabla de RPC. `SpellNetwork` agrega un protocolo separado con comprobación de versión. Si el servidor es anterior, el cliente deshabilita Lanzar y explica que debe actualizarse. No debe probarse magia manteniendo abierto el servidor viejo.
+Curar Heridas Leves usa FX9 y el icono azul GRH74686 porque su DAT no define FX y apunta a un icono vacío. Aliento de Dragón no define icono y muestra el de fuego GRH74714. Implosión guarda directamente el GRH12834 en el DAT: el adaptador usa FX4, que refiere a esa misma animación. Siete sonidos referenciados no existen en el repositorio público de la revisión y usan el sonido16 como sustituto explícito. WAV113 se decodificó de ADPCM a PCM para importación en Godot; se conserva el original en audio/originals/113.wav.source. La meditación usa el FX de nivel máximo120 disponible; ver [RECOVERY.md](RECOVERY.md).
 
 ## Validación
 
-`tests/ao_spell_smoke.gd` comprueba datos originales, costes, daño/curación, intervalos, repetición, muertes, objetivos inválidos, apuntado y conversión de coordenadas dentro del marco escalado.
-
-`tests/ao_spell_network_client.gd` usa dos clientes y el servidor WebSocket real. El cliente gráfico pulsa los botones, genera teclas y clics, arrastra un hechizo, camina mientras apunta y comprueba vida, maná, efectos, consola, CTRL y desconexión. El segundo cliente comprueba los resultados remotos y lanza un hechizo de vuelta. La misma prueba se ejecuta con el PCK de exportación.
-
-La validación automatizada usa Godot 4.7.2 en Linux. La sensación del movimiento y la interacción final en Windows/web deben confirmarse en el equipo de juego con el servidor WSS local.
+Pruebas de datos y servidor: ao_spell_smoke.gd y arena_recovery_smoke.gd. Recursos reales: arena_assets_smoke.gd. Movimiento y cámara: movement_smoke.gd y camera_movement_smoke.gd. Interacción real con servidor y dos clientes: arena_network_client.gd, ejecutado también sobre el PCK exportado. Comprueba clics, búsqueda, arrastre, macros, daño, curas, pociones, meditación/FX, remo, cámara, CTRL, muerte, reaparición y resize. La validación automatizada usa Godot 4.7.2 en Linux; falta confirmar la sensación y la interacción de esta entrega en Windows/web.

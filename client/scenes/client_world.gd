@@ -37,8 +37,14 @@ var _arena_ground: ArenaGround
 var _arena_props: Array[AOProp] = []
 var _spell_effects: Array[Node2D] = []
 
+var _viewport_size := Vector2.ZERO
+var _camera_enabled := false
+var _local_avatar_peer_id := 0
+
 
 func _ready() -> void:
+	# Run after PlayerAvatar interpolation so following never lags a render frame.
+	process_priority = 100
 	y_sort_enabled = true
 	SpellNetwork.spell_resolved.connect(_on_spell_resolved)
 
@@ -64,6 +70,32 @@ func _ready() -> void:
 	PlayerNetwork.player_stats_updated.connect(
 		_on_player_stats_updated
 	)
+
+
+func configure_viewport(viewport_size: Vector2) -> void:
+	# Only this world moves. Its parent Control clips the map and the HUD stays put.
+	_camera_enabled = true
+	scale = Vector2.ONE
+	resize_viewport(viewport_size)
+
+
+func resize_viewport(viewport_size: Vector2) -> void:
+	_viewport_size = Vector2(maxf(viewport_size.x, 1.0), maxf(viewport_size.y, 1.0))
+	_update_camera()
+
+
+func _process(_delta: float) -> void:
+	_update_camera()
+
+
+func _update_camera() -> void:
+	if not _camera_enabled:
+		return
+	var focus := WORLD_ORIGIN + Vector2(GRID_COLUMNS, GRID_ROWS) * TILE_SIZE * 0.5
+	var avatar: PlayerAvatar = _avatars.get(_local_avatar_peer_id)
+	if is_instance_valid(avatar):
+		focus = avatar.position
+	position = _viewport_size * 0.5 - focus
 
 
 func _unhandled_key_input(
@@ -245,6 +277,9 @@ func _on_player_despawned(
 	_avatars.erase(
 		peer_id
 	)
+	if peer_id == _local_avatar_peer_id:
+		_local_avatar_peer_id = 0
+		_update_camera()
 
 
 func _on_player_moved(
@@ -271,6 +306,7 @@ func _on_player_moved(
 			state.grid_position
 		)
 	)
+	avatar.apply_server_stats(state)
 
 
 func _on_player_stats_updated(
@@ -300,9 +336,10 @@ func _on_player_stats_updated(
 		]
 	)
 
-	avatar.apply_server_stats(
-		state
-	)
+	if not avatar.is_alive and state.is_alive:
+		avatar.setup(state, state.peer_id == multiplayer.get_unique_id(), _grid_to_world(state.grid_position))
+	else:
+		avatar.apply_server_stats(state)
 
 
 func _spawn_player(
@@ -345,6 +382,9 @@ func _spawn_player(
 	_avatars[
 		state.peer_id
 	] = avatar
+	if is_local:
+		_local_avatar_peer_id = state.peer_id
+		_update_camera()
 
 
 func _grid_to_world(
@@ -376,3 +416,5 @@ func _clear_players() -> void:
 		avatar.queue_free()
 
 	_avatars.clear()
+	_local_avatar_peer_id = 0
+	_update_camera()

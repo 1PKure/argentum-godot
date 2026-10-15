@@ -5,7 +5,42 @@
     1,
     2,
     12,
-    13
+    13,
+    3,
+    4,
+    11,
+    25,
+    26,
+    27,
+    28,
+    29,
+    31,
+    39,
+    40,
+    41,
+    43,
+    50,
+    51,
+    53,
+    54,
+    55,
+    56,
+    59,
+    112,
+    113,
+    122,
+    131,
+    132,
+    133,
+    141,
+    242,
+    243,
+    247,
+    263,
+    268,
+    269,
+    291,
+    350
   ],
   "files": [
     {
@@ -80,5 +115,296 @@
       "file": "19.wav",
       "sha256": "cd7c3689268a811dc84d3a01227e0439e628a99839415aebcd144520b6b9efb0"
     }
+  ],
+  "consumables": {
+    "source_file": "Dat/obj.dat",
+    "source_sha256": "99e874ce0df5652b08206b77216fc76bbee45a42886dc85a4b0f683c6ce51d39",
+    "extracted_ids": [
+      37,
+      38
+    ],
+    "output": "arena_consumables.ini",
+    "output_sha256": "3e59fb5e61bdab5e46317f00763488af48e3146ba07f0133f2bcef6d096d696c"
+  },
+  "expanded_assets": [
+    {
+      "path": "graphics/104.png",
+      "bytes": 389887,
+      "sha256": "fdb06b59c272ac22769fdd49b69eafa1a603f433b77835226edb4bc27cb80532"
+    },
+    {
+      "path": "graphics/107.png",
+      "bytes": 40448,
+      "sha256": "1e77190eb9066d4c9082f185152d735b918190e60363fe3c155f6b274584fc98"
+    },
+    {
+      "path": "graphics/108.png",
+      "bytes": 2485,
+      "sha256": "c8e2243f86457f400cdcb3e08509a401b0f7be60592f0d46bfda1bc3f2e0ee59"
+    },
+    {
+      "path": "graphics/109.png",
+      "bytes": 96484,
+      "sha256": "f6f373a8162368b1990f578ae33d9975a5ab3863c2ed12445bb5571678fdb8b1"
+    },
+    {
+      "path": "graphics/113.png",
+      "bytes": 122121,
+      "sha256": "f817c2df20fecae6a8cfb5d9b5e84e706fa76efb6438d714e0660c8f1d2721fc"
+    },
+    {
+      "path": "graphics/405.png",
+      "bytes": 394,
+      "sha256": "c303f9cb5a1015dcf85cfb8d2c830595aafd375c84b5db0399263e5b57af383b"
+    },
+    {
+      "path": "graphics/1457.png",
+      "bytes": 2782,
+      "sha256": "0b1c7aa5d3bc2b9a90f8997d5b41b89546844f8a06a6f0f0a2a13af642f33a34"
+    },
+    {
+      "path": "graphics/3206.png",
+      "bytes": 184899,
+      "sha256": "34453a5dbe6c432b7faf19cb070d5a0190af53ffc8afed3ab1ea5314a019b177"
+    },
+    {
+      "path": "graphics/3439.png",
+      "bytes": 41625,
+      "sha256": "11acf27dcf4a0f0f2168b2517198182d9455711eee136fb1dcff6cd57dcd0427"
+    },
+    {
+      "path": "graphics/3440.png",
+      "bytes": 10281,
+      "sha256": "ff377c913d42d7e75918c49aef55b89bd912a6c0048e9de1a3eb122eaaaf1d38"
+    },
+    {
+      "path": "graphics/3449.png",
+      "bytes": 14324,
+      "sha256": "55444f45eb5a328e0c39d396986f8243b1decad076ddb9ee0a9230e611f27cbc"
+    },
+    {
+      "path": "graphics/3450.png",
+      "bytes": 34688,
+      "sha256": "a5239b3ba0761c8edbe5e4f8919ffcb6086cbf28daf2d1ac46085e6e59e6185c"
+    },
+    {
+      "path": "graphics/3451.png",
+      "bytes": 73605,
+      "sha256": "4f6dfb19e31ceabbf8654b0161e0def254262e239e592ff1debe247008413b8e"
+    },
+    {
+      "path": "graphics/3452.png",
+      "bytes": 6909,
+      "sha256": "144234e7e10ca8eef6e1e178a463fefa97a2fbfcb898ebdfc59d1c3158a9953c"
+    },
+    {
+      "path": "graphics/3453.png",
+      "bytes": 17506,
+      "sha256": "0c4772e9c54f8f45c7536d2de92b6e484af126a7c566d785c2930556ec1c50c4"
+    },
+    {
+      "path": "graphics/3454.png",
+      "bytes": 25656,
+      "sha256": "76924612fb78571e1002959472a9060079cd4b99d345f7f297ef394f0bed52d5"
+    },
+    {
+      "path": "graphics/3457.png",
+      "bytes": 1893,
+      "sha256": "8548ba237150ad8daa9a9e5d30f17b3784653d7c11e507a05dbe140fc7822c57"
+    },
+    {
+      "path": "graphics/3461.png",
+      "bytes": 99258,
+      "sha256": "78df2bea8d2d015562649f047b0ec4090fd572630b8f4a0cd477b63c90b6fedb"
+    },
+    {
+      "path": "graphics/3468.png",
+      "bytes": 134689,
+      "sha256": "c4451c37a4e1dfa19f2effc824b235ea90a98e1eff6d771f9ba6a7f497ab46c4"
+    },
+    {
+      "path": "graphics/3474.png",
+      "bytes": 113161,
+      "sha256": "95247fcf740d73aafa0c5fb7e3fa7133799010a4e767ec76d367d1b312a8979f"
+    },
+    {
+      "path": "graphics/3492.png",
+      "bytes": 80248,
+      "sha256": "c91842bbd06a5a12c1e20e688abbb3e0f23627ad23a6fa76ebfe27889f7e1968"
+    },
+    {
+      "path": "graphics/3495.png",
+      "bytes": 130162,
+      "sha256": "5d84731e81da5acb41d84bbc7b8651b8595ba0965fd2415a45072b4284393b92"
+    },
+    {
+      "path": "graphics/3499.png",
+      "bytes": 67280,
+      "sha256": "5c15e0965d86476940e6ba2571ae0bb13e8a271868f7d7374de65da79f001883"
+    },
+    {
+      "path": "graphics/3547.png",
+      "bytes": 50033,
+      "sha256": "e5a283393cfcc3ce97d16104d2c5c87bc6fe1c2a1933b271dbe8a4ebc3ab4862"
+    },
+    {
+      "path": "graphics/6640.png",
+      "bytes": 37470,
+      "sha256": "20ffff8a8267d565df694eaacab8495c81649515ab07daba19dcfca6c6191da1"
+    },
+    {
+      "path": "audio/16.wav",
+      "bytes": 8230,
+      "sha256": "2713668228d67565b7d4cc7f1f3239b54c128dd85c92d164239273601dde9d3d"
+    },
+    {
+      "path": "audio/17.wav",
+      "bytes": 135980,
+      "sha256": "641b5c71f4ddf3adcc78f8cde6e280da0cd4ee05fc677fbccdee423e0000a7e1"
+    },
+    {
+      "path": "audio/18.wav",
+      "bytes": 236300,
+      "sha256": "061b3468dd22f190e892896e95a0b8ce1bb881296b98c82518686596170d6d17"
+    },
+    {
+      "path": "audio/19.wav",
+      "bytes": 36034,
+      "sha256": "cd7c3689268a811dc84d3a01227e0439e628a99839415aebcd144520b6b9efb0"
+    },
+    {
+      "path": "audio/27.wav",
+      "bytes": 97172,
+      "sha256": "d46f7d95a1d67453d33866dca74f190d47544bf02c116d5c87ad27768d5b13c3"
+    },
+    {
+      "path": "audio/99.wav",
+      "bytes": 23262,
+      "sha256": "5ec3ee7efb50f2746224b40d10ce3a8ddc4227e3a9338964960f5e925c431eaa"
+    },
+    {
+      "path": "audio/110.wav",
+      "bytes": 17578,
+      "sha256": "2c5f5f6b37c2f70a2f4f30c655874cfaeed649bb897b970190475b3f60bfd3fb"
+    },
+    {
+      "path": "audio/113.wav",
+      "bytes": 40558,
+      "sha256": "5fc767d05f7c898b85509bf50deddb4ddf5a7cf84d749f2b9d5bbce6ae8af45f"
+    },
+    {
+      "path": "audio/135.wav",
+      "bytes": 36784,
+      "sha256": "31c467c229d144014da2233beb804123b7832b5bcfd7ec419861a15b6f191d11"
+    },
+    {
+      "path": "audio/138.wav",
+      "bytes": 244268,
+      "sha256": "643ef2695f0a26c01f83eec4d94a6a4312c617e7ed25a0fc72df1c20f3e0f567"
+    },
+    {
+      "path": "audio/162.wav",
+      "bytes": 139054,
+      "sha256": "57039422095ed6b5950635f8acade03b10386078fcad9eba1cc9e6d143cb0f7d"
+    },
+    {
+      "path": "audio/231.wav",
+      "bytes": 132428,
+      "sha256": "5e808ea9e88111a82bbf2b0e1a234b9b71add93518272d52494050fbb66eda65"
+    },
+    {
+      "path": "audio/520.wav",
+      "bytes": 53692,
+      "sha256": "d0ad8b864e0570166a66b63174e8b4e8880c1993f158be4745284e515babed5f"
+    },
+    {
+      "path": "graphics/3471.png",
+      "bytes": 124846,
+      "sha256": "b4ceb231a82ab94a6e3a6996ad84acfbacc69ae35641f0772f117bce214af8c3"
+    }
+  ],
+  "audio_fallbacks": {
+    "159": 16,
+    "229": 16,
+    "239": 16,
+    "256": 16,
+    "2542": 16,
+    "2627": 16,
+    "2628": 16
+  },
+  "catalog_entries": 213,
+  "enabled_spell_ids": [
+    1,
+    2,
+    12,
+    13,
+    3,
+    4,
+    11,
+    25,
+    26,
+    27,
+    28,
+    29,
+    31,
+    39,
+    40,
+    41,
+    43,
+    50,
+    51,
+    53,
+    54,
+    55,
+    56,
+    59,
+    112,
+    113,
+    122,
+    131,
+    132,
+    133,
+    141,
+    242,
+    243,
+    247,
+    263,
+    268,
+    269,
+    291,
+    350
+  ],
+  "presentation_fallbacks": {
+    "minor_heal_icon_grh": 74686,
+    "minor_heal_fx": 9,
+    "meditation_fx": 120,
+    "implosion_fx_id": 4,
+    "implosion_original_animation_grh": 12834,
+    "dragon_breath_missing_icon_grh": 74714
+  },
+  "effects_over_time": {
+    "file": "EffectsOverTime.dat",
+    "sha256": "4a7ddb16b7de792b43929ec50264a37f3868b9fe1689c4e6120880813210631f"
+  },
+  "audio_conversions": [
+    {
+      "original": "audio/originals/113.wav.source",
+      "original_sha256": "c23095eb2b3a31c2262a79b8567a7f8a8fbc0e09fb5de581ceff4d5ea20c8687",
+      "runtime": "audio/113.wav",
+      "runtime_sha256": "5fc767d05f7c898b85509bf50deddb4ddf5a7cf84d749f2b9d5bbce6ae8af45f",
+      "conversion": "Original ADPCM WAV decoded to PCM signed 16-bit for Godot import; no sound redesign."
+    }
+  ],
+  "meditation_data": {
+    "file": "Meditaciones.dat",
+    "sha256": "e86bb094b19d37273a01d3fafb74496f3d288d05056ceca7e0801f3b291b5612",
+    "runtime_fx": 120,
+    "reason": "FX153 referenced by low-level meditation is absent from the same original FXs.ini; FX120 is MeditationLevelMax."
+  },
+  "initial_spell_ids": [
+    1,
+    2,
+    12,
+    13
   ]
 }
