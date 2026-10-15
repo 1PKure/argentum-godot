@@ -1,7 +1,7 @@
 class_name PlayerAvatar
 extends Node2D
 
-const MOVE_DURATION_SECONDS: float = 0.12
+const MOVE_DURATION_SECONDS: float = MovementRules.MOVE_INTERVAL_SECONDS
 const TILE_SIZE: float = 48.0
 const VISUAL_MOVEMENT_GRACE_SECONDS: float = 0.05
 var is_ghost: bool

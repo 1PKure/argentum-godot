@@ -35,10 +35,12 @@ var _avatars: Dictionary[int, PlayerAvatar] = {}
 
 var _arena_ground: ArenaGround
 var _arena_props: Array[AOProp] = []
+var _spell_effects: Array[Node2D] = []
 
 
 func _ready() -> void:
 	y_sort_enabled = true
+	SpellNetwork.spell_resolved.connect(_on_spell_resolved)
 
 	_create_arena_ground()
 	_create_arena_props()
@@ -89,6 +91,24 @@ func _unhandled_key_input(
 
 	if event.keycode == KEY_F4:
 		PlayerNetwork.request_debug_mana_spend()
+
+
+func target_grid_at(viewport_position: Vector2) -> Vector2i:
+	var local_point := get_global_transform().affine_inverse() * viewport_position
+	for avatar: PlayerAvatar in _avatars.values():
+		if Rect2(avatar.position + Vector2(-24, -68), Vector2(48, 100)).has_point(local_point):
+			return avatar.grid_position
+	return Vector2i(floori((local_point.x - WORLD_ORIGIN.x) / TILE_SIZE), floori((local_point.y - WORLD_ORIGIN.y) / TILE_SIZE))
+
+
+func _on_spell_resolved(event: Dictionary) -> void:
+	var effect := ArenaSpellEffect.new()
+	effect.event = event
+	effect.origin = _grid_to_world(Vector2i(int(event.origin_x), int(event.origin_y)))
+	effect.target = _grid_to_world(Vector2i(int(event.target_x), int(event.target_y)))
+	add_child(effect)
+	_spell_effects.append(effect)
+	effect.tree_exited.connect(func() -> void: _spell_effects.erase(effect))
 
 
 func _request_basic_attack() -> void:
@@ -346,6 +366,9 @@ func _grid_to_world(
 
 func clear_session() -> void:
 	_clear_players()
+	for effect in _spell_effects.duplicate():
+		if is_instance_valid(effect):
+			effect.queue_free()
 
 
 func _clear_players() -> void:

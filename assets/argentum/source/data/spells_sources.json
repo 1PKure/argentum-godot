@@ -1,0 +1,84 @@
+{
+  "repository": "https://github.com/ao-org/Recursos",
+  "commit": "89615f34162d9fa0bf0fae4242cd6639edbf772f",
+  "spell_ids": [
+    1,
+    2,
+    12,
+    13
+  ],
+  "files": [
+    {
+      "file": "107.png",
+      "bytes": 40448,
+      "sha256": "1e77190eb9066d4c9082f185152d735b918190e60363fe3c155f6b274584fc98"
+    },
+    {
+      "file": "108.png",
+      "bytes": 2485,
+      "sha256": "c8e2243f86457f400cdcb3e08509a401b0f7be60592f0d46bfda1bc3f2e0ee59"
+    },
+    {
+      "file": "113.png",
+      "bytes": 122121,
+      "sha256": "f817c2df20fecae6a8cfb5d9b5e84e706fa76efb6438d714e0660c8f1d2721fc"
+    },
+    {
+      "file": "405.png",
+      "bytes": 394,
+      "sha256": "c303f9cb5a1015dcf85cfb8d2c830595aafd375c84b5db0399263e5b57af383b"
+    },
+    {
+      "file": "1457.png",
+      "bytes": 2782,
+      "sha256": "0b1c7aa5d3bc2b9a90f8997d5b41b89546844f8a06a6f0f0a2a13af642f33a34"
+    },
+    {
+      "file": "3453.png",
+      "bytes": 17506,
+      "sha256": "0c4772e9c54f8f45c7536d2de92b6e484af126a7c566d785c2930556ec1c50c4"
+    }
+  ],
+  "fx_ids": [
+    9,
+    15,
+    86
+  ],
+  "data_files": [
+    {
+      "file": "Hechizos.dat",
+      "sha256": "49887eb54a78e0040964fd1b405aa7da12a34049ce2bebe9f493458876a37923"
+    },
+    {
+      "file": "FXs.ini",
+      "sha256": "534d67bee30e90f3df6f2b3292025b924f5e56a3a360efc302089314c5b89b81"
+    },
+    {
+      "file": "intervalos.ini",
+      "sha256": "ae3ec3ff73f131ceffe8f70970ea9cb5cd2ed1d54f1ee93f3b5ee183e53874f4"
+    }
+  ],
+  "server_reference": {
+    "repository": "https://github.com/ao-org/argentum-online-server",
+    "commit": "9d381f280c10b680cf1f84be5372f8c1dce42840",
+    "file": "intervalos.ini"
+  },
+  "audio_files": [
+    {
+      "file": "16.wav",
+      "sha256": "2713668228d67565b7d4cc7f1f3239b54c128dd85c92d164239273601dde9d3d"
+    },
+    {
+      "file": "17.wav",
+      "sha256": "641b5c71f4ddf3adcc78f8cde6e280da0cd4ee05fc677fbccdee423e0000a7e1"
+    },
+    {
+      "file": "18.wav",
+      "sha256": "061b3468dd22f190e892896e95a0b8ce1bb881296b98c82518686596170d6d17"
+    },
+    {
+      "file": "19.wav",
+      "sha256": "cd7c3689268a811dc84d3a01227e0439e628a99839415aebcd144520b6b9efb0"
+    }
+  ]
+}

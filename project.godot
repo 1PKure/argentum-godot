@@ -21,6 +21,7 @@ NetworkManager="*uid://f63okkehfaww"
 PlayerNetwork="*uid://q1b820kls4vu"
 DevServerLauncher="*uid://c5lbr7cu8i63u"
 AOResources="*uid://cqc86kpi0ald7"
+SpellNetwork="*res://autoload/spell_network.gd"
 
 [display]
 

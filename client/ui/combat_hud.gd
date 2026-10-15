@@ -27,6 +27,12 @@ var _menu_panel: Control
 var _inventory_button: TextureButton
 var _spell_button: TextureButton
 var _selected_inventory_slot: Button
+var _spell_controller: SpellTargetingController
+var _spell_buttons: Dictionary[int, SpellSlotButton] = {}
+var _hotkey_buttons: Array[SpellSlotButton] = []
+var _launch_button: TextureButton
+var _spell_status: Label
+var _controls_hint: Label
 
 
 func _ready() -> void:
@@ -39,6 +45,7 @@ func _ready() -> void:
 	PlayerNetwork.player_despawned.connect(_on_player_despawned)
 	PlayerNetwork.player_moved.connect(_on_player_moved)
 	PlayerNetwork.player_stats_updated.connect(_on_player_stats_updated)
+	SpellNetwork.spell_resolved.connect(_on_spell_event)
 	show_inventory()
 	_update_local_stats()
 	console.append_message("Bienvenido a la arena PvP.")
@@ -51,6 +58,64 @@ func mount_world(world: Node2D) -> void:
 	var world_scale := minf((WORLD_RECT.size.x - 16.0) / arena_size.x, (WORLD_RECT.size.y - 100.0) / arena_size.y)
 	_world.scale = Vector2.ONE * world_scale
 	_world.position = WORLD_RECT.size * 0.5 - (ClientWorld.WORLD_ORIGIN + arena_size * 0.5) * world_scale
+
+
+func configure_spells(controller: SpellTargetingController) -> void:
+	_spell_controller = controller
+	controller.changed.connect(_update_spell_ui)
+	controller.feedback.connect(console.append_message)
+	_update_spell_ui()
+
+
+func _update_spell_ui() -> void:
+	if _spell_controller == null:
+		return
+	for id: int in _spell_buttons:
+		_spell_buttons[id].button_pressed = id == _spell_controller.selected_spell_id
+	for index in range(_hotkey_buttons.size()):
+		var id: int = _spell_controller.bindings[index]
+		if _hotkey_buttons[index].spell_id != id:
+			_hotkey_buttons[index].configure(id, index)
+		_hotkey_buttons[index].button_pressed = id != 0 and id == _spell_controller.aimed_spell_id
+	_launch_button.disabled = not _spell_controller.can_launch()
+	_launch_button.modulate = Color.WHITE if not _launch_button.disabled else Color(0.55, 0.55, 0.55)
+	_controls_hint.text = "Movimiento: WASD · Golpear: CTRL · Hechizos: 1–4"
+	_spell_status.text = "Seleccioná un hechizo y pulsá Lanzar."
+	if _spell_controller.aimed_spell_id != 0:
+		show_spells()
+		var spell := SpellCatalog.get_spell(_spell_controller.aimed_spell_id)
+		_controls_hint.text = "%s · Elegí un objetivo · Esc o clic derecho para cancelar" % spell.name
+		_spell_status.text = "Elegí el objetivo con un clic."
+	elif _spell_controller.pending_request != 0:
+		_spell_status.text = "Esperando el resultado…"
+	elif not _spell_controller.server_ready:
+		_spell_status.text = "Esperando al servidor de combate…"
+
+
+func _on_spell_selected(id: int) -> void:
+	if _spell_controller != null:
+		_spell_controller.select_spell(id)
+
+
+func _on_hotkey_pressed(slot: int) -> void:
+	if _spell_controller != null:
+		_spell_controller.aim_hotkey(slot)
+
+
+func _on_hotkey_assigned(slot: int, id: int) -> void:
+	if _spell_controller != null:
+		_spell_controller.assign_hotkey(slot, id)
+
+
+func _on_launch_pressed() -> void:
+	if _spell_controller != null:
+		_spell_controller.aim_selected()
+
+
+func _on_spell_event(event: Dictionary) -> void:
+	var caster := "Tu personaje" if int(event.caster_id) == _local_peer_id else str(event.caster_name)
+	var target := "tu personaje" if int(event.target_id) == _local_peer_id else str(event.target_name)
+	console.append_message("%s lanzó %s sobre %s (%d)." % [caster, event.spell_name, target, event.amount], str(event.effect))
 
 
 func start_session(peer_id: int) -> void:
@@ -111,7 +176,7 @@ func _build_interface() -> void:
 		filter_button.button_pressed = index == 0
 		filter_button.pressed.connect(console.set_channel_filter.bind(["all", "combat", "system"][index]))
 	_label(_frame, "Arena PvP · Prueba privada", Rect2(385, 5, 245, 22), 12)
-	_label(_frame, "Movimiento: WASD · Golpear: CTRL", Rect2(43, 123, 575, 22), 12)
+	_controls_hint = _label(_frame, "Movimiento: WASD · Golpear: CTRL · Hechizos: 1–4", Rect2(43, 123, 575, 22), 12)
 	_minimap = ArenaMinimap.new()
 	_frame.add_child(_minimap)
 	_minimap.position = Vector2(642, 43)
@@ -138,13 +203,24 @@ func _build_interface() -> void:
 		slot.tooltip_text = "Casillero %d · Vacío" % (index + 1)
 		slot.toggle_mode = true
 		slot.pressed.connect(_select_inventory_slot.bind(slot, index + 1))
-	var empty_spells := _label(_spell_panel, "Sin hechizos disponibles.", Rect2(16, 55, 216, 50), 13)
-	empty_spells.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var launch := _art_button(_spell_panel, "lanzar", Rect2(0, 284, 161, 39))
-	launch.name = "LaunchButton"
-	launch.disabled = true
-	launch.modulate = Color(0.55, 0.55, 0.55)
-	launch.tooltip_text = "No hay un hechizo disponible para lanzar."
+	var spell_index := 0
+	for id: int in SpellCatalog.loadout_ids():
+		var entry := SpellSlotButton.new()
+		entry.configure(id)
+		_spell_panel.add_child(entry)
+		entry.position = Vector2(15, 44 + spell_index * 47)
+		entry.size = Vector2(217, 44)
+		entry.pressed.connect(_on_spell_selected.bind(id))
+		_spell_buttons[id] = entry
+		spell_index += 1
+	_spell_status = _label(_spell_panel, "Seleccioná un hechizo y pulsá Lanzar.", Rect2(16, 237, 216, 41), 12)
+	_spell_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_launch_button = _art_button(_spell_panel, "lanzar", Rect2(0, 284, 161, 39))
+	_launch_button.name = "LaunchButton"
+	_launch_button.disabled = true
+	_launch_button.modulate = Color(0.55, 0.55, 0.55)
+	_launch_button.tooltip_text = "Lanzar el hechizo seleccionado: después elegí un objetivo."
+	_launch_button.pressed.connect(_on_launch_pressed)
 	_health_bar = _resource_bar("es_barradevida.png", Vector2(791, 602))
 	_mana_bar = _resource_bar("es_barrademana.png", Vector2(791, 630))
 	_health_label = _label(_frame, "—", Rect2(791, 599, 216, 22), 13)
@@ -173,9 +249,14 @@ func _build_interface() -> void:
 		var reserved := _text_button(_frame, "", rect)
 		reserved.tooltip_text = "Opción no disponible en esta arena."
 	for index in range(10):
-		var macro := _text_button(_frame, str((index + 1) % 10), Rect2(185 + index * 37, 716, 34, 34))
-		macro.tooltip_text = "Acceso %d · Sin asignar" % ((index + 1) % 10)
-		macro.pressed.connect(console.append_message.bind("Este acceso no tiene un hechizo asignado."))
+		var macro := SpellSlotButton.new()
+		macro.configure(0, index)
+		_frame.add_child(macro)
+		macro.position = Vector2(185 + index * 37, 716)
+		macro.size = Vector2(34, 34)
+		macro.pressed.connect(_on_hotkey_pressed.bind(index))
+		macro.spell_dropped.connect(_on_hotkey_assigned)
+		_hotkey_buttons.append(macro)
 
 
 func _fit_interface() -> void:

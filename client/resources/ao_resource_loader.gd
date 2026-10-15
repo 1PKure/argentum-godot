@@ -442,6 +442,28 @@ func get_grh_definition(
 		grh_id
 	)
 
+
+func get_grh_animation(grh_id: int) -> Dictionary:
+	_ensure_loaded()
+	var value := str(_graphics.get("Graphics", {}).get("Grh%d" % grh_id, ""))
+	var parts := value.split("-", false)
+	if parts.size() < 2:
+		return {}
+	var count := int(parts[0])
+	var frames: Array[Dictionary] = []
+	if count == 1:
+		frames.append(_get_static_grh(grh_id))
+		return {"frames": frames, "fps": 1.0}
+	if parts.size() < count + 2:
+		return {}
+	for index in range(count):
+		var frame := _get_static_grh(int(parts[index + 1]))
+		if frame.is_empty():
+			return {}
+		frames.append(frame)
+	var duration := maxf(float(parts[count + 1]), 1.0)
+	return {"frames": frames, "fps": count * 1000.0 / duration}
+
 func _parse_ini_like_file(
 	path: String
 ) -> Dictionary:

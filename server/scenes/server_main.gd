@@ -31,6 +31,7 @@ func _ready() -> void:
 	PlayerNetwork.debug_mana_spend_requested.connect(
 		_on_debug_mana_spend_requested
 	)
+	SpellNetwork.cast_requested.connect(_on_spell_cast_requested)
 
 	var error: Error = (
 		NetworkManager.start_server()
@@ -136,6 +137,17 @@ func _on_basic_attack_requested(
 	PlayerNetwork.broadcast_player_stats_updated(
 		target.to_dictionary()
 	)
+
+
+func _on_spell_cast_requested(peer_id: int, spell_id: int, target: Vector2i, request_id: int) -> void:
+	var result := player_registry.try_cast_spell(peer_id, spell_id, target, request_id)
+	if not result.ok:
+		SpellNetwork.send_rejection(peer_id, request_id, result.message, result.remaining_msec)
+		return
+	PlayerNetwork.broadcast_player_stats_updated(result.caster_state)
+	if int(result.target_state.peer_id) != peer_id:
+		PlayerNetwork.broadcast_player_stats_updated(result.target_state)
+	SpellNetwork.broadcast_result(result.event)
 
 
 func _on_debug_damage_requested(

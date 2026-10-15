@@ -5,6 +5,8 @@ var _players: Dictionary[int, PlayerState] = {}
 
 var _last_move_time: Dictionary[int, int] = {}
 var _last_attack_time: Dictionary[int, int] = {}
+var _last_spell_time: Dictionary[int, int] = {}
+var _last_spell_request: Dictionary[int, int] = {}
 
 var _arena_id: String = (
 	ArenaData.DEFAULT_ARENA_ID
@@ -59,7 +61,9 @@ func add_player(
 	_players[peer_id] = player
 
 	_last_move_time[peer_id] = 0
-	_last_attack_time[peer_id] = 0
+	_last_attack_time[peer_id] = -SpellCatalog.ATTACK_SPELL_GAP_MSEC
+	_last_spell_time[peer_id] = -SpellCatalog.CAST_INTERVAL_MSEC
+	_last_spell_request[peer_id] = 0
 
 	print(
 		"Player registered: %s at tile %s"
@@ -90,6 +94,8 @@ func remove_player(
 	_players.erase(peer_id)
 	_last_move_time.erase(peer_id)
 	_last_attack_time.erase(peer_id)
+	_last_spell_time.erase(peer_id)
+	_last_spell_request.erase(peer_id)
 
 
 func try_move_player(
@@ -125,10 +131,7 @@ func try_move_player(
 		)
 	)
 
-	if (
-		current_time - last_move_time
-		< MovementRules.MOVE_INTERVAL_MSEC
-	):
+	if not MovementRules.is_move_ready(current_time, last_move_time):
 		return null
 
 	var offset: Vector2i = (
@@ -167,9 +170,7 @@ func try_move_player(
 	player.grid_position = new_position
 	player.facing_direction = direction
 
-	_last_move_time[peer_id] = (
-		current_time
-	)
+	_last_move_time[peer_id] = MovementRules.get_accepted_move_time(current_time, last_move_time)
 
 	return player
 
@@ -209,6 +210,8 @@ func try_basic_attack(
 		current_time - last_attack_time
 		< CombatRules.BASIC_ATTACK_COOLDOWN_MSEC
 	):
+		return null
+	if current_time - _last_spell_time.get(attacker_peer_id, -SpellCatalog.SPELL_ATTACK_GAP_MSEC) < SpellCatalog.SPELL_ATTACK_GAP_MSEC:
 		return null
 
 	_last_attack_time[
@@ -259,6 +262,71 @@ func try_basic_attack(
 		)
 
 	return target
+
+
+func try_cast_spell(caster_id: int, spell_id: int, target_position: Vector2i, request_id: int) -> Dictionary:
+	var caster: PlayerState = _players.get(caster_id)
+	if caster == null:
+		return _spell_error("No hay un personaje conectado para lanzar.")
+	if request_id <= _last_spell_request.get(caster_id, 0):
+		return _spell_error("El lanzamiento ya fue procesado.")
+	_last_spell_request[caster_id] = request_id
+	if not caster.is_alive:
+		return _spell_error("No podés lanzar hechizos mientras sos un fantasma.")
+	if not SpellCatalog.is_available(spell_id):
+		return _spell_error("No tenés ese hechizo disponible.")
+	if not MovementRules.is_inside_bounds(target_position):
+		return _spell_error("El objetivo está fuera de la arena.")
+	var target: PlayerState = _find_player_at_position(target_position, -1)
+	if target == null or not target.is_alive:
+		return _spell_error("No hay un objetivo vivo en esa casilla.")
+	var spell := SpellCatalog.get_spell(spell_id)
+	if spell.effect == "damage" and caster_id == target.peer_id:
+		return _spell_error("Elegí a un rival para un hechizo ofensivo.")
+	if caster.current_mana < int(spell.mana):
+		return _spell_error("No tenés suficiente maná para %s." % spell.name)
+	var now := Time.get_ticks_msec()
+	var remaining: int = SpellCatalog.CAST_INTERVAL_MSEC - (now - _last_spell_time.get(caster_id, -SpellCatalog.CAST_INTERVAL_MSEC))
+	if remaining > 0:
+		return _spell_error("Todavía no podés volver a lanzar.", remaining)
+	remaining = SpellCatalog.ATTACK_SPELL_GAP_MSEC - (now - _last_attack_time.get(caster_id, -SpellCatalog.ATTACK_SPELL_GAP_MSEC))
+	if remaining > 0:
+		return _spell_error("Esperá el intervalo entre golpe y magia.", remaining)
+	# No await occurs between validation and mutation: cost and effect are atomic.
+	var rolled := randi_range(int(spell.min_amount), int(spell.max_amount))
+	var previous_health := target.current_health
+	if spell.effect == "healing":
+		target.restore_health(rolled)
+	else:
+		target.apply_damage(rolled)
+	caster.spend_mana(int(spell.mana))
+	_last_spell_time[caster_id] = now
+	return {
+		"ok": true,
+		"caster_state": caster.to_dictionary(),
+		"target_state": target.to_dictionary(),
+		"event": {
+			"request_id": request_id,
+			"caster_id": caster_id,
+			"target_id": target.peer_id,
+			"caster_name": caster.display_name,
+			"target_name": target.display_name,
+			"spell_id": spell_id,
+			"spell_name": spell.name,
+			"words": spell.words,
+			"effect": spell.effect,
+			"amount": absi(target.current_health - previous_health),
+			"mana_cost": int(spell.mana),
+			"origin_x": caster.grid_position.x,
+			"origin_y": caster.grid_position.y,
+			"target_x": target.grid_position.x,
+			"target_y": target.grid_position.y,
+		}
+	}
+
+
+func _spell_error(message: String, remaining_msec: int = 0) -> Dictionary:
+	return {"ok": false, "message": message, "remaining_msec": remaining_msec}
 
 
 func apply_damage(
