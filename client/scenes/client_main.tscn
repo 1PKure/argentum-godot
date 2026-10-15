@@ -4,6 +4,7 @@
 [ext_resource type="Script" uid="uid://bix5ukrbr08fu" path="res://client/scenes/client_world.gd" id="2_2jffr"]
 [ext_resource type="Script" uid="uid://caslkqqnk0rgh" path="res://client/input/local_input_controller.gd" id="3_i2ki5"]
 [ext_resource type="PackedScene" uid="uid://cdcevowuiwuo" path="res://client/scenes/CombatArena.tscn" id="4_g3pht"]
+[ext_resource type="Script" path="res://client/ui/combat_hud.gd" id="5_hud"]
 
 [node name="ClientMain" type="Node" unique_id=474296746]
 script = ExtResource("1_xh82j")
@@ -16,3 +17,13 @@ metadata/_custom_type_script = "uid://bix5ukrbr08fu"
 script = ExtResource("3_i2ki5")
 
 [node name="CombatArena" parent="." unique_id=2096086313 instance=ExtResource("4_g3pht")]
+
+[node name="CombatHUD" type="Control" parent="."]
+layout_mode = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("5_hud")

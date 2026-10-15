@@ -5,6 +5,8 @@ const CONNECTION_PANEL_SCRIPT := preload(
 )
 
 @onready var _local_input: LocalInputController = $LocalInputController
+@onready var _world: ClientWorld = $ClientWorld
+@onready var _hud: CombatHUD = $CombatHUD
 
 var _connection_panel: ServerConnectionPanel
 
@@ -12,6 +14,8 @@ var _connection_panel: ServerConnectionPanel
 func _ready() -> void:
 	print("Starting Argentum client...")
 	_local_input.set_process(false)
+	_hud.mount_world(_world)
+	_hud.disconnect_requested.connect(_disconnect_from_arena)
 
 	NetworkManager.connected_to_server.connect(_on_connected_to_server)
 	NetworkManager.connection_failed.connect(_on_connection_failed)
@@ -50,6 +54,14 @@ func _cancel_connection() -> void:
 	_connection_panel.show_connection("Conexión cancelada. Podés volver a intentar.")
 
 
+func _disconnect_from_arena() -> void:
+	_local_input.set_process(false)
+	NetworkManager.stop()
+	_world.clear_session()
+	_hud.end_session("Te desconectaste de la arena.")
+	_connection_panel.show_connection("Desconectado. Podés volver a conectar.")
+
+
 func _unhandled_key_input(event: InputEvent) -> void:
 	if OS.has_feature("web") or not OS.is_debug_build():
 		return
@@ -70,6 +82,7 @@ func _on_connection_attempt_started(
 func _on_connected_to_server() -> void:
 	print("CLIENT MAIN: Connection confirmed.")
 	_connection_panel.hide_connection()
+	_hud.start_session(multiplayer.get_unique_id())
 	_local_input.set_process(true)
 
 
@@ -84,4 +97,6 @@ func _on_connection_failed() -> void:
 func _on_server_disconnected() -> void:
 	print("CLIENT MAIN: Server disconnected.")
 	_local_input.set_process(false)
+	_world.clear_session()
+	_hud.end_session("Se perdió la conexión con el servidor.")
 	_connection_panel.show_connection("Se perdió la conexión con el servidor.", true)

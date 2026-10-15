@@ -344,6 +344,10 @@ func _grid_to_world(
 	)
 
 
+func clear_session() -> void:
+	_clear_players()
+
+
 func _clear_players() -> void:
 	for avatar in _avatars.values():
 		avatar.queue_free()
