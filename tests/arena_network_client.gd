@@ -114,7 +114,10 @@ func _run() -> void:
 	_key(KEY_1, true)
 	_key(KEY_1, false)
 	await process_frame
-	var point: Vector2 = world.get_global_transform() * (world.WORLD_ORIGIN + Vector2(24, 24))
+	# Pick an empty tile visible from the current camera. Tile (0, 0) can be
+	# outside the game viewport after the additional healing-follow movement.
+	var empty_tile: Vector2i = hud._players[local_id].grid_position + Vector2i(0, 2)
+	var point: Vector2 = world.get_global_transform() * world._grid_to_world(empty_tile)
 	await _click_at(point)
 	await _wait_for(func() -> bool: return controller.pending_request == 0)
 	_check(hud._players[local_id].current_mana == 2985, "Empty-target rejection does not spend mana")
@@ -132,7 +135,7 @@ func _run() -> void:
 	_key(KEY_1, false)
 	await process_frame
 	_check(controller.aimed_spell_id == 12, "Reassigned numeric hotkey uses the new spell")
-	await _click_at(world.get_global_transform() * (world.WORLD_ORIGIN + Vector2(24, 24)), MOUSE_BUTTON_RIGHT)
+	await _click_at(point, MOUSE_BUTTON_RIGHT)
 	_check(controller.aimed_spell_id == 0, "Right click also cancels targeting")
 	controller.assign_hotkey(0, 1)
 	_key(KEY_D, true)
