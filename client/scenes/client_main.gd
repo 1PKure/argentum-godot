@@ -1,56 +1,87 @@
 extends Node
 
+const CONNECTION_PANEL_SCRIPT := preload(
+	"res://client/ui/server_connection_panel.gd"
+)
+
+@onready var _local_input: LocalInputController = $LocalInputController
+
+var _connection_panel: ServerConnectionPanel
+
 
 func _ready() -> void:
 	print("Starting Argentum client...")
+	_local_input.set_process(false)
 
-	NetworkManager.connected_to_server.connect(
-		_on_connected_to_server
-	)
+	NetworkManager.connected_to_server.connect(_on_connected_to_server)
+	NetworkManager.connection_failed.connect(_on_connection_failed)
+	NetworkManager.server_disconnected.connect(_on_server_disconnected)
+	NetworkManager.connection_attempt_started.connect(_on_connection_attempt_started)
 
-	NetworkManager.connection_failed.connect(
-		_on_connection_failed
-	)
+	_connection_panel = CONNECTION_PANEL_SCRIPT.new()
+	add_child(_connection_panel)
+	_connection_panel.setup(NetworkConstants.get_server_url())
+	_connection_panel.connect_requested.connect(_connect_to_server)
+	_connection_panel.cancel_requested.connect(_cancel_connection)
 
-	NetworkManager.server_disconnected.connect(
-		_on_server_disconnected
-	)
-
-	print("Client is waiting for server connection...")
-
-	var error: Error = NetworkManager.start_client()
-
-	if error != OK:
-		push_error(
-			"Client startup failed. Error: %s"
-			% error
-		)
+	if OS.has_feature("web"):
+		_connection_panel.show_connection("Elegí el servidor e iniciá la conexión.")
 		return
 
-	print("Client startup completed.")
+	_connect_to_server(NetworkConstants.get_server_url())
+
+
+func _connect_to_server(server_url: String) -> void:
+	_local_input.set_process(false)
+	_connection_panel.show_connection("Conectando al servidor…")
+	_connection_panel.set_busy(true)
+
+	var error: Error = NetworkManager.start_client(server_url)
+	if error != OK:
+		NetworkManager.stop()
+		_connection_panel.show_connection(
+			"No se pudo iniciar la conexión. Revisá la dirección. Error: %s" % error,
+			true
+		)
+
+
+func _cancel_connection() -> void:
+	NetworkManager.stop()
+	_connection_panel.show_connection("Conexión cancelada. Podés volver a intentar.")
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if not OS.is_debug_build():
+	if OS.has_feature("web") or not OS.is_debug_build():
 		return
 
 	if event is InputEventKey:
-		if event.pressed and not event.echo:
-			if event.keycode == KEY_F2:
-				DevServerLauncher.launch_extra_client()
+		if event.pressed and not event.echo and event.keycode == KEY_F2:
+			DevServerLauncher.launch_extra_client()
+
+
+func _on_connection_attempt_started(
+	_url: String,
+	attempt: int,
+	maximum: int
+) -> void:
+	_connection_panel.set_message("Conectando… intento %d de %d." % [attempt, maximum])
 
 
 func _on_connected_to_server() -> void:
 	print("CLIENT MAIN: Connection confirmed.")
+	_connection_panel.hide_connection()
+	_local_input.set_process(true)
 
 
 func _on_connection_failed() -> void:
-	push_error(
-		"CLIENT MAIN: Server connection failed."
+	_local_input.set_process(false)
+	_connection_panel.show_connection(
+		"No se pudo conectar. Comprobá que el servidor esté activo y la dirección sea correcta.",
+		true
 	)
 
 
 func _on_server_disconnected() -> void:
-	print(
-		"CLIENT MAIN: Server disconnected."
-	)
+	print("CLIENT MAIN: Server disconnected.")
+	_local_input.set_process(false)
+	_connection_panel.show_connection("Se perdió la conexión con el servidor.", true)
