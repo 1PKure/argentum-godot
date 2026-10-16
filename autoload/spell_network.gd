@@ -1,11 +1,12 @@
 extends Node
 
+signal shot_requested(peer_id: int, target: Vector2i, request_id: int)
 signal cast_requested(peer_id: int, spell_id: int, target: Vector2i, request_id: int)
 signal spell_resolved(event: Dictionary)
 signal spell_rejected(request_id: int, message: String, remaining_msec: int)
 signal server_capabilities_received(available: bool)
 
-const PROTOCOL_VERSION := 3
+const PROTOCOL_VERSION := 4
 var server_available := false
 var _query_generation := 0
 
@@ -76,3 +77,16 @@ func _receive_rejection(request_id: int, message: String, remaining_msec: int) -
 @rpc("authority", "call_remote", "reliable")
 func _receive_result(event: Dictionary) -> void:
 	spell_resolved.emit(event)
+
+
+func request_shot(target: Vector2i, request_id: int) -> bool:
+	if not server_available or not _can_send():
+		return false
+	_request_shot.rpc_id(NetworkConstants.SERVER_PEER_ID, target.x, target.y, request_id)
+	return true
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _request_shot(target_x: int, target_y: int, request_id: int) -> void:
+	if multiplayer.is_server():
+		shot_requested.emit(multiplayer.get_remote_sender_id(), Vector2i(target_x, target_y), request_id)

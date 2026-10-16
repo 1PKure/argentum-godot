@@ -55,6 +55,9 @@ var _bottom_back: Panel
 var _class_panel: ClassPresetPanel
 var _equipped_label: Label
 var _book_class_id := -1
+var _inventory_revision := -1
+var _inventory_peer := 0
+var _pixel_scale := 2
 
 
 func _ready() -> void:
@@ -70,6 +73,7 @@ func _ready() -> void:
 	PlayerNetwork.player_stats_updated.connect(_on_player_stats_updated)
 	SpellNetwork.spell_resolved.connect(_on_spell_event)
 	RecoveryNetwork.action_resolved.connect(_on_recovery_event)
+	InventoryNetwork.rejected.connect(func(message: String) -> void: console.append_message(message))
 	RecoveryNetwork.action_rejected.connect(func(message: String) -> void: console.append_message(message))
 	show_inventory()
 	_update_local_stats()
@@ -80,6 +84,7 @@ func mount_world(world: Node2D) -> void:
 	_world = world
 	_world.reparent(game_area)
 	_world.configure_viewport(game_area.size)
+	_update_pixel_scale()
 
 
 func configure_spells(controller: SpellTargetingController) -> void:
@@ -96,14 +101,17 @@ func _update_spell_ui() -> void:
 		_spell_buttons[id].button_pressed = id == _spell_controller.selected_spell_id
 	for index in range(_hotkey_buttons.size()):
 		var id: int = _spell_controller.bindings[index]
-		if _hotkey_buttons[index].spell_id != id:
-			_hotkey_buttons[index].configure(id, index)
+		if _hotkey_buttons[index].spell_id != id or _hotkey_buttons[index].class_id != _spell_controller.class_id:
+			_hotkey_buttons[index].configure(id, index, _spell_controller.class_id)
 		_hotkey_buttons[index].button_pressed = id != 0 and id == _spell_controller.aimed_spell_id
 	_launch_button.disabled = not _spell_controller.can_launch()
 	_launch_button.modulate = Color.WHITE if not _launch_button.disabled else Color(0.55, 0.55, 0.55)
 	_controls_hint.text = "WASD · CTRL golpe · 1–0 hechizos · M meditar · Q vida · E maná"
 	_spell_status.text = "Seleccioná un hechizo y pulsá Lanzar."
-	if _spell_controller.aimed_spell_id != 0:
+	if _spell_controller.aimed_attack:
+		_controls_hint.text = "Disparo de arco · Clic en un rival · Esc o clic derecho para cancelar"
+		_spell_status.text = "Elegí el objetivo del arco con un clic."
+	elif _spell_controller.aimed_spell_id != 0:
 		show_spells()
 		var spell := SpellCatalog.get_spell(_spell_controller.aimed_spell_id)
 		_controls_hint.text = "%s · Elegí un objetivo · Esc o clic derecho para cancelar" % spell.name
@@ -149,7 +157,7 @@ func _on_spell_event(event: Dictionary) -> void:
 	var detail := str(event.get("status_message", ""))
 	if int(event.amount) > 0:
 		detail = "%d" % int(event.amount)
-	console.append_message("%s lanzó %s sobre %s (%s)." % [caster, event.spell_name, target, detail], "healing" if str(event.effect) == "healing" else "damage")
+	console.append_message("%s %s %s sobre %s (%s)." % [caster, "usó" if event.get("action", "") == "shot" else "lanzó", event.spell_name, target, detail], "healing" if str(event.effect) == "healing" else "damage")
 
 
 func start_session(peer_id: int) -> void:
@@ -192,7 +200,7 @@ func _build_interface() -> void:
 	add_child(backdrop)
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_frame = _control(self, "AO20Frame", Rect2(Vector2.ZERO, DESIGN_SIZE))
-	_frame.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	_frame.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_header_art = _frame_patch(Rect2(0, 0, 752, 152), 150, 110, 32, 8)
 	_world_art = _frame_patch(Rect2(0, 152, 752, 616), 8, 8, 0, 60)
 	_side_art = _frame_patch(Rect2(752, 0, 272, 768), 0, 0, 160, 270)
@@ -247,7 +255,7 @@ func _build_interface() -> void:
 		slot.position = Vector2(10 + (index % 6) * 36, 16 + (index / 6) * 36)
 		slot.size = Vector2(34, 34)
 		slot.configure(index, _inventory_layout)
-		slot.item_used.connect(_request_recovery)
+		slot.item_used.connect(_use_inventory_item)
 		slot.item_dropped.connect(_move_inventory_item)
 		_inventory_slots.append(slot)
 	_equipped_label = _label(_inventory_panel, "", Rect2(12, 268, 216, 126), 12)
@@ -345,6 +353,15 @@ func _build_interface() -> void:
 		class_style.set_border_width_all(1)
 		_reserved_buttons[0].add_theme_stylebox_override(style_name, class_style)
 	_reserved_buttons[0].pressed.connect(_open_classes)
+	_reserved_buttons[1].text = "Píxel 2×"
+	_reserved_buttons[1].tooltip_text = "Alternar escala nítida 1× / 2× del mundo. No cambia la velocidad ni las reglas."
+	for style_name: String in ["normal", "hover", "pressed"]:
+		_reserved_buttons[1].add_theme_stylebox_override(style_name, _reserved_buttons[0].get_theme_stylebox(style_name))
+	_reserved_buttons[1].pressed.connect(func() -> void:
+		_pixel_scale = 1 if _pixel_scale == 2 else 2
+		_reserved_buttons[1].text = "Píxel %d×" % _pixel_scale
+		_update_pixel_scale()
+	)
 	for index in range(10):
 		var macro := SpellSlotButton.new()
 		macro.configure(0, index)
@@ -492,6 +509,7 @@ func _fit_interface() -> void:
 		_hotkey_buttons[index].position = Vector2((side_x - 410) * 0.5 + index * 41, height - 49)
 	if _world != null:
 		_world.resize_viewport(game_area.size)
+		_update_pixel_scale()
 
 
 func _on_snapshot_received(players: Array) -> void:
@@ -500,7 +518,7 @@ func _on_snapshot_received(players: Array) -> void:
 		var state := PlayerState.from_dictionary(data)
 		_players[state.peer_id] = state
 		if state.peer_id == _local_peer_id and _spell_controller != null:
-			_spell_controller.apply_class(state.class_id)
+			_spell_controller.apply_class(state.class_id, state.preset_revision)
 	console.append_message("Arena lista · %d jugador(es) conectados." % _players.size())
 	_update_local_stats()
 
@@ -529,7 +547,7 @@ func _on_player_moved(data: Dictionary) -> void:
 func _on_player_stats_updated(data: Dictionary) -> void:
 	var state := PlayerState.from_dictionary(data)
 	var previous: PlayerState = _players.get(state.peer_id)
-	if previous != null and previous.class_id == state.class_id:
+	if previous != null and previous.class_id == state.class_id and previous.preset_revision == state.preset_revision:
 		var health_change := state.current_health - previous.current_health
 		var mana_change := state.current_mana - previous.current_mana
 		var player_name := _player_name(state)
@@ -555,14 +573,14 @@ func _update_local_stats() -> void:
 	var state: PlayerState = _players.get(_local_peer_id)
 	_name_label.text = state.display_name if state != null else "Sin personaje"
 	if state != null:
-		var profile := ClassCatalog.get_profile(state.class_id)
+		var profile := ClassCatalog.get_equipped_profile(state.class_id, state.equipped_items)
 		_name_label.text = "%s · %s" % [state.display_name, profile.name]
 		var equipped := PackedStringArray()
 		for slot: String in ["armor", "weapon", "helmet", "shield", "accessory", "ammunition"]:
-			var item := ClassCatalog.get_item(int(profile[slot]))
+			var item := ClassCatalog.get_item(int(state.equipped_items.get(slot, 0)))
 			if not item.is_empty():
 				equipped.append(str(item.Name))
-		_equipped_label.text = "EQUIPADO · %s\n%s\nPociones ilimitadas · Arrastrar: mover" % [profile.name, " · ".join(equipped)]
+		_equipped_label.text = "EQUIPADO · %s\n%s\nE: equipado · Clic: equipar / usar · Arrastrar: mover" % [profile.name, " · ".join(equipped)]
 	else:
 		_equipped_label.text = "Sin personaje conectado."
 	if state != null and state.is_ghost:
@@ -574,6 +592,15 @@ func _update_local_stats() -> void:
 	_health_label.text = "%d / %d" % [state.current_health, state.max_health] if state != null else "—"
 	_mana_label.text = "%d / %d" % [state.current_mana, state.max_mana] if state != null else "—"
 	_position_label.text = "Bosque · %d, %d" % [state.grid_position.x, state.grid_position.y] if state != null else "Bosque"
+	if state != null and (state.inventory_revision != _inventory_revision or state.peer_id != _inventory_peer):
+		_inventory_revision = state.inventory_revision
+		_inventory_peer = state.peer_id
+		_inventory_layout.apply_state(state)
+		for index in range(_inventory_slots.size()):
+			_inventory_slots[index].configure(index, _inventory_layout)
+	elif state == null:
+		_inventory_revision = -1
+		_inventory_peer = 0
 	_minimap.players = _players
 	_minimap.local_peer_id = _local_peer_id
 	_minimap.queue_redraw()
@@ -581,12 +608,26 @@ func _update_local_stats() -> void:
 
 
 func _move_inventory_item(source: int, destination: int, action: String) -> void:
-	if not _inventory_layout.move_item(source, destination, action):
+	if not _inventory_layout.can_move(source, destination, action):
 		return
-	for index in range(_inventory_slots.size()):
-		_inventory_slots[index].configure(index, _inventory_layout)
-	if _inventory_layout.save() != OK:
-		console.append_message("El orden se conserva en esta sesión; no se pudo guardarlo en el dispositivo.")
+	InventoryNetwork.request_move(source, destination, _inventory_layout.item_id(source), _inventory_layout.revision)
+
+
+func _use_inventory_item(action: String) -> void:
+	if action.begins_with("item:"):
+		var index := _inventory_layout.actions.find(action)
+		if index >= 0:
+			_spell_controller.cancel_targeting()
+			InventoryNetwork.request_use(index, _inventory_layout.item_id(index), _inventory_layout.revision)
+	else:
+		_request_recovery(action)
+
+
+func _update_pixel_scale() -> void:
+	if _world == null:
+		return
+	var screen_scale := maxf(game_area.get_screen_transform().get_scale().x, 0.01)
+	_world.set_pixel_scale(float(_pixel_scale) / screen_scale)
 
 
 func _control(parent: Node, node_name: String, rect: Rect2) -> Control:

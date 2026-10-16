@@ -88,39 +88,6 @@
     "ammunition": 552
   },
   {
-    "id": 9,
-    "name": "Trabajador",
-    "key": "Trabajador",
-    "armor": 2920,
-    "weapon": 398,
-    "helmet": 132,
-    "shield": 0,
-    "accessory": 0,
-    "ammunition": 0
-  },
-  {
-    "id": 10,
-    "name": "Pirata",
-    "key": "Pirata",
-    "armor": 2830,
-    "weapon": 44,
-    "helmet": 0,
-    "shield": 0,
-    "accessory": 0,
-    "ammunition": 0
-  },
-  {
-    "id": 11,
-    "name": "Ladrón",
-    "key": "Ladron",
-    "armor": 2830,
-    "weapon": 44,
-    "helmet": 0,
-    "shield": 0,
-    "accessory": 0,
-    "ammunition": 0
-  },
-  {
     "id": 12,
     "name": "Bandido",
     "key": "Bandido",

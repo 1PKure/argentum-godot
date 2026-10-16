@@ -10,7 +10,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var resources = root.get_node("AOResources")
-	_check(ClassCatalog.all_ids().size() == 12, "All twelve public AO20 classes are available")
+	_check(ClassCatalog.all_ids().size() == 9, "Nine selected PvP classes are available")
 	for id: int in ClassCatalog.all_ids():
 		var profile := ClassCatalog.get_profile(id)
 		_check(int(profile.max_health) > 0 and int(profile.max_mana) >= 0, "%s has a real resource profile" % profile.name)
@@ -25,6 +25,9 @@ func _run() -> void:
 			if frames != null:
 				for direction: String in ["up", "down", "left", "right"]:
 					complete = complete and frames.get_frame_count("walk_" + direction) > 0
+					for frame_index in range(frames.get_frame_count("walk_" + direction)):
+						var texture := frames.get_frame_texture("walk_" + direction, frame_index) as AtlasTexture
+						complete = complete and texture != null and texture.atlas != null
 			_check(complete, "%s %s renders in all four directions" % [profile.name, slot])
 		for slot: String in ["armor", "weapon", "helmet", "shield", "accessory", "ammunition"]:
 			if int(profile[slot]) > 0:
@@ -35,7 +38,7 @@ func _run() -> void:
 	_check(ClassCatalog.get_profile(3).max_health > ClassCatalog.get_profile(1).max_health, "Warrior has more health than mage")
 	_check(ClassCatalog.get_profile(1).max_mana > ClassCatalog.get_profile(7).max_mana, "Mage has more mana than paladin")
 	_check(ClassCatalog.physical_damage(3, 1) > ClassCatalog.physical_damage(1, 1), "Warrior equipment and class improve physical damage")
-	_check(ClassCatalog.physical_damage(3, 3) < ClassCatalog.physical_damage(3, 11), "Armor actually reduces physical damage")
+	_check(ClassCatalog.physical_damage(3, 3) < ClassCatalog.physical_damage(3, 8), "Armor actually reduces physical damage")
 	_check(ClassCatalog.magic_damage(100, 1, 1) != 100, "Weapon magic bonus and helmet resistance affect spell damage")
 	var registry = load("res://server/systems/player_registry.gd").new()
 	root.add_child(registry)
@@ -43,47 +46,53 @@ func _run() -> void:
 	var target: PlayerState = registry.add_player(802)
 	var original := player.to_dictionary()
 	_check(not registry.try_select_class(801, 999, 10000).ok and player.to_dictionary() == original, "Unknown class does not mutate state")
-	target.current_mana -= 1
-	_check(not registry.try_select_class(802, 3, 10000).ok and target.current_mana == 2999, "Changing class cannot refill missing mana")
-	target.current_mana = target.max_mana
+	_check(ClassCatalog.get_profile(9).is_empty() and ClassCatalog.get_profile(10).is_empty() and ClassCatalog.get_profile(11).is_empty(), "Worker, pirate and thief cannot be selected")
+	player.current_health = 1
+	player.current_mana = 0
+	player.is_meditating = true
+	player.active_effects.assign(["Paralizado"])
 	var result: Dictionary = registry.try_recovery_action(801, "class:8", 1, 10000)
-	_check(result.ok and player.class_id == 8 and player.max_mana == 0, "Recovery RPC dispatch applies hunter preset on the server")
-	_check(PlayerState.from_dictionary(player.to_dictionary()).class_id == 8, "Class survives a network snapshot round trip")
-	_check(not registry.try_recovery_action(801, "class:3", 1, 10000).ok and player.class_id == 8, "Duplicate selection requests cannot switch class")
-	_check(not registry.try_cast_spell(801, 1, target.grid_position, 1, 10000).ok and target.current_health == target.max_health, "Forged hunter magic request is rejected without effect")
-	_check(not registry.try_recovery_action(801, "meditate", 2, 10000).ok and not player.is_meditating, "Nonmagical classes cannot meditate")
-	_check(not ClassCatalog.can_cast(5, 113) and ClassCatalog.can_cast(6, 113), "Druid and bard have distinct spell presets")
+	_check(result.ok and player.class_id == 8 and player.max_mana == 0 and player.current_health == player.max_health and player.active_effects.is_empty(), "A depleted meditating character freely switches to a ready hunter")
+	_check(PlayerState.from_dictionary(player.to_dictionary()).equipped_items == player.equipped_items, "Inventory and equipment survive a snapshot round trip")
+	_check(not registry.try_recovery_action(801, "class:3", 1, 10000).ok and player.class_id == 8, "Duplicate requests cannot reapply a preset")
+	_check(not registry.try_cast_spell(801, 1, target.grid_position, 1, 10000).ok, "Forged hunter magic request is rejected")
+	_check(not registry.try_recovery_action(801, "meditate", 2, 10000).ok, "Hunter cannot meditate")
 	player.grid_position = Vector2i(1, 2)
-	player.facing_direction = MovementRules.Direction.EAST
 	target.grid_position = Vector2i(3, 2)
-	_check(registry.try_basic_attack(801, 7000) == null and target.current_health == target.max_health, "Blocked terrain stops a hunter arrow before its target")
+	_check(not registry.try_ranged_attack(801, target.grid_position, 1, 10000).ok, "Aimed arrows are blocked by terrain")
 	player.grid_position = Vector2i(4, 5)
 	target.grid_position = Vector2i(13, 5)
-	_check(registry.try_basic_attack(801, 8000) == null, "Hunter cannot hit past its eight-tile range")
-	var blocker: PlayerState = registry.add_player(803)
-	blocker.grid_position = Vector2i(6, 5)
-	target.grid_position = Vector2i(10, 5)
-	_check(registry.try_basic_attack(801, 9000) == blocker and target.current_health == target.max_health, "Hunter hits the first living rival in the facing line")
-	registry.remove_player(803)
-	player.grid_position = Vector2i(4, 5)
-	player.facing_direction = MovementRules.Direction.EAST
-	target.grid_position = Vector2i(10, 5)
-	_check(registry.try_basic_attack(801, 10000) == target and target.current_health < target.max_health, "Hunter hits an aligned rival six tiles away")
-	_check(not registry.try_select_class(801, 3, 19999).ok, "Combat lock blocks switching at 9999 ms")
-	var cooldown: int = registry._last_attack_time[801]
-	_check(registry.try_select_class(801, 3, 20000).ok and player.class_id == 3, "Class switch accepts the exact ten-second peace boundary")
-	_check(registry._last_attack_time[801] == cooldown, "Class selection preserves existing action cooldowns")
-	_check(registry.try_basic_attack(801, 21000) == null, "Warrior cannot reuse the hunter's ranged attack")
+	_check(not registry.try_ranged_attack(801, target.grid_position, 2, 10000).ok, "Aimed arrows respect eight-tile range")
+	target.grid_position = Vector2i(10, 6)
+	_check(registry.try_basic_attack(801, 10000) == null and target.current_health == target.max_health, "CTRL's legacy physical RPC cannot fire a hunter arrow")
+	result = registry.try_ranged_attack(801, target.grid_position, 3, 10000)
+	_check(result.ok and result.event.amount > 0 and player.current_mana == 0, "Click-targeted diagonal arrow applies real damage without mana")
+	var health := target.current_health
+	_check(not registry.try_ranged_attack(801, target.grid_position, 3, 10650).ok and target.current_health == health, "Arrow request replay cannot duplicate damage")
+	_check(not registry.try_ranged_attack(801, target.grid_position, 4, 10649).ok, "Arrow cooldown rejects one millisecond early")
+	_check(registry.try_ranged_attack(801, target.grid_position, 5, 10650).ok, "Arrow accepts at the 650 ms boundary")
+	var weapon_id := int(player.equipped_items.weapon)
+	var weapon_index := player.inventory.find(weapon_id)
+	var revision := player.inventory_revision
+	result = registry.try_inventory_move(801, weapon_index, 41, weapon_id, revision, 1)
+	_check(result.ok and player.inventory[41] == weapon_id and player.equipped_items.weapon == weapon_id, "Moving equipped bow preserves ownership and equip state")
+	_check(not registry.try_inventory_move(801, weapon_index, 40, weapon_id, revision, 2).ok and player.inventory.count(weapon_id) == 1, "A stale drag cannot duplicate the old bow")
+	result = registry.try_inventory_use(801, 41, weapon_id, player.inventory_revision, 3)
+	_check(result.ok and not player.equipped_items.has("weapon") and player.inventory[41] == weapon_id, "Clicking equipped bow unequips it without removing the item")
+	_check(not registry.try_ranged_attack(801, target.grid_position, 6, 12000).ok, "Unequipped hunter bow cannot fire")
+	_check(registry.try_inventory_use(801, 41, weapon_id, player.inventory_revision, 4).ok and player.equipped_items.weapon == weapon_id, "Clicking moved bow equips it again")
+	var armor_id := int(target.equipped_items.armor)
+	var armor_index := target.inventory.find(armor_id)
+	var armored_damage := ClassCatalog.physical_damage(8, 1, player.equipped_items, target.equipped_items)
+	registry.try_inventory_use(802, armor_index, armor_id, target.inventory_revision, 1)
+	_check(ClassCatalog.physical_damage(8, 1, player.equipped_items, target.equipped_items) > armored_damage, "Unequipping armor changes actual incoming damage")
+	_check(not registry.try_inventory_use(801, 41, 1788, player.inventory_revision, 5).ok, "A forged foreign item cannot be equipped")
 	player.apply_damage(1)
-	_check(not registry.try_select_class(801, 1, 40000).ok, "Changing class cannot refill missing health")
-	player.current_health = player.max_health
-	player.active_effects.assign(["Paralizado"])
-	_check(not registry.try_select_class(801, 1, 40000).ok, "Changing class cannot remove an active status")
-	player.active_effects.clear()
+	_check(registry.try_select_class(801, 3, 10651).ok and player.class_id == 3 and player.current_health == player.max_health, "Preset selection remains free immediately after combat")
 	player.is_alive = false
-	_check(not registry.try_select_class(801, 1, 40000).ok, "Ghosts cannot change class to resurrect")
-	registry.try_recovery_action(801, "respawn", 3, 40000)
-	_check(player.class_id == 3 and player.max_health == int(ClassCatalog.get_profile(3).max_health), "Respawn keeps the selected class and equipment")
+	_check(registry.try_select_class(801, 1, 10652).ok and player.is_alive, "Selecting a preset also prepares a dead test character")
+	var preset_revision := player.preset_revision
+	_check(registry.try_select_class(801, 1, 10653).ok and player.preset_revision > preset_revision, "Current preset can be reapplied without a wait")
 	registry.queue_free()
 	var controller = load("res://client/input/spell_targeting_controller.gd").new()
 	root.add_child(controller)
@@ -91,11 +100,12 @@ func _run() -> void:
 	controller.server_ready = true
 	controller.aim_spell(1)
 	controller.apply_class(8)
-	_check(controller.aimed_spell_id == 0 and controller.bindings.count(0) == 10 and not controller.can_launch(), "Hunter selection clears the spell cursor and grants an empty macro preset")
+	_check(controller.aimed_spell_id == 0 and controller.bindings[2] == ClassCatalog.ATTACK_BINDING and not controller.can_launch(), "Hunter selection clears the spell cursor and grants a physical attack macro")
 	controller.aim_spell(53)
 	_check(controller.aimed_spell_id == 0, "A numeric macro cannot arm forbidden hunter magic")
 	controller.apply_class(1)
 	_check(controller.bindings[0] != 0, "Returning to a caster restores its own macro preset")
+	_check(ClassCatalog.get_profile(1).bindings.slice(0, 4) == [25, 27, 51, 31], "Generic mage macros use control, remover, damage and healing order")
 	controller.queue_free()
 	var visual = load("res://client/characters/player_visual.tscn").instantiate()
 	root.add_child(visual)

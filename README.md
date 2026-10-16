@@ -24,10 +24,12 @@ See [spell data, rules and test scope](docs/SPELLS.md) and [movement timing](doc
 
 M toggles meditation; Q/E drink health/mana potions (original +27 HP / +5% maximum MP). The default mage testing preset has 500 HP /3000 MP; other classes use their own profiles, with unlimited arena potions and Respawn after death. The camera follows the local interpolated avatar, while the HUD fills the window from a 1280×800 design base. The book supports name/ID search and a full-catalog filter with reasons for entries that require unported systems. See [recovery rules](docs/RECOVERY.md), [the exact catalog](docs/SPELL_CATALOG.md) and [movement/camera validation](docs/MOVEMENT.md).
 
-Both potions can be used during meditation without resetting its timing; filling mana ends it. The meditation FX is 30% smaller and grounded at the feet in front of the body. Spell impacts/results follow the target and words follow the caster. Drag inventory supplies into empty slots or onto each other to rearrange them; the per-device layout is saved and dragging never consumes a potion.
+Both potions can be used during meditation without resetting its timing; filling mana ends it. The meditation FX is 30% smaller and grounded at the feet in front of the body. Spell impacts/results follow the target and words follow the caster. Drag inventory supplies into empty slots or onto each other to rearrange them; the server keeps this session layout and dragging never consumes a potion.
 
 ## Class presets
 
-The **Clases** button opens twelve AO20-based arena presets with visible armor, weapon, shield and helmet, server-enforced stats and spell permissions, and separate class hotkeys. Hunter uses an eight-tile facing-line physical bow attack without magic. See [class rules, adaptations and test steps](docs/CLASSES.md). These are provisional arena presets; advanced class specialties remain pending.
+The **Clases** button opens nine AO20-based arena presets with visible armor, weapon, shield and helmet, server-enforced stats and spell permissions, and separate class hotkeys. Hunter uses CTRL/3 to aim, then clicks a rival for an eight-tile physical bow attack without magic. See [class rules, adaptations and test steps](docs/CLASSES.md). These are provisional arena presets; advanced class specialties remain pending.
 
 Only free infrastructure is in scope. Accounts are optional; the private web client still connects to the local WSS dedicated. See [the zero-cost policy](docs/HOSTING_BUDGET.md).
+
+Equipment now lives in the server inventory: drag to move/swap, click to equip/unequip, E marks equipped items. Presets can be switched or reset freely during practice. Initial macros follow control/remover/damage/healing categories. The Píxel 1×/2× control renders the world at integer source-pixel scale; see [CLASSES.md](docs/CLASSES.md).

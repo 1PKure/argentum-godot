@@ -11,7 +11,8 @@ var _last_recovery_request: Dictionary[int, int] = {}
 var _last_potion_time: Dictionary[int, int] = {}
 var _next_meditation_tick: Dictionary[int, int] = {}
 var _spell_cooldowns: Dictionary = {}
-var _last_combat_time: Dictionary[int, int] = {}
+var _last_inventory_request: Dictionary[int, int] = {}
+var _last_shot_request: Dictionary[int, int] = {}
 var _status_system := ArenaStatusSystem.new()
 
 var _arena_id: String = (
@@ -115,7 +116,8 @@ func remove_player(
 	_last_attack_time.erase(peer_id)
 	_last_spell_time.erase(peer_id)
 	_last_spell_request.erase(peer_id)
-	_last_combat_time.erase(peer_id)
+	_last_inventory_request.erase(peer_id)
+	_last_shot_request.erase(peer_id)
 
 
 func try_move_player(
@@ -213,7 +215,7 @@ func try_basic_attack(
 		]
 	)
 
-	if not attacker.is_alive:
+	if not attacker.is_alive or attacker.class_id == 8:
 		return null
 
 	if attacker.is_ghost:
@@ -241,7 +243,6 @@ func try_basic_attack(
 	_last_attack_time[
 		attacker_peer_id
 	] = current_time
-	_last_combat_time[attacker_peer_id] = current_time
 
 	var attack_offset: Vector2i = (
 		MovementRules.get_offset(
@@ -262,10 +263,9 @@ func try_basic_attack(
 	if target == null:
 		return null
 
-	var damage := ClassCatalog.physical_damage(attacker.class_id, target.class_id)
+	var damage := ClassCatalog.physical_damage(attacker.class_id, target.class_id, attacker.equipped_items, target.equipped_items)
 	if not target.apply_damage(damage):
 		return null
-	_last_combat_time[target.peer_id] = current_time
 
 	print(
 		"%s attacked %s for %d damage. HP: %d/%d"
@@ -285,6 +285,91 @@ func try_basic_attack(
 		)
 
 	return target
+
+
+func try_ranged_attack(peer_id: int, position: Vector2i, request_id: int, now: int = -1) -> Dictionary:
+	var attacker: PlayerState = _players.get(peer_id)
+	if attacker == null or not attacker.is_alive or attacker.class_id != 8:
+		return _spell_error("Este personaje no puede disparar con arco.")
+	if request_id <= _last_shot_request.get(peer_id, 0):
+		return _spell_error("El disparo ya fue procesado.")
+	_last_shot_request[peer_id] = request_id
+	if not attacker.equipped_items.has("weapon") or not attacker.equipped_items.has("ammunition"):
+		return _spell_error("Equipá el arco y las flechas antes de disparar.")
+	var target: PlayerState = _find_player_at_position(position, peer_id)
+	if target == null:
+		return _spell_error("Elegí un rival vivo para disparar.")
+	var delta := position - attacker.grid_position
+	if maxi(absi(delta.x), absi(delta.y)) > ClassCatalog.RANGED_RANGE:
+		return _spell_error("El rival está fuera del alcance del arco.")
+	if not CombatRules.has_clear_shot(_arena_id, attacker.grid_position, position):
+		return _spell_error("Hay un obstáculo entre el arco y el objetivo.")
+	if now < 0:
+		now = Time.get_ticks_msec()
+	var remaining: int = CombatRules.BASIC_ATTACK_COOLDOWN_MSEC - (now - _last_attack_time.get(peer_id, -CombatRules.BASIC_ATTACK_COOLDOWN_MSEC))
+	if remaining > 0:
+		return _spell_error("Esperá el intervalo del arco.", remaining)
+	remaining = SpellCatalog.SPELL_ATTACK_GAP_MSEC - (now - _last_spell_time.get(peer_id, -SpellCatalog.SPELL_ATTACK_GAP_MSEC))
+	if remaining > 0:
+		return _spell_error("Esperá el intervalo entre magia y golpe.", remaining)
+	var damage := ClassCatalog.physical_damage(attacker.class_id, target.class_id, attacker.equipped_items, target.equipped_items)
+	var previous := target.current_health
+	target.apply_damage(damage)
+	attacker.is_meditating = false
+	attacker.facing_direction = (MovementRules.Direction.EAST if delta.x > 0 else MovementRules.Direction.WEST) if absi(delta.x) > absi(delta.y) else (MovementRules.Direction.SOUTH if delta.y > 0 else MovementRules.Direction.NORTH)
+	_last_attack_time[peer_id] = now
+	if not target.is_alive:
+		_status_system.clear_player(target)
+	return {"ok": true, "caster_state": attacker.to_dictionary(), "target_state": target.to_dictionary(), "event": {
+		"action": "shot", "request_id": request_id, "caster_id": peer_id, "target_id": target.peer_id,
+		"caster_name": attacker.display_name, "target_name": target.display_name, "spell_id": 247,
+		"spell_name": "Disparo de arco", "words": "", "effect": "damage", "amount": previous - target.current_health,
+		"mana_cost": 0, "origin_x": attacker.grid_position.x, "origin_y": attacker.grid_position.y,
+		"target_x": position.x, "target_y": position.y}}
+
+
+func try_inventory_move(peer_id: int, source: int, destination: int, item_id: int, revision: int, request_id: int) -> Dictionary:
+	var valid := _validate_inventory_request(peer_id, source, item_id, revision, request_id)
+	if not valid.ok:
+		return valid
+	var player: PlayerState = _players[peer_id]
+	if destination < 0 or destination >= player.inventory.size() or source == destination:
+		return _spell_error("Casillero de destino inválido.")
+	var previous: int = player.inventory[destination]
+	player.inventory[destination] = item_id
+	player.inventory[source] = previous
+	player.inventory_revision += 1
+	return {"ok": true, "state": player.to_dictionary()}
+
+
+func try_inventory_use(peer_id: int, slot: int, item_id: int, revision: int, request_id: int) -> Dictionary:
+	var valid := _validate_inventory_request(peer_id, slot, item_id, revision, request_id)
+	if not valid.ok:
+		return valid
+	var player: PlayerState = _players[peer_id]
+	var equipment_slot := ClassCatalog.equipment_slot(player.class_id, item_id)
+	if equipment_slot.is_empty():
+		return _spell_error("Este objeto no es equipo del preset.")
+	if not player.is_alive:
+		return _spell_error("Reaparecé o elegí un preset para cambiar equipo.")
+	if int(player.equipped_items.get(equipment_slot, 0)) == item_id:
+		player.equipped_items.erase(equipment_slot)
+	else:
+		player.equipped_items[equipment_slot] = item_id
+	player.inventory_revision += 1
+	return {"ok": true, "state": player.to_dictionary()}
+
+
+func _validate_inventory_request(peer_id: int, slot: int, item_id: int, revision: int, request_id: int) -> Dictionary:
+	var player: PlayerState = _players.get(peer_id)
+	if player == null:
+		return _spell_error("No hay un personaje conectado.")
+	if request_id <= _last_inventory_request.get(peer_id, 0):
+		return _spell_error("La acción de inventario ya fue procesada.")
+	_last_inventory_request[peer_id] = request_id
+	if revision != player.inventory_revision or slot < 0 or slot >= player.inventory.size() or item_id <= 0 or player.inventory[slot] != item_id:
+		return _spell_error("El inventario cambió. Volvé a intentar con el objeto actual.")
+	return {"ok": true}
 
 
 func try_cast_spell(caster_id: int, spell_id: int, target_position: Vector2i, request_id: int, now: int = -1) -> Dictionary:
@@ -340,12 +425,10 @@ func try_cast_spell(caster_id: int, spell_id: int, target_position: Vector2i, re
 		if spell.effect == "healing":
 			target.restore_health(rolled)
 		else:
-			target.apply_damage(ClassCatalog.magic_damage(rolled, caster.class_id, target.class_id))
+			target.apply_damage(ClassCatalog.magic_damage(rolled, caster.class_id, target.class_id, caster.equipped_items, target.equipped_items))
 	caster.spend_mana(int(spell.mana))
 	caster.is_meditating = false
 	_last_spell_time[caster_id] = now
-	_last_combat_time[caster_id] = now
-	_last_combat_time[target.peer_id] = now
 	_spell_cooldowns[caster_id][cooldown_key] = now
 	if not target.is_alive:
 		_status_system.clear_player(target)
@@ -438,21 +521,24 @@ func try_select_class(peer_id: int, class_id: int, now: int = -1) -> Dictionary:
 		return _spell_error("Clase desconocida o personaje desconectado.")
 	if now < 0:
 		now = Time.get_ticks_msec()
-	if player.class_id == class_id:
-		return _spell_error("Ya estás usando esta clase.")
-	if not player.is_alive or player.is_meditating or not player.active_effects.is_empty() or player.current_health != player.max_health or player.current_mana != player.max_mana:
-		return _spell_error("Para cambiar de clase necesitás vida y maná completos, sin meditar ni efectos activos.")
-	if now - _last_combat_time.get(peer_id, -ClassCatalog.CHANGE_PEACE_MSEC) < ClassCatalog.CHANGE_PEACE_MSEC:
-		return _spell_error("Esperá 10 segundos sin combatir antes de cambiar de clase.")
 	player.class_id = class_id
 	player.max_health = int(profile.max_health)
 	player.max_mana = int(profile.max_mana)
 	player.current_health = player.max_health
 	player.current_mana = player.max_mana
-	# Keep action and individual cooldowns; selecting a preset never clears them.
+	player.is_alive = true
+	player.is_meditating = false
+	_status_system.clear_player(player)
+	_next_meditation_tick.erase(peer_id)
+	player.reset_preset_inventory()
+	player.preset_revision += 1
+	_last_spell_time[peer_id] = -SpellCatalog.CAST_INTERVAL_MSEC
+	_last_attack_time[peer_id] = -SpellCatalog.SPELL_ATTACK_GAP_MSEC
+	_last_potion_time[peer_id] = -RecoveryRules.POTION_INTERVAL_MSEC
+	_spell_cooldowns[peer_id] = {}
 	return {"ok": true, "state": player.to_dictionary(), "event": {
 		"peer_id": peer_id, "player_name": player.display_name, "action": "class",
-		"class_id": class_id, "amount": 0, "message": "Eligió %s." % profile.name,
+		"class_id": class_id, "amount": 0, "message": "Preset %s listo para probar." % profile.name,
 		"is_meditating": false}}
 
 
@@ -460,8 +546,6 @@ func advance_runtime(now: int = -1) -> Array[PlayerState]:
 	if now < 0:
 		now = Time.get_ticks_msec()
 	var changed := _status_system.tick(_players, now)
-	for changed_player: PlayerState in changed:
-		_last_combat_time[changed_player.peer_id] = now
 	for player: PlayerState in _players.values():
 		if not player.is_alive or not player.is_meditating:
 			continue
@@ -495,7 +579,6 @@ func apply_damage(
 		amount
 	):
 		return null
-	_last_combat_time[peer_id] = Time.get_ticks_msec()
 
 	return player
 

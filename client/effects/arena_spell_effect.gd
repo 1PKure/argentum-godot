@@ -12,6 +12,8 @@ var _sprite: AnimatedSprite2D
 var _text: Label
 var _words: Label
 var _audio: AudioStreamPlayer
+var _projectile: Sprite2D
+var _is_shot := false
 
 
 func _ready() -> void:
@@ -19,7 +21,15 @@ func _ready() -> void:
 	# Follow the same interpolated position rendered by PlayerAvatar this frame.
 	process_priority = 50
 	var spell := SpellCatalog.get_spell(int(event.spell_id))
-	var fx_id := int(spell.fx_id)
+	_is_shot = event.get("action", "") == "shot"
+	var fx_id := 0 if _is_shot else int(spell.fx_id)
+	if _is_shot:
+		_lifetime = 0.65
+		_projectile = Sprite2D.new()
+		_projectile.texture = AOResources.get_equipment_icon(552)
+		_projectile.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		_projectile.scale = Vector2.ONE * ClientWorld.VISUAL_SCALE
+		add_child(_projectile)
 	# Minor heal has no FXgrh in the DAT; reuse AO20's healing visual.
 	if fx_id == 0 and spell.effect == "healing":
 		fx_id = 9
@@ -43,7 +53,7 @@ func _ready() -> void:
 	var sound_path := "res://assets/argentum/source/audio/%d.wav" % int(spell.sound_id)
 	if int(spell.sound_id) > 0 and not ResourceLoader.exists(sound_path):
 		sound_path = "res://assets/argentum/source/audio/16.wav"
-	if ResourceLoader.exists(sound_path):
+	if not _is_shot and ResourceLoader.exists(sound_path):
 		_audio = AudioStreamPlayer.new()
 		_audio.stream = load(sound_path)
 		_audio.volume_db = -12.0
@@ -80,6 +90,12 @@ func _update_anchors() -> void:
 	if has_target:
 		target = target_avatar.position
 		_text.position = target + Vector2(-80, -85 - _elapsed * 24.0)
+	if _projectile != null:
+		var fraction := minf(_elapsed / 0.18, 1.0)
+		_projectile.visible = has_origin and has_target and fraction < 1.0
+		_projectile.position = origin.lerp(target, fraction) + Vector2(0, -18)
+		_projectile.rotation = (target - origin).angle() + PI / 4.0
+		_text.visible = has_target and fraction >= 1.0
 	if _sprite != null:
 		_sprite.visible = has_target
 		if has_target:

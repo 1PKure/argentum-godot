@@ -23,6 +23,7 @@ DevServerLauncher="*uid://c5lbr7cu8i63u"
 AOResources="*uid://cqc86kpi0ald7"
 SpellNetwork="*res://autoload/spell_network.gd"
 RecoveryNetwork="*res://autoload/recovery_network.gd"
+InventoryNetwork="*res://autoload/inventory_network.gd"
 
 [display]
 

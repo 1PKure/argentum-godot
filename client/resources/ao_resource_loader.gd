@@ -453,6 +453,7 @@ func get_icon_texture(grh_id: int) -> Texture2D:
 	if not ResourceLoader.exists(GRAPHICS_PATH + "%d.png" % int(frame.file_num)):
 		return null
 	var texture := AtlasTexture.new()
+	texture.filter_clip = true
 	texture.atlas = get_texture(int(frame.file_num))
 	texture.region = frame.region
 	return texture
@@ -460,10 +461,14 @@ func get_icon_texture(grh_id: int) -> Texture2D:
 
 func get_equipment_icon(item_id: int) -> Texture2D:
 	var grh := int(ClassCatalog.get_item(item_id).get("GrhIndex", 0))
-	# One newer shield icon points beyond the public GRH table. Use its actual
-	# directional equipment frame; no original resource is altered.
-	if grh > 0 and not _graphics.get("Graphics", {}).has("Grh%d" % grh):
-		var frames := get_equipment_frames("shield", int(ClassCatalog.get_item(item_id).get("Anim", 0)))
+	# A newer weapon icon points beyond the public GRH table. Use a frame of
+	# that same item, choosing the correct equipment kind from the original DAT.
+	if item_id == 1719 or (grh > 0 and not _graphics.get("Graphics", {}).has("Grh%d" % grh)):
+		var item := ClassCatalog.get_item(item_id)
+		var kind: String = {2: "weapon", 16: "shield", 17: "helmet"}.get(int(item.get("ObjType", 0)), "")
+		if kind.is_empty():
+			return null
+		var frames := get_equipment_frames(kind, int(item.get("Anim", 0)))
 		return frames.get_frame_texture("walk_down", 0) if frames != null else null
 	return get_icon_texture(grh) if grh > 0 else null
 

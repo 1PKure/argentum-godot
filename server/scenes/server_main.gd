@@ -32,6 +32,9 @@ func _ready() -> void:
 		_on_debug_mana_spend_requested
 	)
 	SpellNetwork.cast_requested.connect(_on_spell_cast_requested)
+	SpellNetwork.shot_requested.connect(_on_shot_requested)
+	InventoryNetwork.move_requested.connect(_on_inventory_move)
+	InventoryNetwork.use_requested.connect(_on_inventory_use)
 	RecoveryNetwork.action_requested.connect(_on_recovery_action_requested)
 
 	var error: Error = (
@@ -225,3 +228,28 @@ func _send_new_player_to_existing_clients(
 			existing_peer_id,
 			player_data
 		)
+
+
+func _on_shot_requested(peer_id: int, target: Vector2i, request_id: int) -> void:
+	var result := player_registry.try_ranged_attack(peer_id, target, request_id)
+	if not result.ok:
+		SpellNetwork.send_rejection(peer_id, request_id, result.message, result.remaining_msec)
+		return
+	PlayerNetwork.broadcast_player_stats_updated(result.caster_state)
+	PlayerNetwork.broadcast_player_stats_updated(result.target_state)
+	SpellNetwork.broadcast_result(result.event)
+
+
+func _on_inventory_move(peer_id: int, source: int, destination: int, item_id: int, revision: int, request_id: int) -> void:
+	_broadcast_inventory(peer_id, player_registry.try_inventory_move(peer_id, source, destination, item_id, revision, request_id))
+
+
+func _on_inventory_use(peer_id: int, slot: int, item_id: int, revision: int, request_id: int) -> void:
+	_broadcast_inventory(peer_id, player_registry.try_inventory_use(peer_id, slot, item_id, revision, request_id))
+
+
+func _broadcast_inventory(peer_id: int, result: Dictionary) -> void:
+	if not result.ok:
+		InventoryNetwork.send_rejection(peer_id, str(result.message))
+		return
+	PlayerNetwork.broadcast_player_stats_updated(result.state)

@@ -14,9 +14,9 @@ La arena continúa la interfaz validada de AO20, sin incorporar la prueba retira
 
 El servidor identifica al lanzador por su conexión y valida personaje vivo, libro disponible, objetivo, maná, intervalo global 1100 ms, cruce golpe/magia 700 ms y cooldown individual. Rechazos y solicitudes repetidas no gastan recursos. Daño requiere rival; curación y remover admiten al propio jugador. Una cura directa sobre vida completa puede gastar maná con efecto cero. Las raíces bloquean caminar; permiten lanzar remover o beber. Los efectos periódicos usan valores y tiempos de EffectsOverTime.dat.
 
-Los objetivos se admiten dentro de toda la arena 20×12. Falta portar visión, línea de visión y las reglas completas de mapas de AO. El perfil de prueba de 500 vida/3000 maná no representa una clase ni balance final. No aplica requisitos de clase, skills, estamina, equipo ni multiplicadores. Los hechizos cuyo efecto depende de esos sistemas quedan pendientes. Invocaciones, bot y lobbies siguen pendientes; PvE está fuera del alcance acordado.
+Los objetivos se admiten dentro de toda la arena 20×12. Falta portar visión, línea de visión y las reglas completas de mapas de AO. Las nueve clases aplican sus permisos y modificadores del equipo actual; Mago conserva 500 vida/3000 maná como referencia de prueba. No representa el balance final ni progresión de nivel. Skills, estamina y especialidades completas siguen pendientes. Los hechizos cuyo efecto depende de esos sistemas quedan pendientes. Invocaciones, bot y lobbies siguen pendientes; PvE está fuera del alcance acordado.
 
-PlayerNetwork conserva su tabla RPC. SpellNetwork usa un protocolo separado, versión 2, y comprueba soporte. Un servidor anterior a ese protocolo deshabilita Lanzar/recuperación y muestra una instrucción de actualización. Para probar cada cambio hay que actualizar y reiniciar el servidor desde la misma rama/revisión que el cliente; la compatibilidad del protocolo no garantiza reglas idénticas entre revisiones.
+PlayerNetwork conserva su tabla RPC. SpellNetwork usa un protocolo separado, versión 4, y comprueba soporte. Un servidor anterior a ese protocolo deshabilita Lanzar/recuperación y muestra una instrucción de actualización. Para probar cada cambio hay que actualizar y reiniciar el servidor desde la misma rama/revisión que el cliente; la compatibilidad del protocolo no garantiza reglas idénticas entre revisiones.
 
 ## Procedencia y adaptaciones visuales
 
@@ -31,3 +31,5 @@ El render de impactos alinea el último píxel visible de cada frame con los pie
 Pruebas de datos y servidor: ao_spell_smoke.gd y arena_recovery_smoke.gd. Recursos reales: arena_assets_smoke.gd. Movimiento y cámara: movement_smoke.gd y camera_movement_smoke.gd. Interacción real con servidor y dos clientes: arena_network_client.gd, ejecutado también sobre el PCK exportado. Comprueba clics, búsqueda, arrastre, macros, daño, curas, pociones, meditación/FX, remo, cámara, CTRL, muerte, reaparición y resize. La validación automatizada usa Godot 4.7.2 en Linux; falta confirmar la sensación y la interacción de esta entrega en Windows/web.
 
 La cadencia global fue ajustada expresamente para esta arena; las recargas individuales de Hechizos.dat se conservan. Comparación y combinaciones: [ACTION_INTERVALS.md](ACTION_INTERVALS.md).
+
+El Cazador usa un cursor de ataque físico separado de la magia: CTRL/3 y clic, con alcance y obstáculos validados en servidor. Los macros iniciales y el inventario equipado se describen en [CLASSES.md](CLASSES.md).

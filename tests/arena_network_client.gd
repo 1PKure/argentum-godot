@@ -23,6 +23,8 @@ func _run() -> void:
 	hud = main.get_node("CombatHUD")
 	# Keep test drags deterministic and out of the real saved preference.
 	hud._inventory_layout.storage_path = ""
+	hud._pixel_scale = 1
+	hud._update_pixel_scale()
 	hud._inventory_layout.actions = ArenaInventoryLayout.new().actions
 	for index in range(hud._inventory_slots.size()):
 		hud._inventory_slots[index].configure(index, hud._inventory_layout)
@@ -251,12 +253,10 @@ func _run() -> void:
 	await _capture("arena-hunter-preset.png")
 	await _click(panel.apply_button)
 	await _wait_for(func() -> bool: return not panel._pending)
-	_check(panel.visible and panel.message.text.contains("10 segundos") and hud._players[local_id].class_id == 1, "Server rejects switching immediately after combat and the panel explains why")
-	await create_timer(10.1).timeout
-	await _click(panel.apply_button)
 	await _wait_for(func() -> bool: return hud._players[local_id].class_id == 8)
-	_check(not panel.visible and hud._players[local_id].max_mana == 0 and main._local_input.is_processing(), "Applying a rested hunter preset updates resources and returns to gameplay")
-	_check(controller.bindings.count(0) == 10 and controller.aimed_spell_id == 0 and hud._launch_button.disabled, "Hunter has no inherited spell macros or active casting cursor")
+	_check(hud._players[local_id].class_id == 8, "Preset selection succeeds immediately after combat without full-resource or peace gates")
+	_check(not panel.visible and hud._players[local_id].max_mana == 0 and main._local_input.is_processing(), "Applying a hunter preset updates resources and returns to gameplay")
+	_check(controller.bindings[2] == ClassCatalog.ATTACK_BINDING and controller.aimed_spell_id == 0 and hud._launch_button.disabled, "Hunter has an attack macro and no inherited spell macros or casting cursor")
 	_check(world._avatars[local_id]._player_visual._class_id == 8 and hud._equipped_label.text.contains("Arco de Cazador"), "Hunter equipment is visible in the avatar and equipped summary")
 	await _capture("arena-hunter-equipped.png")
 	for resolution: Vector2i in [Vector2i(1280, 800), Vector2i(1440, 900), Vector2i(1280, 720)]:

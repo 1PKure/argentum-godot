@@ -62,9 +62,10 @@ func _ready() -> void:
 	details.add_theme_font_size_override("font_size", 15)
 	row.add_child(details)
 	_gear = VBoxContainer.new()
+	_gear.custom_minimum_size.y = 150
 	content.add_child(_gear)
 	var note := Label.new()
-	note.text = "Presets de prueba con datos de AO20; balance provisional.\nEspecialidades avanzadas y profesiones: pendientes.\nCTRL: golpe al frente · Cazador: disparo hasta 8 casillas.\nPociones y flechas ilimitadas durante las pruebas.\n\nCambio: recursos completos, sin efectos ni meditación,\ny 10 segundos sin combatir. Conserva las recargas."
+	note.text = "Presets de prueba con datos de AO20; balance provisional.\nEspecialidades avanzadas y profesiones: pendientes.\nCTRL: golpe · Cazador: CTRL → apuntar → clic.\nPociones y flechas ilimitadas durante las pruebas.\n\nCambio libre: prepara el personaje al instante.\nLa ronda y su cuenta regresiva se implementan después."
 	note.add_theme_font_size_override("font_size", 13)
 	content.add_child(note)
 	message = Label.new()
@@ -137,7 +138,8 @@ func _show_selected() -> void:
 		label.text = str(item.get("Name", ""))
 		label.add_theme_font_size_override("font_size", 14)
 		row.add_child(label)
-	apply_button.disabled = _pending or int(profile.id) == _current_class
+	apply_button.disabled = _pending
+	apply_button.text = "Reiniciar este preset" if int(profile.id) == _current_class else "Usar este preset"
 
 
 func _apply() -> void:
