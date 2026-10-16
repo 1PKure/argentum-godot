@@ -26,7 +26,6 @@ var _spell_panel: Control
 var _menu_panel: Control
 var _inventory_button: TextureButton
 var _spell_button: TextureButton
-var _selected_inventory_slot: Button
 var _spell_controller: SpellTargetingController
 var _spell_buttons: Dictionary[int, SpellSlotButton] = {}
 var _hotkey_buttons: Array[SpellSlotButton] = []
@@ -50,12 +49,14 @@ var _menu_button: Button
 var _stats_button: Button
 var _close_button: Button
 var _reserved_buttons: Array[Button] = []
-var _inventory_slots: Array[Button] = []
+var _inventory_slots: Array[InventorySlotButton] = []
+var _inventory_layout := ArenaInventoryLayout.new()
 var _bottom_back: Panel
 
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_inventory_layout.restore()
 	_build_interface()
 	get_viewport().size_changed.connect(_fit_interface)
 	_fit_interface()
@@ -232,20 +233,15 @@ func _build_interface() -> void:
 	_spell_button.texture_pressed = load(ART + "es_boton-hechizos-default.png")
 	_spell_button.pressed.connect(show_spells)
 	for index in range(42):
-		var slot := _text_button(_inventory_panel, "", Rect2(10 + (index % 6) * 36, 16 + (index / 6) * 36, 34, 34))
-		slot.tooltip_text = "Casillero %d · Vacío" % (index + 1)
-		if index < 2:
-			var action := "health_potion" if index == 0 else "mana_potion"
-			var potion := RecoveryRules.get_potion(action)
-			slot.icon = _grh_icon(int(potion.get("icon_grh", 0)))
-			slot.expand_icon = true
-			slot.tooltip_text = "%s · Provisión de arena ilimitada · Clic para usar" % potion.get("name", "Poción")
-			slot.pressed.connect(_request_recovery.bind(action))
-		else:
-			slot.toggle_mode = true
-			slot.pressed.connect(_select_inventory_slot.bind(slot, index + 1))
+		var slot := InventorySlotButton.new()
+		_inventory_panel.add_child(slot)
+		slot.position = Vector2(10 + (index % 6) * 36, 16 + (index / 6) * 36)
+		slot.size = Vector2(34, 34)
+		slot.configure(index, _inventory_layout)
+		slot.item_used.connect(_request_recovery)
+		slot.item_dropped.connect(_move_inventory_item)
 		_inventory_slots.append(slot)
-	_label(_inventory_panel, "Provisión de arena ilimitada.\nVida +27 · Maná +5% máximo.\nM: meditar · Q: vida · E: maná.", Rect2(12, 280, 216, 74), 12)
+	_label(_inventory_panel, "Clic: usar · Arrastrar: mover.\nProvisión de arena ilimitada.\nM: meditar · Q: vida · E: maná.", Rect2(12, 280, 216, 74), 12)
 	_spell_search = LineEdit.new()
 	_spell_search.placeholder_text = "Buscar nombre o ID…"
 	_spell_panel.add_child(_spell_search)
@@ -540,11 +536,13 @@ func _update_local_stats() -> void:
 	_update_recovery_controls()
 
 
-func _select_inventory_slot(slot: Button, number: int) -> void:
-	if _selected_inventory_slot != null and _selected_inventory_slot != slot:
-		_selected_inventory_slot.button_pressed = false
-	_selected_inventory_slot = slot
-	console.append_message("Casillero %d vacío." % number)
+func _move_inventory_item(source: int, destination: int, action: String) -> void:
+	if not _inventory_layout.move_item(source, destination, action):
+		return
+	for index in range(_inventory_slots.size()):
+		_inventory_slots[index].configure(index, _inventory_layout)
+	if _inventory_layout.save() != OK:
+		console.append_message("El orden se conserva en esta sesión; no se pudo guardarlo en el dispositivo.")
 
 
 func _control(parent: Node, node_name: String, rect: Rect2) -> Control:

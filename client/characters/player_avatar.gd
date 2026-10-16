@@ -15,6 +15,10 @@ const MOVE_SPEED: float = (
 
 const MOVEMENT_EPSILON: float = 0.01
 const HUMAN_HEAD_COUNT := 41
+const EFFECT_FOOT_POSITION := Vector2(0, 30)
+const EFFECT_Z_INDEX := 30
+const OVERHEAD_Z_INDEX := 40
+const MEDITATION_SCALE := 1.05 # 30% smaller than the previous 1.5 scale.
 
 const STATUS_BARS_POSITION := Vector2(
 	-22.0,
@@ -190,8 +194,10 @@ func _apply_effect_presentation(state: PlayerState) -> void:
 		# from the same public FX table, so this test profile uses the valid FX.
 		_meditation_fx = AOResources.create_fx_sprite(120)
 		if _meditation_fx != null:
-			_meditation_fx.scale = Vector2.ONE * 1.5
-			_meditation_fx.z_index = -1
+			_meditation_fx.scale = Vector2.ONE * MEDITATION_SCALE
+			_meditation_fx.position = EFFECT_FOOT_POSITION + Vector2(_meditation_fx.get_meta("source_offset", Vector2.ZERO)) * MEDITATION_SCALE
+			_meditation_fx.z_index = EFFECT_Z_INDEX
+			_meditation_fx.modulate.a = 0.72
 			add_child(_meditation_fx)
 			_meditation_fx.play()
 	if _meditation_fx != null:
@@ -220,6 +226,7 @@ func _get_head_id_from_peer() -> int:
 
 func _create_name_label() -> void:
 	_name_label = Label.new()
+	_name_label.z_index = OVERHEAD_Z_INDEX
 
 	_name_label.position = Vector2(
 		-70.0,
@@ -242,6 +249,7 @@ func _create_name_label() -> void:
 
 func _create_status_bars() -> void:
 	_status_bars = PlayerStatusBars.new()
+	_status_bars.z_index = OVERHEAD_Z_INDEX
 
 	_status_bars.position = (
 		STATUS_BARS_POSITION

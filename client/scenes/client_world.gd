@@ -138,6 +138,8 @@ func _on_spell_resolved(event: Dictionary) -> void:
 	effect.event = event
 	effect.origin = _grid_to_world(Vector2i(int(event.origin_x), int(event.origin_y)))
 	effect.target = _grid_to_world(Vector2i(int(event.target_x), int(event.target_y)))
+	effect.origin_avatar = _avatars.get(int(event.caster_id))
+	effect.target_avatar = _avatars.get(int(event.target_id))
 	add_child(effect)
 	_spell_effects.append(effect)
 	effect.tree_exited.connect(func() -> void: _spell_effects.erase(effect))

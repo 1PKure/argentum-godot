@@ -29,6 +29,7 @@ var _molds: Dictionary = {}
 var _heads: Dictionary = {}
 
 var _texture_cache: Dictionary = {}
+var _fx_visible_bottoms: Dictionary = {}
 
 var _is_loaded := false
 
@@ -456,13 +457,14 @@ func get_icon_texture(grh_id: int) -> Texture2D:
 	return texture
 
 
-func create_fx_sprite(fx_id: int) -> AnimatedSprite2D:
+func create_fx_sprite(fx_id: int, looping: bool = true, ground_visible_pixels: bool = false) -> AnimatedSprite2D:
 	var fx: Dictionary = AODataFile.read_sections(DATA_PATH + "FXs.ini").get("FX%d" % fx_id, {})
 	var animation := get_grh_animation(int(fx.get("Animacion", "0")))
 	if animation.is_empty():
 		return null
 	var frames := SpriteFrames.new()
 	frames.set_animation_speed("default", animation.fps)
+	frames.set_animation_loop("default", looping)
 	for frame: Dictionary in animation.frames:
 		if not ResourceLoader.exists(GRAPHICS_PATH + "%d.png" % int(frame.file_num)):
 			return null
@@ -473,7 +475,41 @@ func create_fx_sprite(fx_id: int) -> AnimatedSprite2D:
 	var sprite := AnimatedSprite2D.new()
 	sprite.sprite_frames = frames
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	if ground_visible_pixels:
+		sprite.set_meta("visible_bottoms", _get_fx_visible_bottoms(fx_id, animation.frames))
+	# AO effects are grounded at the character's feet, not centered on the tile.
+	# Keep this correct even for animations with differently sized frames.
+	sprite.frame_changed.connect(_anchor_fx_frame.bind(sprite))
+	_anchor_fx_frame(sprite)
+	sprite.set_meta("source_offset", Vector2(float(fx.get("OffsetX", "0")), float(fx.get("OffsetY", "0"))))
 	return sprite
+
+
+func _anchor_fx_frame(sprite: AnimatedSprite2D) -> void:
+	var texture := sprite.sprite_frames.get_frame_texture(sprite.animation, sprite.frame)
+	if texture != null:
+		var bottom := float(texture.get_height())
+		if sprite.has_meta("visible_bottoms"):
+			bottom = float(sprite.get_meta("visible_bottoms")[sprite.frame])
+		sprite.offset = Vector2(0, texture.get_height() * 0.5 - bottom)
+
+
+func _get_fx_visible_bottoms(fx_id: int, animation_frames: Array) -> Array[float]:
+	if _fx_visible_bottoms.has(fx_id):
+		return _fx_visible_bottoms[fx_id]
+	var bottoms: Array[float] = []
+	# Decode each atlas once on first use of this FX, never once per render frame.
+	var images: Dictionary = {}
+	for frame: Dictionary in animation_frames:
+		var file_num := int(frame.file_num)
+		if not images.has(file_num):
+			images[file_num] = get_texture(file_num).get_image()
+		var atlas: Image = images[file_num]
+		var region: Rect2 = frame.region
+		var used := atlas.get_region(Rect2i(region)).get_used_rect()
+		bottoms.append(float(used.end.y) if used.has_area() else region.size.y)
+	_fx_visible_bottoms[fx_id] = bottoms
+	return bottoms
 
 
 func get_grh_animation(grh_id: int) -> Dictionary:

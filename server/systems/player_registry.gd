@@ -196,7 +196,8 @@ func try_move_player(
 
 
 func try_basic_attack(
-	attacker_peer_id: int
+	attacker_peer_id: int,
+	current_time: int = -1
 ) -> PlayerState:
 	if not _players.has(
 		attacker_peer_id
@@ -215,9 +216,8 @@ func try_basic_attack(
 	if attacker.is_ghost:
 		return null
 
-	var current_time: int = (
-		Time.get_ticks_msec()
-	)
+	if current_time < 0:
+		current_time = Time.get_ticks_msec()
 
 	var last_attack_time: int = (
 		_last_attack_time.get(
@@ -285,7 +285,7 @@ func try_basic_attack(
 	return target
 
 
-func try_cast_spell(caster_id: int, spell_id: int, target_position: Vector2i, request_id: int) -> Dictionary:
+func try_cast_spell(caster_id: int, spell_id: int, target_position: Vector2i, request_id: int, now: int = -1) -> Dictionary:
 	var caster: PlayerState = _players.get(caster_id)
 	if caster == null:
 		return _spell_error("No hay un personaje conectado para lanzar.")
@@ -307,14 +307,18 @@ func try_cast_spell(caster_id: int, spell_id: int, target_position: Vector2i, re
 		return _spell_error("Elegí a un rival para un hechizo ofensivo.")
 	if caster.current_mana < int(spell.mana):
 		return _spell_error("No tenés suficiente maná para %s." % spell.name)
-	var now := Time.get_ticks_msec()
+	if now < 0:
+		now = Time.get_ticks_msec()
 	var remaining: int = SpellCatalog.CAST_INTERVAL_MSEC - (now - _last_spell_time.get(caster_id, -SpellCatalog.CAST_INTERVAL_MSEC))
 	if remaining > 0:
 		return _spell_error("Todavía no podés volver a lanzar.", remaining)
 	remaining = SpellCatalog.ATTACK_SPELL_GAP_MSEC - (now - _last_attack_time.get(caster_id, -SpellCatalog.ATTACK_SPELL_GAP_MSEC))
 	if remaining > 0:
 		return _spell_error("Esperá el intervalo entre golpe y magia.", remaining)
-	var cooldown_key := str(spell.raw.get("CdEffectId", spell_id))
+	# Shared effect groups and individual spell IDs are different namespaces.
+	# Dart (spell 1) must not accidentally lock Restoration (CdEffectId 1).
+	var cooldown_group := int(spell.raw.get("CdEffectId", "0"))
+	var cooldown_key := "group:%d" % cooldown_group if cooldown_group > 0 else "spell:%d" % spell_id
 	var cooldown: int = int(float(spell.cooldown) * 1000.0)
 	remaining = cooldown - (now - int(_spell_cooldowns[caster_id].get(cooldown_key, -cooldown)))
 	if remaining > 0:
@@ -406,7 +410,10 @@ func try_recovery_action(peer_id: int, action: String, request_id: int, now: int
 			var previous := player.current_mana
 			player.restore_mana(maxi(1, int(player.max_mana * int(potion.percent) / 100.0)))
 			amount = player.current_mana - previous
-		player.is_meditating = false
+		# Drinking preserves meditation and its scheduled tick. Full mana still
+		# ends it immediately, as it does when regeneration fills the resource.
+		if player.current_mana >= player.max_mana:
+			player.is_meditating = false
 		_last_potion_time[peer_id] = now
 		message = "Usó %s (+%d)." % [potion.name, amount]
 	return {"ok": true, "state": player.to_dictionary(), "event": {
