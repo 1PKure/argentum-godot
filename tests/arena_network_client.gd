@@ -31,7 +31,7 @@ func _run() -> void:
 	await _wait_for(func() -> bool: return hud._players.size() == 2 and controller.server_ready)
 	_check(hud._players.size() == 2 and controller.server_ready, "Two clients negotiate spell support with the dedicated server")
 	if hud._players.size() != 2 or not controller.server_ready:
-		_finish()
+		await _finish()
 		return
 	local_id = root.multiplayer.get_unique_id()
 	var opponent := 0
@@ -66,7 +66,7 @@ func _run() -> void:
 		await _wait_for(func() -> bool: return hud._players[opponent].current_mana > med_mana)
 		_check(hud._players[opponent].current_mana == med_mana + 150 and hud._players[opponent].is_meditating, "Other client sees a blue potion without a meditation interruption")
 		await _wait_for(func() -> bool: return hud._players.size() == 1, 35.0)
-		_finish()
+		await _finish()
 		return
 	_key(KEY_D, true)
 	await create_timer(0.26).timeout
@@ -248,7 +248,7 @@ func _run() -> void:
 	await create_timer(0.2).timeout
 	main._disconnect_from_arena()
 	_check(controller.aimed_spell_id == 0 and not controller.session_active, "Disconnect clears aiming and pending spell state")
-	_finish()
+	await _finish()
 
 
 func _search_spell(id: int) -> void:
@@ -365,5 +365,11 @@ func _check(condition: bool, message: String) -> void:
 
 func _finish() -> void:
 	manager.stop()
+	# Release active FX/audio while the engine is still processing frames.
+	# Immediate process exit can leave an audio playback pending in the mixer.
+	world.clear_session()
+	main.queue_free()
+	await process_frame
+	await create_timer(0.2).timeout
 	print("AO network checks: %d; failures: %d" % [checks, failures])
 	quit(1 if failures else 0)
