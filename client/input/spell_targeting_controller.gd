@@ -164,7 +164,7 @@ func _on_capabilities(available: bool) -> void:
 		return
 	server_ready = available
 	if not available:
-		feedback.emit("El servidor no incluye esta versión de hechizos. Actualizá la rama work/ao20-spells y reinicialo con el .cmd.", "system")
+		feedback.emit("El servidor no incluye esta versión de hechizos. Actualizalo a la misma rama y revisión que el cliente y reinicialo con el .cmd.", "system")
 	changed.emit()
 
 

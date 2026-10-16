@@ -9,7 +9,7 @@ See [the first Web test guide](docs/WEB_TEST.md) for local testing, export instr
 
 ## AO20 combat interface
 
-The AO20 frame includes inventory/spell panels, synchronized health/mana, arena minimap and a bounded combat console. The `work/ao20-spells` iteration imports all 213 original AO20 entries and enables 39 spells with implemented PvP rules: select → Launch → target click, or a numeric hotkey → target click. Drag spells onto the hotkey bar to reassign them. Escape/right click cancels aiming; WASD stays active and CTRL remains a physical attack without a mana cost.
+The AO20 frame includes inventory/spell panels, synchronized health/mana, arena minimap and a bounded combat console. The book imports all 213 original AO20 entries and enables 39 spells with implemented PvP rules: select → Launch → target click, or a numeric hotkey → target click. Drag spells onto the hotkey bar to reassign them. Escape/right click cancels aiming; WASD stays active and CTRL remains a physical attack without a mana cost.
 
 Use the same branch for the dedicated server and restart it after updating. `tools/Start-PrivateWebTest.cmd` imports the project before launching WSS. The spell protocol checks server support separately from the unchanged movement/physical-attack RPCs.
 
