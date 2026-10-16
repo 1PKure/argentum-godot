@@ -24,7 +24,7 @@ Datos, iconos, FX y audio proceden de [ao-org/Recursos, commit 89615f3](https://
 
 Curar Heridas Leves usa FX9 y el icono azul GRH74686 porque su DAT no define FX y apunta a un icono vacío. Aliento de Dragón no define icono y muestra el de fuego GRH74714. Implosión guarda directamente el GRH12834 en el DAT: el adaptador usa FX4, que refiere a esa misma animación. Siete sonidos referenciados no existen en el repositorio público de la revisión y usan el sonido16 como sustituto explícito. WAV113 se decodificó de ADPCM a PCM para importación en Godot; se conserva el original en audio/originals/113.wav.source. La meditación usa el FX de nivel máximo120 disponible; ver [RECOVERY.md](RECOVERY.md).
 
-El render adapta el ancla inferior de cada frame a los pies del avatar y conserva los offsets de FXs.ini. Los impactos y resultados flotantes acompañan al objetivo interpolado; las palabras acompañan al lanzador, incluso si se mueven en sentidos distintos. Son efectos de personaje; un futuro hechizo de área fija requerirá su propia presentación sobre terreno.
+El render de impactos alinea el último píxel visible de cada frame con los pies del avatar. Compensa el margen transparente, conserva OffsetX y sustituye OffsetY del render original por esta alineación. No modifica las imágenes ni FXs.ini; la meditación conserva su presentación validada. Los impactos y resultados flotantes acompañan al objetivo interpolado; las palabras acompañan al lanzador, incluso si se mueven en sentidos distintos. Son efectos de personaje; un futuro hechizo de área fija requerirá su propia presentación sobre terreno.
 
 ## Validación
 

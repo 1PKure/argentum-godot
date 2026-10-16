@@ -34,6 +34,11 @@ func _run() -> void:
 		"A custom server URL is used and trimmed."
 	)
 	ProjectSettings.set_setting(NetworkConstants.SERVER_URL_SETTING, original_url)
+	_expect(NetworkConstants.resolve_server_url("", true) == "wss://127.0.0.1:7777", "Web starts with local WSS even when the setting is empty.")
+	_expect(NetworkConstants.resolve_server_url("  ws://127.0.0.1:7777  ", true) == "wss://127.0.0.1:7777", "Web upgrades the default local address without requiring pasted text.")
+	_expect(NetworkConstants.resolve_server_url("ws://127.0.0.1:7777", false) == "ws://127.0.0.1:7777", "Native development retains its existing WS default.")
+	_expect(NetworkConstants.resolve_server_url(" wss://arena.example.test/game ", true) == "wss://arena.example.test/game", "An explicitly configured remote WSS endpoint stays unchanged.")
+	_expect(NetworkConstants.resolve_server_url("ws://192.0.2.1:7777", true) == "ws://192.0.2.1:7777", "An explicit remote development endpoint is not silently replaced.")
 
 	_expect(
 		manager.start_client("https://example.test") == ERR_INVALID_PARAMETER,
@@ -51,6 +56,10 @@ func _run() -> void:
 	panel.connect_requested.connect(func(url: String) -> void: submitted.append(url))
 	var input := panel.find_child("ServerURL", true, false) as LineEdit
 	var connect_button := panel.find_child("ConnectButton", true, false) as Button
+	panel.setup(NetworkConstants.resolve_server_url(NetworkConstants.LOCAL_WEBSOCKET_URL, true))
+	connect_button.pressed.emit()
+	_expect(submitted == ["wss://127.0.0.1:7777"], "The prepared Web address can be submitted by pressing Connect without editing.")
+	submitted.clear()
 	input.text = "https://example.test"
 	connect_button.pressed.emit()
 	_expect(submitted.is_empty(), "The connection panel rejects an unsupported scheme.")

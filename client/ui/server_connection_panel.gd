@@ -92,7 +92,7 @@ func _build_interface() -> void:
 
 	_url_input = LineEdit.new()
 	_url_input.name = "ServerURL"
-	_url_input.placeholder_text = "ws://127.0.0.1:7777"
+	_url_input.placeholder_text = NetworkConstants.get_server_url()
 	_url_input.custom_minimum_size.y = 40.0
 	_url_input.max_length = 2048
 	_url_input.text_submitted.connect(_on_url_submitted)
@@ -103,6 +103,8 @@ func _build_interface() -> void:
 		"Prueba local: iniciá el servidor Godot en esta PC.\n"
 		+ "Para una página HTTPS, usá un servidor wss://."
 	)
+	if OS.has_feature("web"):
+		hint.text = "Prueba local: abrí Start-PrivateWebTest.cmd\ny pulsá Conectar."
 	hint.add_theme_font_size_override("font_size", 12)
 	hint.modulate = Color(0.65, 0.72, 0.6)
 	content.add_child(hint)

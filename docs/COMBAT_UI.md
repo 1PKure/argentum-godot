@@ -4,7 +4,7 @@ El HUD conserva recursos originales de AO20, consola, Inventario/Hechizos, minim
 
 La cámara sigue al avatar interpolado dentro de game_area. No mueve el HUD. El exterior decorativo oscurecido evita franjas negras al seguir al jugador cerca del borde; la línea marca los límites autoritativos originales de 20×12 y no agrega casillas caminables.
 
-Los FX se anclan por la base a los pies y se dibujan por delante del cuerpo. El impacto y el resultado flotante siguen al objetivo interpolado; las palabras siguen al lanzador. Son referencias a esos avatares concretos: desconectar o reutilizar un ID no deja un efecto atado a otro personaje. El nombre y las barras se mantienen encima de la meditación, reducida un 30% y con opacidad 72% para dejar visible el avatar.
+Los FX de hechizos se anclan por su base visible a los pies, descontando el margen transparente de cada cuadro y se dibujan por delante del cuerpo. El impacto y el resultado flotante siguen al objetivo interpolado; las palabras siguen al lanzador. Son referencias a esos avatares concretos: desconectar o reutilizar un ID no deja un efecto atado a otro personaje. El nombre y las barras se mantienen encima de la meditación, reducida un 30% y con opacidad 72% para dejar visible el avatar.
 
 El inventario permite arrastrar las dos provisiones de arena a casilleros vacíos o intercambiarlas. El orden se guarda por dispositivo en `user://arena_inventory.cfg`; un clic usa la poción que ocupa ese casillero y un arrastre nunca la consume. No representa todavía un inventario autoritativo con cantidades o equipo. Q/E conservan sus acciones al reordenar.
 
@@ -25,3 +25,5 @@ La consola muestra eventos de hechizos/recuperación confirmados, rechazo al sol
 ## Rediseño posterior
 
 Arte y distribución viven en CombatHUD y SpellSlotButton; selección/apuntado en SpellTargetingController; reglas y recuperación en el servidor. Cambiar texturas, colores o distribución no exige rehacer las reglas de hechizos. Cambiar la forma de apuntar o los controles sí exige adaptar y validar interacciones.
+
+La web precarga `wss://127.0.0.1:7777`: iniciar el `.cmd` y pulsar Conectar. El desarrollo nativo conserva WS; una dirección remota configurada explícitamente se respeta. La meditación conserva el anclaje y tamaño ya validados.

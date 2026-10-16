@@ -61,11 +61,12 @@ func _test_effects() -> void:
 	_check(med.modulate.a < 1.0, "Continuous meditation leaves the character visible through its effect")
 	_check(caster_avatar._name_label.z_index > med.z_index and caster_avatar._status_bars.z_index > med.z_index, "Name and health/mana bars remain above meditation")
 	_check(_frame_bottom_is_anchored(med), "Meditation's frame bottom is anchored to the feet")
+	_check(not med.has_meta("visible_bottoms") and is_equal_approx(med.modulate.a, 0.72), "Accepted meditation layout and opacity are unchanged")
 	world._on_spell_resolved({"spell_id": 13, "amount": 20, "words": "EN COR SANCTIS", "caster_id": 1, "target_id": 2, "origin_x": 4, "origin_y": 5, "target_x": 7, "target_y": 5})
 	var effect = world._spell_effects[-1]
 	effect.set_process(false)
 	_check(effect._sprite != null and not effect._sprite.sprite_frames.get_animation_loop("default"), "Healing uses a single original AO animation")
-	_check(_frame_bottom_is_anchored(effect._sprite), "Healing FX is bottom-aligned instead of hanging below the tile")
+	_check(_visible_base_is_anchored(effect._sprite), "Healing FX grounds its actual pixels rather than transparent canvas")
 	_check(effect.process_priority > target_avatar.process_priority and effect.process_priority < world.process_priority, "Effects follow interpolation before the camera moves")
 	var initial_target: Vector2 = target_avatar.position
 	target_avatar.apply_server_position(Vector2i(8, 5), initial_target + Vector2(48, 0))
@@ -78,6 +79,18 @@ func _test_effects() -> void:
 	_check(is_equal_approx(effect._text.position.x + 80, target_avatar.position.x), "Floating result follows the target horizontally")
 	_check(is_equal_approx(effect._text.position.y, target_avatar.position.y - 85 - 0.06 * 24), "Floating result follows the target and keeps its upward animation")
 	_check(effect._sprite.position.is_equal_approx(target_avatar.position + Vector2(0, 30)), "Healing graphic stays on the moving character's feet")
+	effect._sprite.pause()
+	effect._sprite.frame = effect._sprite.sprite_frames.get_frame_count("default") - 1
+	_check(effect._sprite.offset.y > -48 and _visible_base_is_anchored(effect._sprite), "The final healing pillar compensates its transparent bottom margin")
+	await _capture("spell-feet-healing.png")
+	world._on_spell_resolved({"spell_id": 53, "amount": 95, "words": "Rahma Nañarak O Al", "caster_id": 1, "target_id": 2, "origin_x": 4, "origin_y": 5, "target_x": 8, "target_y": 5})
+	var apocalypse = world._spell_effects[-1]
+	apocalypse.set_process(false)
+	apocalypse._sprite.pause()
+	apocalypse._sprite.frame = mini(7, apocalypse._sprite.sprite_frames.get_frame_count("default") - 1)
+	_check(_visible_base_is_anchored(apocalypse._sprite), "Apocalypse also rests its visible graphic on the feet")
+	effect.visible = false
+	await _capture("spell-feet-apocalypse.png")
 	world._on_player_despawned(2)
 	effect._process(0.0)
 	_check(not effect._sprite.visible and not effect._text.visible and effect._words.visible, "A despawn hides only the missing target's visual feedback")
@@ -94,6 +107,22 @@ func _test_effects() -> void:
 func _frame_bottom_is_anchored(sprite: AnimatedSprite2D) -> bool:
 	var texture := sprite.sprite_frames.get_frame_texture(sprite.animation, sprite.frame)
 	return is_zero_approx(sprite.offset.y + texture.get_height() * 0.5)
+
+
+func _visible_base_is_anchored(sprite: AnimatedSprite2D) -> bool:
+	var texture := sprite.sprite_frames.get_frame_texture(sprite.animation, sprite.frame)
+	var used := texture.get_image().get_used_rect()
+	return not used.has_area() or is_zero_approx(sprite.offset.y - texture.get_height() * 0.5 + used.end.y)
+
+
+func _capture(filename: String) -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	var directory := OS.get_environment("AO_UI_CAPTURE_DIR")
+	if directory.is_empty():
+		return
+	await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png(directory.path_join(filename))
 
 
 func _check(condition: bool, message: String) -> void:
