@@ -1,0 +1,147 @@
+{
+  "repository": "https://github.com/ao-org/Recursos",
+  "commit": "89615f34162d9fa0bf0fae4242cd6639edbf772f",
+  "conversion": "Lossless BMP to PNG; pixels unchanged.",
+  "files": [
+    {
+      "original": "es_ventanaprincipal.bmp",
+      "file": "es_ventanaprincipal.png",
+      "source_sha256": "caca55abc1fee28d9121e8c031dda8f3c1e01bfa73fb09e2cce5ed675959f314",
+      "png_sha256": "1e389ca24a4a165eebeeea92864d849e0fbe0bbbc6eeb620997ace70b937e247",
+      "size": [
+        1024,
+        768
+      ]
+    },
+    {
+      "original": "es_centrohechizo.bmp",
+      "file": "es_centrohechizo.png",
+      "source_sha256": "835d307a2aa1088f3b41091797f0f73ebd6dec17da781a8b15686e06ccae281f",
+      "png_sha256": "2aaaa74cbe4685625f2ce007cccddd907acb5897f28882bc09e956d84269fff0",
+      "size": [
+        247,
+        325
+      ]
+    },
+    {
+      "original": "es_centroinventario.bmp",
+      "file": "es_centroinventario.png",
+      "source_sha256": "95d2a68ec708dcd722d29a41f4d0b072e81c4b7b5d0ee6a6d648e777e7b19611",
+      "png_sha256": "a11be341e269e39c15f30927ca3db8d181dd6f659d2dc7b701796b1a6a31d2fd",
+      "size": [
+        247,
+        325
+      ]
+    },
+    {
+      "original": "es_barradevida.bmp",
+      "file": "es_barradevida.png",
+      "source_sha256": "e0d0f6de595e8ca92e51867419495820538530747e8708b68e39bc36d74a5cd4",
+      "png_sha256": "149c61c470c80a1088ba5ab0cf346914aa94dd385389d0542627b377fa4f2eba",
+      "size": [
+        216,
+        16
+      ]
+    },
+    {
+      "original": "es_barrademana.bmp",
+      "file": "es_barrademana.png",
+      "source_sha256": "a3c286cc2600f384cc750a68300bbfebb846a20d36c8f598e8b13416bda189cb",
+      "png_sha256": "1d18ede4d75c85b915a0f0e91278a87b028ca5392afd6ca018f85d41b13e9c63",
+      "size": [
+        216,
+        16
+      ]
+    },
+    {
+      "original": "es_boton-inventory-default.bmp",
+      "file": "es_boton-inventory-default.png",
+      "source_sha256": "4fddaf307eaf9f433e589172a0f2e9dab39d4872d49c23758cf6c638aaa5dcb0",
+      "png_sha256": "955a36a310a8abf2e9b55cd63a1b94365157984f8f05272ddd830b5ade15ad60",
+      "size": [
+        122,
+        28
+      ]
+    },
+    {
+      "original": "es_boton-inventory-off.bmp",
+      "file": "es_boton-inventory-off.png",
+      "source_sha256": "cdc084ce4ab548ba0bfbdebe4b9ae87427d4f95dc9f4b6f465eb129d85d5a2d8",
+      "png_sha256": "604a452d0517080cde3d6f631c8397c02fe7bb641fae8826b0ec3bfc475a290a",
+      "size": [
+        122,
+        28
+      ]
+    },
+    {
+      "original": "es_boton-inventory-over.bmp",
+      "file": "es_boton-inventory-over.png",
+      "source_sha256": "40010ab102e6ca13fd2669bb8212c7056125ec419f0e1907f152ac7981f7c78a",
+      "png_sha256": "8df3476b2fb70ab9f76c39f4654e70d0033791535d182afc78349115c41a2c74",
+      "size": [
+        122,
+        28
+      ]
+    },
+    {
+      "original": "es_boton-hechizos-default.bmp",
+      "file": "es_boton-hechizos-default.png",
+      "source_sha256": "92ec1531d6b67eeec34c08f63b104f9be624a32e8bbf07e8eb4250ae5d4bbe59",
+      "png_sha256": "e89156d8fef1d38b0cac4cd815a9c0ed850d9327f6797af69d0f0a119a22b5b6",
+      "size": [
+        122,
+        28
+      ]
+    },
+    {
+      "original": "es_boton-hechizos-off.bmp",
+      "file": "es_boton-hechizos-off.png",
+      "source_sha256": "320689afeb763501c1f4c5c40129aba944e149a694fe128d70f8d6e46467c99c",
+      "png_sha256": "9de82c99e6a1764822e4f6f8010f08435d557585a7261b90f06d02014e618b1b",
+      "size": [
+        122,
+        28
+      ]
+    },
+    {
+      "original": "es_boton-hechizos-over.bmp",
+      "file": "es_boton-hechizos-over.png",
+      "source_sha256": "eceeeb354e6c768934b4bd0d8658c9454c933dde57e5448f50413b034bf42cc9",
+      "png_sha256": "5c16362e10dbfaca3c59fd35d1a685e826020210df1ef2775d2f522051c2cf1c",
+      "size": [
+        122,
+        28
+      ]
+    },
+    {
+      "original": "es_boton-lanzar-default.bmp",
+      "file": "es_boton-lanzar-default.png",
+      "source_sha256": "ac7a001c6527bcdfcf492749181377b1ae51aa46fe939880da1aa01902fe15b0",
+      "png_sha256": "e5e97836bbc8bc68a6988731cad0102a231efb4000dfc592052586b0dd61fc5c",
+      "size": [
+        161,
+        39
+      ]
+    },
+    {
+      "original": "es_boton-lanzar-off.bmp",
+      "file": "es_boton-lanzar-off.png",
+      "source_sha256": "cf894f5047edcd95d5dec9ebbd99b3f97ea3f01a4181e6515b70e8b1181ca0a0",
+      "png_sha256": "1a02abf2465ada9eaf6f338e7afa71c0a0482c976feb39087e2b896d52985853",
+      "size": [
+        161,
+        39
+      ]
+    },
+    {
+      "original": "es_boton-lanzar-over.bmp",
+      "file": "es_boton-lanzar-over.png",
+      "source_sha256": "2ee6e55ea7a31522e8ae2e6427bb91c0b4a304d7df9277348f216cb71593a6c5",
+      "png_sha256": "01ab729af9a3e1cfc5362fe8425fcb7c5b9b2dff7fb19462dc6767cf9709aa49",
+      "size": [
+        161,
+        39
+      ]
+    }
+  ]
+}
