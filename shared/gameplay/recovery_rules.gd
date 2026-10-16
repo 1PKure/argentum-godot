@@ -7,8 +7,8 @@ const ARENA_MAX_MANA := 3000
 const MEDITATION_WARMUP_MSEC := 2000
 const MEDITATION_INTERVAL_MSEC := 1000
 const MEDITATION_PERCENT := 5
-const POTION_INTERVAL_MSEC := 380 # intervalos.ini: IntervaloUserPuedeUsarU
-const ATTACK_POTION_GAP_MSEC := 800
+const POTION_INTERVAL_MSEC := 330 # Arena tuning; AO20 IntervaloUserPuedeUsarU: 380 ms.
+const ATTACK_POTION_GAP_MSEC := 700 # Arena tuning; source reference: 800 ms.
 const POTION_FILE := "res://assets/argentum/source/data/arena_consumables.ini"
 
 

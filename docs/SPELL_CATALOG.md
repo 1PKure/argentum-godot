@@ -4,7 +4,7 @@ Se importaron las 213 entradas del Hechizos.dat original. 39 están habilitadas 
 
 Un hechizo pendiente no puede armarse, asignarse a un acceso ni gastar recursos. Los hechizos de NPC, recetas y administración no forman parte del PvP de jugadores. No se presenta el catálogo como un port completo de los 213 hechizos.
 
-Los habilitados incluyen daño/curación directa, parálisis/inmovilización, remover/limpieza y restauración/daño periódico. Los intervalos individuales del DAT se respetan además de los 1230 ms globales. Las duraciones de raíces y los valores/ticks de EffectsOverTime.dat se resuelven en el servidor; parálisis impide caminar, pero permite removerse, curarse y beber.
+Los habilitados incluyen daño/curación directa, parálisis/inmovilización, remover/limpieza y restauración/daño periódico. Los intervalos individuales del DAT se respetan además de los 1100 ms globales del perfil de arena. Las duraciones de raíces y los valores/ticks de EffectsOverTime.dat se resuelven en el servidor; parálisis impide caminar, pero permite removerse, curarse y beber.
 
 El perfil de prueba omite requisitos de clase, skill, estamina y equipo. No implementa fórmulas de resistencia ni multiplicadores de equipo. Los hechizos que dependen del efecto de esos sistemas —atributos, invisibilidad en red, invocaciones, armas, transformaciones, etc.— quedan pendientes, con su motivo. El siguiente paso de port debe abordar esos sistemas, no habilitarlos cambiando únicamente una lista.
 

@@ -3,9 +3,10 @@ extends RefCounted
 
 const DATA_FILE := "res://assets/argentum/source/data/Hechizos.dat"
 const DEFAULT_BINDINGS: Array[int] = [1, 2, 12, 13]
-const CAST_INTERVAL_MSEC := 1230
-const ATTACK_SPELL_GAP_MSEC := 800
-const SPELL_ATTACK_GAP_MSEC := 800
+# Arena cadence is deliberately faster than the imported reference profile.
+const CAST_INTERVAL_MSEC := 1100 # Previous: 1230 ms.
+const ATTACK_SPELL_GAP_MSEC := 700 # Previous: 800 ms.
+const SPELL_ATTACK_GAP_MSEC := 700
 # Every enabled entry has a real server handler. Other entries stay consultable.
 const STATUS_HANDLERS := [11, 25, 26, 27, 28, 29, 112, 132, 133, 263, 350]
 const PERIODIC_HANDLERS := [242, 243, 268, 269]
