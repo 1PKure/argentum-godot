@@ -15,9 +15,13 @@ Use the same branch for the dedicated server and restart it after updating. `too
 
 See [the interface scope and Windows test guide](docs/COMBAT_UI.md). AO20 artwork attribution, provenance and its separate license are in `assets/argentum/interface/ao20/`.
 
+See [the PvP priorities and integration workflow](docs/ROADMAP.md). New task branches and PRs start directly from the updated `Alpha`.
+
 See [spell data, rules and test scope](docs/SPELLS.md) and [movement timing](docs/MOVEMENT.md). This remains a small PvP prototype, not the complete AO20 combat server.
 
 
 ## Arena recovery and camera
 
 M toggles meditation; Q/E drink health/mana potions (original +27 HP / +5% maximum MP). The explicit testing profile is 500 HP /3000 MP, with unlimited arena potions and Respawn after death. The camera follows the local interpolated avatar, while the HUD fills the window from a1280×800 design base. The book supports name/ID search and a full-catalog filter with reasons for entries that require unported systems. See [recovery rules](docs/RECOVERY.md), [the exact catalog](docs/SPELL_CATALOG.md) and [movement/camera validation](docs/MOVEMENT.md).
+
+Both potions can be used during meditation without resetting its timing; filling mana ends it. The meditation FX is 30% smaller and grounded at the feet in front of the body. Spell impacts/results follow the target and words follow the caster. Drag inventory supplies into empty slots or onto each other to rearrange them; the per-device layout is saved and dragging never consumes a potion.

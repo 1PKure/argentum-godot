@@ -406,7 +406,10 @@ func try_recovery_action(peer_id: int, action: String, request_id: int, now: int
 			var previous := player.current_mana
 			player.restore_mana(maxi(1, int(player.max_mana * int(potion.percent) / 100.0)))
 			amount = player.current_mana - previous
-		player.is_meditating = false
+		# Drinking preserves meditation and its scheduled tick. Full mana still
+		# ends it immediately, as it does when regeneration fills the resource.
+		if player.current_mana >= player.max_mana:
+			player.is_meditating = false
 		_last_potion_time[peer_id] = now
 		message = "Usó %s (+%d)." % [potion.name, amount]
 	return {"ok": true, "state": player.to_dictionary(), "event": {

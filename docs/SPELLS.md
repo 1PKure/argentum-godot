@@ -16,13 +16,15 @@ El servidor identifica al lanzador por su conexión y valida personaje vivo, lib
 
 Los objetivos se admiten dentro de toda la arena 20×12. Falta portar visión, línea de visión y las reglas completas de mapas de AO. El perfil de prueba de 500 vida/3000 maná no representa una clase ni balance final. No aplica requisitos de clase, skills, estamina, equipo ni multiplicadores. Los hechizos cuyo efecto depende de esos sistemas quedan pendientes. Invocaciones, bot y lobbies siguen pendientes; PvE está fuera del alcance acordado.
 
-PlayerNetwork conserva su tabla RPC. SpellNetwork usa un protocolo separado, versión 2, y comprueba soporte. Un servidor anterior deshabilita Lanzar/recuperación y muestra una instrucción de actualización. Actualizar work/ao20-spells y reiniciar el servidor es necesario.
+PlayerNetwork conserva su tabla RPC. SpellNetwork usa un protocolo separado, versión 2, y comprueba soporte. Un servidor anterior a ese protocolo deshabilita Lanzar/recuperación y muestra una instrucción de actualización. Para probar cada cambio hay que actualizar y reiniciar el servidor desde la misma rama/revisión que el cliente; la compatibilidad del protocolo no garantiza reglas idénticas entre revisiones.
 
 ## Procedencia y adaptaciones visuales
 
 Datos, iconos, FX y audio proceden de [ao-org/Recursos, commit 89615f3](https://github.com/ao-org/Recursos/tree/89615f34162d9fa0bf0fae4242cd6639edbf772f). Los intervalos y reglas consultadas proceden de [ao-org/argentum-online-server, commit 9d381f2](https://github.com/ao-org/argentum-online-server/tree/9d381f280c10b680cf1f84be5372f8c1dce42840). No es un port del servidor entero. Se conservan los avisos de los recursos en assets/argentum/interface/ao20/. Hashes y excepciones están en assets/argentum/source/data/spells_sources.json.
 
 Curar Heridas Leves usa FX9 y el icono azul GRH74686 porque su DAT no define FX y apunta a un icono vacío. Aliento de Dragón no define icono y muestra el de fuego GRH74714. Implosión guarda directamente el GRH12834 en el DAT: el adaptador usa FX4, que refiere a esa misma animación. Siete sonidos referenciados no existen en el repositorio público de la revisión y usan el sonido16 como sustituto explícito. WAV113 se decodificó de ADPCM a PCM para importación en Godot; se conserva el original en audio/originals/113.wav.source. La meditación usa el FX de nivel máximo120 disponible; ver [RECOVERY.md](RECOVERY.md).
+
+El render adapta el ancla inferior de cada frame a los pies del avatar y conserva los offsets de FXs.ini. Los impactos y resultados flotantes acompañan al objetivo interpolado; las palabras acompañan al lanzador, incluso si se mueven en sentidos distintos. Son efectos de personaje; un futuro hechizo de área fija requerirá su propia presentación sobre terreno.
 
 ## Validación
 

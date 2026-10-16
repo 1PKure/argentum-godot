@@ -456,13 +456,14 @@ func get_icon_texture(grh_id: int) -> Texture2D:
 	return texture
 
 
-func create_fx_sprite(fx_id: int) -> AnimatedSprite2D:
+func create_fx_sprite(fx_id: int, looping: bool = true) -> AnimatedSprite2D:
 	var fx: Dictionary = AODataFile.read_sections(DATA_PATH + "FXs.ini").get("FX%d" % fx_id, {})
 	var animation := get_grh_animation(int(fx.get("Animacion", "0")))
 	if animation.is_empty():
 		return null
 	var frames := SpriteFrames.new()
 	frames.set_animation_speed("default", animation.fps)
+	frames.set_animation_loop("default", looping)
 	for frame: Dictionary in animation.frames:
 		if not ResourceLoader.exists(GRAPHICS_PATH + "%d.png" % int(frame.file_num)):
 			return null
@@ -473,7 +474,18 @@ func create_fx_sprite(fx_id: int) -> AnimatedSprite2D:
 	var sprite := AnimatedSprite2D.new()
 	sprite.sprite_frames = frames
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	# AO effects are grounded at the character's feet, not centered on the tile.
+	# Keep this correct even for animations with differently sized frames.
+	sprite.frame_changed.connect(_anchor_fx_frame.bind(sprite))
+	_anchor_fx_frame(sprite)
+	sprite.set_meta("source_offset", Vector2(float(fx.get("OffsetX", "0")), float(fx.get("OffsetY", "0"))))
 	return sprite
+
+
+func _anchor_fx_frame(sprite: AnimatedSprite2D) -> void:
+	var texture := sprite.sprite_frames.get_frame_texture(sprite.animation, sprite.frame)
+	if texture != null:
+		sprite.offset = Vector2(0, -texture.get_height() * 0.5)
 
 
 func get_grh_animation(grh_id: int) -> Dictionary:

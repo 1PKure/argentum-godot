@@ -53,12 +53,25 @@ func _run() -> void:
 	registry._last_move_time[701] = -1000
 	registry.try_move_player(701, 1)
 	_check(not caster.is_meditating, "An accepted move interrupts meditation")
+	caster.current_mana = 2000
+	caster.current_health = 400
 	registry.try_recovery_action(701, "meditate", 8, 19000)
-	registry.try_recovery_action(701, "mana_potion", 9, 19500)
-	_check(not caster.is_meditating, "Drinking interrupts meditation")
+	result = registry.try_recovery_action(701, "mana_potion", 9, 19500)
+	_check(result.ok and caster.is_meditating and caster.current_mana == 2150, "Blue potion restores mana without interrupting meditation")
+	result = registry.try_recovery_action(701, "health_potion", 10, 19880)
+	_check(result.ok and caster.is_meditating and caster.current_health == 427, "Red potion restores health without interrupting meditation")
+	result = registry.try_recovery_action(701, "health_potion", 11, 19900)
+	_check(not result.ok and caster.is_meditating and caster.current_health == 427, "Meditation does not bypass the shared potion cooldown")
+	registry.advance_runtime(20999)
+	_check(caster.current_mana == 2150, "Drinking cannot grant an early meditation tick")
+	registry.advance_runtime(21000)
+	_check(caster.current_mana == 2300 and caster.is_meditating, "Drinking preserves the original meditation warmup and tick schedule")
 	caster.current_mana = 2999
-	registry.try_recovery_action(701, "meditate", 10, 21000)
-	registry.advance_runtime(23000)
+	result = registry.try_recovery_action(701, "mana_potion", 12, 21380)
+	_check(result.ok and caster.current_mana == 3000 and not caster.is_meditating, "A blue potion that fills mana ends meditation immediately")
+	caster.current_mana = 2999
+	registry.try_recovery_action(701, "meditate", 13, 22000)
+	registry.advance_runtime(24000)
 	_check(caster.current_mana == 3000 and not caster.is_meditating, "Meditation stops automatically at full mana")
 	caster.current_mana = 3000
 	registry._last_spell_time[701] = -5000
@@ -97,12 +110,12 @@ func _run() -> void:
 	result = registry.try_cast_spell(701, 263, caster.grid_position, 5)
 	_check(result.ok and not caster.active_effects.has("Putrefacción"), "Blessing removes an actual negative effect")
 	caster.apply_damage(10000)
-	result = registry.try_recovery_action(701, "health_potion", 11, 25000)
+	result = registry.try_recovery_action(701, "health_potion", 14, 25000)
 	_check(not result.ok and caster.current_health == 0, "Ghosts cannot drink or gain health")
-	result = registry.try_recovery_action(701, "respawn", 12, 26000)
+	result = registry.try_recovery_action(701, "respawn", 15, 26000)
 	_check(result.ok and caster.is_alive and caster.current_health == 500 and caster.current_mana == 3000 and caster.active_effects.is_empty(), "Arena respawn resets real combat state")
 	_check(registry._spell_cooldowns[701].is_empty(), "Arena respawn clears per-spell cooldowns for a fresh test round")
-	_check(not registry.try_recovery_action(701, "respawn", 13, 27000).ok, "Living players cannot use respawn as a refill")
+	_check(not registry.try_recovery_action(701, "respawn", 16, 27000).ok, "Living players cannot use respawn as a refill")
 	var serialized: Dictionary = caster.to_dictionary()
 	serialized.is_meditating = true
 	serialized.active_effects = ["Inmovilizado"]

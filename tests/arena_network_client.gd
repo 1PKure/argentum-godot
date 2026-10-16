@@ -21,6 +21,11 @@ func _run() -> void:
 	main = load("res://client/scenes/client_main.tscn").instantiate()
 	root.add_child(main)
 	hud = main.get_node("CombatHUD")
+	# Keep test drags deterministic and out of the real saved preference.
+	hud._inventory_layout.storage_path = ""
+	hud._inventory_layout.actions = ArenaInventoryLayout.new().actions
+	for index in range(hud._inventory_slots.size()):
+		hud._inventory_slots[index].configure(index, hud._inventory_layout)
 	controller = main._spell_controller
 	world = main._world
 	await _wait_for(func() -> bool: return hud._players.size() == 2 and controller.server_ready)
@@ -52,6 +57,14 @@ func _run() -> void:
 		network.request_cast(53, hud._players[opponent].grid_position, 3)
 		await _wait_for(func() -> bool: return hud._players[local_id].current_mana == 1810)
 		_check(hud._players[local_id].current_mana == 1810, "Remote Apocalypse keeps its original 1000 mana cost")
+		await _wait_for(func() -> bool: return hud._players[opponent].is_meditating)
+		var med_health: int = hud._players[opponent].current_health
+		var med_mana: int = hud._players[opponent].current_mana
+		_check(hud._players[opponent].is_meditating and world._avatars[opponent]._meditation_fx.visible, "Other client sees the confirmed meditation and its FX")
+		await _wait_for(func() -> bool: return hud._players[opponent].current_health > med_health)
+		_check(hud._players[opponent].current_health == med_health + 27 and hud._players[opponent].is_meditating, "Other client sees a red potion without a meditation interruption")
+		await _wait_for(func() -> bool: return hud._players[opponent].current_mana > med_mana)
+		_check(hud._players[opponent].current_mana == med_mana + 150 and hud._players[opponent].is_meditating, "Other client sees a blue potion without a meditation interruption")
 		await _wait_for(func() -> bool: return hud._players.size() == 1, 35.0)
 		_finish()
 		return
@@ -90,6 +103,13 @@ func _run() -> void:
 	await _wait_for(func() -> bool: return controller.pending_request == 0 and hud._players[local_id].current_mana == 2985)
 	_check(hud._players[local_id].current_health > health_before, "Macro-targeted heal actually restores health")
 	_check(hud._players[local_id].current_mana == 2985, "Minor heal consumes five mana")
+	var healing_fx = world._spell_effects[-1]
+	_key(KEY_D, true)
+	await create_timer(0.15).timeout
+	_key(KEY_D, false)
+	await process_frame
+	_check(is_instance_valid(healing_fx) and healing_fx.target.is_equal_approx(world._avatars[local_id].position), "Healing FX follows the actual moving avatar after a confirmed cast")
+	_check(is_instance_valid(healing_fx) and healing_fx._words.position.is_equal_approx(world._avatars[local_id].position + Vector2(-100, -107)), "Incantation follows the moving caster through the scrolling camera")
 	await _capture("ao-macro-heal.png")
 	_key(KEY_1, true)
 	_key(KEY_1, false)
@@ -150,15 +170,40 @@ func _run() -> void:
 	_key(KEY_E, false)
 	await _wait_for(func() -> bool: return hud._players[local_id].current_mana > mana_before)
 	_check(hud._players[local_id].current_mana == mana_before + 150, "Blue-potion hotkey restores 5 percent of 3000 mana")
+	hud.show_inventory()
+	var drag_health: int = hud._players[local_id].current_health
+	var drag_mana: int = hud._players[local_id].current_mana
+	await _drag(hud._inventory_slots[0], hud._inventory_slots[8])
+	_check(hud._inventory_slots[0].action == "" and hud._inventory_slots[8].action == "health_potion", "Actual GUI drag moves a potion into an empty inventory slot")
+	await _drag(hud._inventory_slots[8], hud._inventory_slots[1])
+	_check(hud._inventory_slots[1].action == "health_potion" and hud._inventory_slots[8].action == "mana_potion", "Actual GUI drag swaps occupied potion slots")
+	await _drag(hud._inventory_slots[8], hud._name_label)
+	_check(hud._inventory_slots[8].action == "mana_potion", "Dropping outside inventory leaves the potion in its original slot")
+	await _drag(hud._inventory_slots[8], hud._hotkey_buttons[0])
+	_check(hud._inventory_slots[8].action == "mana_potion" and controller.bindings[0] == 1, "Potion drag cannot replace a spell hotkey")
+	_check(hud._players[local_id].current_health == drag_health and hud._players[local_id].current_mana == drag_mana, "Moving, swapping and cancelling drags never drinks a potion")
+	_check(hud._inventory_layout.actions.count("health_potion") == 1 and hud._inventory_layout.actions.count("mana_potion") == 1, "GUI rearrangement preserves exactly one supply of each type")
+	# Leave enough room to test both potions plus a meditation tick.
+	for index in range(60):
+		root.get_node("PlayerNetwork").request_debug_mana_spend()
+	await _wait_for(func() -> bool: return hud._players[local_id].current_mana == drag_mana - 600)
 	mana_before = hud._players[local_id].current_mana
 	_key(KEY_M, true)
 	_key(KEY_M, false)
 	await _wait_for(func() -> bool: return hud._players[local_id].is_meditating)
 	await create_timer(0.3).timeout
 	_check(hud._players[local_id].is_meditating and hud._players[local_id].current_mana == mana_before, "Meditation key starts its warmup with no instant mana")
+	await _click(hud._inventory_slots[1])
+	await _wait_for(func() -> bool: return hud._players[local_id].current_health > drag_health)
+	_check(hud._players[local_id].current_health == drag_health + 27 and hud._players[local_id].is_meditating, "Clicking the moved red potion restores health while meditation continues")
+	await create_timer(0.42).timeout
+	await _click(hud._inventory_slots[8])
 	await _wait_for(func() -> bool: return hud._players[local_id].current_mana > mana_before)
-	_check(hud._players[local_id].current_mana == mana_before + 150, "Meditation restores mana through real server ticks")
+	_check(hud._players[local_id].current_mana == mana_before + 150 and hud._players[local_id].is_meditating, "Clicking the moved blue potion restores mana while meditation continues")
+	await _wait_for(func() -> bool: return hud._players[local_id].current_mana >= mana_before + 300)
+	_check(hud._players[local_id].current_mana == mana_before + 300 and hud._players[local_id].is_meditating, "Meditation still regenerates after both potions")
 	_check(world._avatars[local_id]._meditation_fx != null and world._avatars[local_id]._meditation_fx.visible, "Confirmed meditation displays the original AO20 looping FX")
+	_check(world._avatars[local_id]._meditation_fx.scale == Vector2.ONE * 1.05 and world._avatars[local_id]._meditation_fx.z_index > 0, "Live meditation uses the smaller effect in front of the avatar")
 	await _capture("arena-meditation.png")
 	_key(KEY_A, true)
 	await create_timer(0.15).timeout
