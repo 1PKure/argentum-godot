@@ -1,21 +1,22 @@
 # Interfaz de combate AO20
 
-Esta iteración parte de `work/web-export-alpha`, sin incorporar la prueba retirada de `work/pvp-spells`.
+El HUD conserva recursos originales de AO20, consola, Inventario/Hechizos, minimapa y barras confirmadas de vida/maná. La base de diseño actual es 1280×800. Ocupa todo el viewport con controles a escala uniforme y amplía el área de juego en ventanas más anchas; no requiere 1920×1080.
 
-La interfaz usa los recursos originales de AO20: marco de 1024×768, consola superior, paneles Inventario/Hechizos y barras de vida/maná. Se adapta al espacio disponible conservando proporciones y toda la arena se presenta dentro del área de juego. El minimapa muestra posiciones reales y obstáculos.
+La cámara sigue al avatar interpolado dentro de game_area. No mueve el HUD. El exterior decorativo oscurecido evita franjas negras al seguir al jugador cerca del borde; la línea marca los límites autoritativos originales de 20×12 y no agrega casillas caminables.
 
-Los botones y la barra de desplazamiento no toman foco de teclado. WASD y CTRL conservan sus acciones anteriores al cambiar de pestaña o seleccionar un casillero. Inventario y accesos numéricos se presentan vacíos. Lanzar permanece deshabilitado porque la base estable aún no tiene un libro de hechizos ni su resolución; esta entrega no incorpora reglas nuevas de hechizos, ni el modo de combate descartado.
+El libro incorpora búsqueda, catálogo completo y accesos por arrastre. Ver [SPELLS.md](SPELLS.md) y [SPELL_CATALOG.md](SPELL_CATALOG.md) para los 39 habilitados y los motivos de las entradas pendientes. Las pociones y la meditación se explican en [RECOVERY.md](RECOVERY.md). Los botones y scrollbars no toman foco de teclado. El campo de búsqueda sí captura texto mientras se escribe; Enter libera ese foco.
 
-La consola recibe los eventos ya existentes de PlayerNetwork. Muestra entradas/salidas y diferencias confirmadas de vida/maná, además de muerte. No imprime cambios por movimiento ni presenta los valores iniciales del snapshot como daño. Separa Todo/Combate/Sistema, limita el historial a 200 mensajes y trata nombres como texto, sin ejecutar BBCode.
-
-El protocolo existente sólo informa cambios de estado: la consola no atribuye el atacante, un hechizo ni el motivo de un rechazo que el servidor no haya comunicado. Estos eventos podrán incorporarse con el port de combate. No se cambió la tabla de RPC; este cliente es compatible con el servidor de `work/web-export-alpha`.
+La consola muestra eventos de hechizos/recuperación confirmados, rechazo al solicitante, entradas/salidas, vida/maná y muerte. Mantiene filtros, máximo 200 mensajes y nombres como texto literal. Los golpes físicos conservan un mensaje genérico de pérdida de vida porque su protocolo aún no informa autoría.
 
 ## Prueba desde Windows
 
-1. En GitHub Desktop: Fetch origin y elegir `work/ao20-combat-ui` en Current branch.
-2. Abrir el proyecto una vez en Godot para importar los nuevos PNG y registrar las clases. Ejecutar `tools/Start-PrivateWebTest.cmd` si se prueba desde la web privada.
-3. Conectar dos clientes. Moverse con WASD, alternar Inventario/Hechizos y desplazarse por la consola. Comprobar que el movimiento sigue respondiendo después de esos clics.
-4. Acercarse al otro jugador, orientarse hacia su casilla y pulsar CTRL. La pérdida de vida confirmada debe aparecer en ambas consolas; el golpe físico no gasta maná.
-5. Probar filtros y desconexión desde Menú. Al reconectar se reinician el historial y las barras de la sesión anterior.
+1. Cerrar Godot, clientes y servidor anterior.
+2. GitHub Desktop: Fetch origin, Current branch work/ao20-spells y Pull origin si aparece.
+3. Reabrir project.godot y esperar la importación. F5 prueba el proyecto desde el editor. Para web, ejecutar tools/Start-PrivateWebTest.cmd y conectar a wss://127.0.0.1:7777.
+4. Abrir dos clientes y acercarse usando el minimapa. Probar Lanzar, macros, buscar Apocalipsis y asignarlo por arrastre.
+5. Probar Q/E con recursos gastados, M para meditar y caminar para interrumpirlo. Comprobar cámara y puntero después de caminar.
+6. Probar parálisis/remo, morir y usar Reaparecer. Al desconectar/reconectar no deben quedar avatar, FX o estado de la sesión anterior.
 
-Los botones y atributos de AO20 para sistemas aún ausentes no producen estadísticas ni acciones ficticias. Esta iteración se limita a PvP; lobbies, bot y hechizos quedan para las siguientes entregas.
+## Rediseño posterior
+
+Arte y distribución viven en CombatHUD y SpellSlotButton; selección/apuntado en SpellTargetingController; reglas y recuperación en el servidor. Cambiar texturas, colores o distribución no exige rehacer las reglas de hechizos. Cambiar la forma de apuntar o los controles sí exige adaptar y validar interacciones.

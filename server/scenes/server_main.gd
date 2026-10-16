@@ -31,6 +31,8 @@ func _ready() -> void:
 	PlayerNetwork.debug_mana_spend_requested.connect(
 		_on_debug_mana_spend_requested
 	)
+	SpellNetwork.cast_requested.connect(_on_spell_cast_requested)
+	RecoveryNetwork.action_requested.connect(_on_recovery_action_requested)
 
 	var error: Error = (
 		NetworkManager.start_server()
@@ -45,6 +47,22 @@ func _ready() -> void:
 		return
 
 	print("Argentum server ready.")
+
+
+func _process(_delta: float) -> void:
+	for player: PlayerState in player_registry.advance_runtime():
+		PlayerNetwork.broadcast_player_stats_updated(player.to_dictionary())
+
+
+func _on_recovery_action_requested(peer_id: int, action: String, request_id: int) -> void:
+	var result := player_registry.try_recovery_action(peer_id, action, request_id)
+	if not result.ok:
+		RecoveryNetwork.send_rejection(peer_id, str(result.message))
+		return
+	PlayerNetwork.broadcast_player_stats_updated(result.state)
+	if action == "respawn":
+		PlayerNetwork.broadcast_player_moved(result.state)
+	RecoveryNetwork.broadcast_result(result.event)
 
 
 func _on_peer_connected(
@@ -115,11 +133,15 @@ func _on_move_requested(
 func _on_basic_attack_requested(
 	peer_id: int
 ) -> void:
+	var attacker := player_registry.get_player(peer_id)
+	var was_meditating := attacker != null and attacker.is_meditating
 	var target: PlayerState = (
 		player_registry.try_basic_attack(
 			peer_id
 		)
 	)
+	if was_meditating and not attacker.is_meditating:
+		PlayerNetwork.broadcast_player_stats_updated(attacker.to_dictionary())
 
 	if target == null:
 		return
@@ -136,6 +158,17 @@ func _on_basic_attack_requested(
 	PlayerNetwork.broadcast_player_stats_updated(
 		target.to_dictionary()
 	)
+
+
+func _on_spell_cast_requested(peer_id: int, spell_id: int, target: Vector2i, request_id: int) -> void:
+	var result := player_registry.try_cast_spell(peer_id, spell_id, target, request_id)
+	if not result.ok:
+		SpellNetwork.send_rejection(peer_id, request_id, result.message, result.remaining_msec)
+		return
+	PlayerNetwork.broadcast_player_stats_updated(result.caster_state)
+	if int(result.target_state.peer_id) != peer_id:
+		PlayerNetwork.broadcast_player_stats_updated(result.target_state)
+	SpellNetwork.broadcast_result(result.event)
 
 
 func _on_debug_damage_requested(

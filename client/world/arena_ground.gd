@@ -2,6 +2,7 @@ class_name ArenaGround
 extends Node2D
 
 const SHOW_DEBUG_GRID := false
+const VISUAL_PADDING_TILES := 12
 
 var _ground_grh_ids: Array[int] = []
 
@@ -48,12 +49,15 @@ func _draw() -> void:
 	if _ground_grh_ids.is_empty():
 		return
 
-	for y in range(_grid_rows):
-		for x in range(_grid_columns):
+	# Decorative exterior keeps a following camera filled at the arena edges.
+	# Server walkability remains the original 20x12 bounds, marked by the border.
+	for y in range(-VISUAL_PADDING_TILES, _grid_rows + VISUAL_PADDING_TILES):
+		for x in range(-VISUAL_PADDING_TILES, _grid_columns + VISUAL_PADDING_TILES):
 			_draw_ground_tile(
 				x,
 				y
 			)
+	draw_rect(Rect2(_world_origin, Vector2(_grid_columns, _grid_rows) * _tile_size), Color(0.7, 0.63, 0.38, 0.9), false, 3.0)
 
 	if SHOW_DEBUG_GRID:
 		_draw_debug_grid()
@@ -124,7 +128,8 @@ func _draw_ground_tile(
 	draw_texture_rect_region(
 		texture,
 		destination_rect,
-		region
+		region,
+		Color.WHITE if x >= 0 and y >= 0 and x < _grid_columns and y < _grid_rows else Color(0.35, 0.4, 0.32)
 	)
 
 

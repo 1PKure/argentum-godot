@@ -1,7 +1,7 @@
 class_name PlayerAvatar
 extends Node2D
 
-const MOVE_DURATION_SECONDS: float = 0.12
+const MOVE_DURATION_SECONDS: float = MovementRules.MOVE_INTERVAL_SECONDS
 const TILE_SIZE: float = 48.0
 const VISUAL_MOVEMENT_GRACE_SECONDS: float = 0.05
 var is_ghost: bool
@@ -48,8 +48,12 @@ var is_alive: bool
 
 var _name_label: Label
 var _status_bars: PlayerStatusBars
+var _meditation_fx: AnimatedSprite2D
+var _is_meditating := false
+var _effect_labels: Array[String] = []
 
 var _target_position: Vector2
+var _movement_waypoints: Array[Vector2] = []
 var _is_selected := false
 
 
@@ -59,51 +63,38 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	var movement_delta := (
-		_target_position
-		- position
-	)
+	var remaining_distance := MOVE_SPEED * maxf(delta, 0.0)
+	var moved_this_frame := false
+	# Preserve each confirmed turn. Carry unused frame time to the next segment
+	# instead of cutting diagonally toward the newest received grid position.
+	while not _movement_waypoints.is_empty():
+		var waypoint: Vector2 = _movement_waypoints[0]
+		var movement_delta := waypoint - position
+		var distance := movement_delta.length()
+		if distance <= MOVEMENT_EPSILON:
+			position = waypoint
+			_movement_waypoints.pop_front()
+			continue
+		if remaining_distance <= 0.0:
+			break
+		_last_visual_direction = movement_delta
+		moved_this_frame = true
+		var step := minf(distance, remaining_distance)
+		position += movement_delta / distance * step
+		remaining_distance -= step
+		if step >= distance - MOVEMENT_EPSILON:
+			position = waypoint
+			_movement_waypoints.pop_front()
 
-	var is_moving := (
-		movement_delta.length_squared()
-		> MOVEMENT_EPSILON
-	)
-
-	if is_moving:
-		_last_visual_direction = (
-			movement_delta
-		)
-
-		_visual_movement_grace_timer = (
-			VISUAL_MOVEMENT_GRACE_SECONDS
-		)
-
-		_player_visual.set_movement(
-			movement_delta,
-			true
-		)
-
-		position = position.move_toward(
-			_target_position,
-			MOVE_SPEED * delta
-		)
+	if moved_this_frame:
+		_visual_movement_grace_timer = VISUAL_MOVEMENT_GRACE_SECONDS
+		_player_visual.set_movement(_last_visual_direction, true)
 	else:
-		position = _target_position
-
-		if _visual_movement_grace_timer > 0.0:
-			_visual_movement_grace_timer -= (
-				delta
-			)
-
-			_player_visual.set_movement(
-				_last_visual_direction,
-				true
-			)
-		else:
-			_player_visual.set_movement(
-				_last_visual_direction,
-				false
-			)
+		_visual_movement_grace_timer = maxf(_visual_movement_grace_timer - delta, 0.0)
+		_player_visual.set_movement(
+			_last_visual_direction,
+			_visual_movement_grace_timer > 0.0
+		)
 
 
 func _draw() -> void:
@@ -134,6 +125,7 @@ func setup(
 	is_ghost = player_state.is_ghost
 	is_local_player = local_player
 	is_alive = player_state.is_alive
+	_apply_effect_presentation(player_state)
 
 	_player_visual.set_head_id(
 		_get_head_id_from_peer()
@@ -145,6 +137,7 @@ func setup(
 	
 	position = world_position
 	_target_position = world_position
+	_movement_waypoints.clear()
 
 	if _name_label != null:
 		_update_label()
@@ -153,6 +146,7 @@ func setup(
 		_status_bars.apply_state(
 			player_state
 		)
+		_status_bars.visible = not is_ghost
 
 
 func apply_server_position(
@@ -160,6 +154,8 @@ func apply_server_position(
 	new_world_position: Vector2
 ) -> void:
 	grid_position = new_grid_position
+	if not new_world_position.is_equal_approx(_target_position):
+		_movement_waypoints.append(new_world_position)
 	_target_position = new_world_position
 
 
@@ -168,6 +164,7 @@ func apply_server_stats(
 ) -> void:
 	is_alive = player_state.is_alive
 	is_ghost = player_state.is_ghost
+	_apply_effect_presentation(player_state)
 
 	_player_visual.set_ghost_mode(
 		is_ghost
@@ -183,6 +180,22 @@ func apply_server_stats(
 		)
 
 	_update_label()
+
+
+func _apply_effect_presentation(state: PlayerState) -> void:
+	_is_meditating = state.is_meditating
+	_effect_labels.assign(state.active_effects)
+	if _is_meditating and _meditation_fx == null:
+		# Public MeditationLevelMax uses FX120; lower-level FX153 is missing
+		# from the same public FX table, so this test profile uses the valid FX.
+		_meditation_fx = AOResources.create_fx_sprite(120)
+		if _meditation_fx != null:
+			_meditation_fx.scale = Vector2.ONE * 1.5
+			_meditation_fx.z_index = -1
+			add_child(_meditation_fx)
+			_meditation_fx.play()
+	if _meditation_fx != null:
+		_meditation_fx.visible = _is_meditating and state.is_alive
 
 
 func set_selected(selected: bool) -> void:
@@ -248,5 +261,9 @@ func _update_label() -> void:
 
 	if is_ghost:
 		final_name += " [GHOST]"
+	elif _is_meditating:
+		final_name += " · Meditando"
+	elif not _effect_labels.is_empty():
+		final_name += " · " + str(_effect_labels[0])
 
 	_name_label.text = final_name

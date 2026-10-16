@@ -9,6 +9,7 @@ const CONNECTION_PANEL_SCRIPT := preload(
 @onready var _hud: CombatHUD = $CombatHUD
 
 var _connection_panel: ServerConnectionPanel
+var _spell_controller: SpellTargetingController
 
 
 func _ready() -> void:
@@ -16,6 +17,10 @@ func _ready() -> void:
 	_local_input.set_process(false)
 	_hud.mount_world(_world)
 	_hud.disconnect_requested.connect(_disconnect_from_arena)
+	_spell_controller = SpellTargetingController.new()
+	add_child(_spell_controller)
+	_spell_controller.setup(_world, _hud.game_area)
+	_hud.configure_spells(_spell_controller)
 
 	NetworkManager.connected_to_server.connect(_on_connected_to_server)
 	NetworkManager.connection_failed.connect(_on_connection_failed)
@@ -37,6 +42,7 @@ func _ready() -> void:
 
 func _connect_to_server(server_url: String) -> void:
 	_local_input.set_process(false)
+	_spell_controller.end_session()
 	_connection_panel.show_connection("Conectando al servidor…")
 	_connection_panel.set_busy(true)
 
@@ -50,12 +56,14 @@ func _connect_to_server(server_url: String) -> void:
 
 
 func _cancel_connection() -> void:
+	_spell_controller.end_session()
 	NetworkManager.stop()
 	_connection_panel.show_connection("Conexión cancelada. Podés volver a intentar.")
 
 
 func _disconnect_from_arena() -> void:
 	_local_input.set_process(false)
+	_spell_controller.end_session()
 	NetworkManager.stop()
 	_world.clear_session()
 	_hud.end_session("Te desconectaste de la arena.")
@@ -83,6 +91,7 @@ func _on_connected_to_server() -> void:
 	print("CLIENT MAIN: Connection confirmed.")
 	_connection_panel.hide_connection()
 	_hud.start_session(multiplayer.get_unique_id())
+	_spell_controller.start_session(multiplayer.get_unique_id())
 	_local_input.set_process(true)
 
 
@@ -97,6 +106,7 @@ func _on_connection_failed() -> void:
 func _on_server_disconnected() -> void:
 	print("CLIENT MAIN: Server disconnected.")
 	_local_input.set_process(false)
+	_spell_controller.end_session()
 	_world.clear_session()
 	_hud.end_session("Se perdió la conexión con el servidor.")
 	_connection_panel.show_connection("Se perdió la conexión con el servidor.", true)
