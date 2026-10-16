@@ -442,6 +442,61 @@ func get_grh_definition(
 		grh_id
 	)
 
+
+func get_icon_texture(grh_id: int) -> Texture2D:
+	var animation := get_grh_animation(grh_id)
+	if animation.is_empty():
+		return null
+	var frame: Dictionary = animation.frames[0]
+	if not ResourceLoader.exists(GRAPHICS_PATH + "%d.png" % int(frame.file_num)):
+		return null
+	var texture := AtlasTexture.new()
+	texture.atlas = get_texture(int(frame.file_num))
+	texture.region = frame.region
+	return texture
+
+
+func create_fx_sprite(fx_id: int) -> AnimatedSprite2D:
+	var fx: Dictionary = AODataFile.read_sections(DATA_PATH + "FXs.ini").get("FX%d" % fx_id, {})
+	var animation := get_grh_animation(int(fx.get("Animacion", "0")))
+	if animation.is_empty():
+		return null
+	var frames := SpriteFrames.new()
+	frames.set_animation_speed("default", animation.fps)
+	for frame: Dictionary in animation.frames:
+		if not ResourceLoader.exists(GRAPHICS_PATH + "%d.png" % int(frame.file_num)):
+			return null
+		var texture := AtlasTexture.new()
+		texture.atlas = get_texture(int(frame.file_num))
+		texture.region = frame.region
+		frames.add_frame("default", texture)
+	var sprite := AnimatedSprite2D.new()
+	sprite.sprite_frames = frames
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	return sprite
+
+
+func get_grh_animation(grh_id: int) -> Dictionary:
+	_ensure_loaded()
+	var value := str(_graphics.get("Graphics", {}).get("Grh%d" % grh_id, ""))
+	var parts := value.split("-", false)
+	if parts.size() < 2:
+		return {}
+	var count := int(parts[0])
+	var frames: Array[Dictionary] = []
+	if count == 1:
+		frames.append(_get_static_grh(grh_id))
+		return {"frames": frames, "fps": 1.0}
+	if parts.size() < count + 2:
+		return {}
+	for index in range(count):
+		var frame := _get_static_grh(int(parts[index + 1]))
+		if frame.is_empty():
+			return {}
+		frames.append(frame)
+	var duration := maxf(float(parts[count + 1]), 1.0)
+	return {"frames": frames, "fps": count * 1000.0 / duration}
+
 func _parse_ini_like_file(
 	path: String
 ) -> Dictionary:

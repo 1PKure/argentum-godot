@@ -73,6 +73,10 @@ $rootCertificatePath = Join-Path $caRoot "rootCA.pem"
 $chain = [System.IO.File]::ReadAllText($certificatePath) + "`n" + [System.IO.File]::ReadAllText($rootCertificatePath)
 [System.IO.File]::WriteAllText($chainPath, $chain, (New-Object System.Text.UTF8Encoding($false)))
 
+Write-Host "Importando recursos y clases de la version actual del proyecto..."
+& $godotPath --headless --editor --path $projectDirectory --import
+if ($LASTEXITCODE -ne 0) { throw "Godot no pudo importar el proyecto. Abri el proyecto en el editor y revisa los errores antes de iniciar el servidor." }
+
 Write-Host "Servidor privado: wss://127.0.0.1:7777"
 Write-Host "En la web, ingresa esa direccion y pulsa Conectar. Deja esta terminal abierta; Ctrl+C detiene el servidor."
 $godotArguments = @(
