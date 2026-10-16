@@ -47,8 +47,8 @@ func _run() -> void:
 		network.request_cast(1, hud._players[opponent].grid_position, 1)
 		await _wait_for(func() -> bool: return hud._players[local_id].current_mana == 2990)
 		_check(hud._players[local_id].current_mana == 2990, "Opponent can cast independently with its own resource state")
-		await _wait_for(func() -> bool: return hud._players[local_id].current_health <= after_dart - 10)
-		_check(hud._players[local_id].current_health == after_dart - 10, "Physical attack remains separate from magic")
+		await _wait_for(func() -> bool: return hud._players[local_id].current_health <= after_dart - 6)
+		_check(hud._players[local_id].current_health == after_dart - 6, "Physical attack remains separate from magic")
 		network.request_cast(350, hud._players[opponent].grid_position, 2)
 		await _wait_for(func() -> bool: return hud._players[opponent].active_effects.has("Inmovilizado"))
 		_check(hud._players[opponent].active_effects.has("Inmovilizado"), "Root status is synchronized to the other client")
@@ -65,7 +65,10 @@ func _run() -> void:
 		_check(hud._players[opponent].current_health == med_health + 27 and hud._players[opponent].is_meditating, "Other client sees a red potion without a meditation interruption")
 		await _wait_for(func() -> bool: return hud._players[opponent].current_mana > med_mana)
 		_check(hud._players[opponent].current_mana == med_mana + 150 and hud._players[opponent].is_meditating, "Other client sees a blue potion without a meditation interruption")
-		await _wait_for(func() -> bool: return hud._players.size() == 1, 35.0)
+		await _wait_for(func() -> bool: return hud._players[opponent].class_id == 8, 50.0)
+		_check(hud._players[opponent].class_id == 8 and hud._players[opponent].max_mana == 0, "Other client sees the hunter's authoritative profile")
+		_check(world._avatars[opponent]._player_visual._class_id == 8, "Other client replaces the avatar armor, bow and helmet")
+		await _wait_for(func() -> bool: return hud._players.size() == 1, 15.0)
 		await _finish()
 		return
 	_key(KEY_D, true)
@@ -146,7 +149,7 @@ func _run() -> void:
 	_key(KEY_CTRL, true)
 	_key(KEY_CTRL, false)
 	await _wait_for(func() -> bool: return hud._players[opponent].current_health < rival_health)
-	_check(hud._players[opponent].current_health == rival_health - 10, "CTRL retains its physical attack after using spells and menus")
+	_check(hud._players[opponent].current_health == rival_health - 6, "CTRL retains its physical attack after using spells and menus")
 	_check(hud._players[local_id].current_mana == 2985, "CTRL does not consume mana after magic")
 	_check(root.gui_get_focus_owner() == null, "Combat UI interactions do not capture movement keys")
 	await _wait_for(func() -> bool: return hud._players[local_id].active_effects.has("Inmovilizado"))
@@ -223,7 +226,7 @@ func _run() -> void:
 	await _click_world(opponent)
 	await _wait_for(func() -> bool: return hud._players[local_id].current_mana == mana_before - 1000)
 	var apoc_damage: int = target_life - hud._players[opponent].current_health
-	_check(hud._players[local_id].current_mana == mana_before - 1000 and apoc_damage >= 92 and apoc_damage <= 98, "Search, Launch and camera-adjusted target resolve original Apocalypse")
+	_check(hud._players[local_id].current_mana == mana_before - 1000 and apoc_damage >= 89 and apoc_damage <= 95, "Search, Launch and camera-adjusted target resolve Apocalypse with equipment modifiers")
 	await _capture("arena-apocalypse.png")
 	await _click(hud._show_catalog)
 	await _search_spell(7)
@@ -238,6 +241,24 @@ func _run() -> void:
 	_check(hud._players[local_id].is_alive and hud._players[local_id].current_health == 500 and hud._players[local_id].current_mana == 3000, "GUI Respawn restores the server test profile")
 	await create_timer(0.15).timeout
 	_check(world._avatars[local_id].position.distance_to(world._grid_to_world(hud._players[local_id].grid_position)) < 0.1, "Respawn teleports instead of replaying the old movement path")
+	# Full resources after respawn, but the last hit still blocks switching.
+	await _click(hud._reserved_buttons[0])
+	var panel = hud._class_panel
+	_check(panel.visible and not main._local_input.is_processing(), "Class panel opens from the HUD and pauses movement input")
+	panel.selector.select(panel.selector.get_item_index(8))
+	panel.selector.item_selected.emit(panel.selector.selected)
+	_check(panel.details.text.contains("Maná: 0") and panel._preview._class_id == 8, "Hunter preview shows its real gear and nonmagical statistics")
+	await _capture("arena-hunter-preset.png")
+	await _click(panel.apply_button)
+	await _wait_for(func() -> bool: return not panel._pending)
+	_check(panel.visible and panel.message.text.contains("10 segundos") and hud._players[local_id].class_id == 1, "Server rejects switching immediately after combat and the panel explains why")
+	await create_timer(10.1).timeout
+	await _click(panel.apply_button)
+	await _wait_for(func() -> bool: return hud._players[local_id].class_id == 8)
+	_check(not panel.visible and hud._players[local_id].max_mana == 0 and main._local_input.is_processing(), "Applying a rested hunter preset updates resources and returns to gameplay")
+	_check(controller.bindings.count(0) == 10 and controller.aimed_spell_id == 0 and hud._launch_button.disabled, "Hunter has no inherited spell macros or active casting cursor")
+	_check(world._avatars[local_id]._player_visual._class_id == 8 and hud._equipped_label.text.contains("Arco de Cazador"), "Hunter equipment is visible in the avatar and equipped summary")
+	await _capture("arena-hunter-equipped.png")
 	for resolution: Vector2i in [Vector2i(1280, 800), Vector2i(1440, 900), Vector2i(1280, 720)]:
 		root.size = resolution
 		hud._fit_interface()
@@ -245,6 +266,7 @@ func _run() -> void:
 		var frame_rect := Rect2(hud._frame.position, hud._frame.size * hud._frame.scale)
 		_check(frame_rect.size.distance_to(hud.get_viewport_rect().size) < 0.5, "Interface fills the entire viewport at %s" % resolution)
 	await _capture("arena-responsive-catalog.png")
+
 	await create_timer(0.2).timeout
 	main._disconnect_from_arena()
 	_check(controller.aimed_spell_id == 0 and not controller.session_active, "Disconnect clears aiming and pending spell state")

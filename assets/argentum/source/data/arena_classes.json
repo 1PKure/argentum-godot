@@ -1,0 +1,134 @@
+[
+  {
+    "id": 1,
+    "name": "Mago",
+    "key": "Mago",
+    "armor": 519,
+    "weapon": 1788,
+    "helmet": 3990,
+    "shield": 0,
+    "accessory": 0,
+    "ammunition": 0
+  },
+  {
+    "id": 2,
+    "name": "Clérigo",
+    "key": "Clerigo",
+    "armor": 1100,
+    "weapon": 131,
+    "helmet": 601,
+    "shield": 2933,
+    "accessory": 0,
+    "ammunition": 0
+  },
+  {
+    "id": 3,
+    "name": "Guerrero",
+    "key": "Guerrero",
+    "armor": 495,
+    "weapon": 137,
+    "helmet": 132,
+    "shield": 2933,
+    "accessory": 0,
+    "ammunition": 0
+  },
+  {
+    "id": 4,
+    "name": "Asesino",
+    "key": "Asesino",
+    "armor": 1106,
+    "weapon": 1108,
+    "helmet": 4935,
+    "shield": 1719,
+    "accessory": 0,
+    "ammunition": 0
+  },
+  {
+    "id": 5,
+    "name": "Bardo",
+    "key": "Bardo",
+    "armor": 519,
+    "weapon": 366,
+    "helmet": 4936,
+    "shield": 1719,
+    "accessory": 41,
+    "ammunition": 0
+  },
+  {
+    "id": 6,
+    "name": "Druida",
+    "key": "Druida",
+    "armor": 530,
+    "weapon": 391,
+    "helmet": 3976,
+    "shield": 0,
+    "accessory": 0,
+    "ammunition": 0
+  },
+  {
+    "id": 7,
+    "name": "Paladín",
+    "key": "Paladin",
+    "armor": 496,
+    "weapon": 126,
+    "helmet": 601,
+    "shield": 2933,
+    "accessory": 0,
+    "ammunition": 0
+  },
+  {
+    "id": 8,
+    "name": "Cazador",
+    "key": "Cazador",
+    "armor": 360,
+    "weapon": 1876,
+    "helmet": 1115,
+    "shield": 0,
+    "accessory": 0,
+    "ammunition": 552
+  },
+  {
+    "id": 9,
+    "name": "Trabajador",
+    "key": "Trabajador",
+    "armor": 2920,
+    "weapon": 398,
+    "helmet": 132,
+    "shield": 0,
+    "accessory": 0,
+    "ammunition": 0
+  },
+  {
+    "id": 10,
+    "name": "Pirata",
+    "key": "Pirata",
+    "armor": 2830,
+    "weapon": 44,
+    "helmet": 0,
+    "shield": 0,
+    "accessory": 0,
+    "ammunition": 0
+  },
+  {
+    "id": 11,
+    "name": "Ladrón",
+    "key": "Ladron",
+    "armor": 2830,
+    "weapon": 44,
+    "helmet": 0,
+    "shield": 0,
+    "accessory": 0,
+    "ammunition": 0
+  },
+  {
+    "id": 12,
+    "name": "Bandido",
+    "key": "Bandido",
+    "armor": 1099,
+    "weapon": 2598,
+    "helmet": 132,
+    "shield": 1719,
+    "accessory": 0,
+    "ammunition": 0
+  }
+]

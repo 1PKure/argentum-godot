@@ -1,3 +1,5 @@
+> Actualización de clases: 500 HP / 3000 MP corresponde ahora al Mago inicial. Las otras clases usan los perfiles de [CLASSES.md](CLASSES.md); las clases sin maná no meditan.
+
 # Recuperación de recursos y perfil de arena
 
 La arena incluye recuperación autoritativa y un perfil explícito de prueba: 500 de vida y 3000 de maná. Permite pagar los costes originales de los hechizos caros. No representa una clase, nivel ni balance final de AO20. Los valores por defecto de PlayerState siguen sirviendo a fixtures independientes; el servidor aplica el perfil al conectar y reaparecer.

@@ -3,6 +3,7 @@ extends RefCounted
 
 var peer_id: int
 var display_name: String
+var class_id := ClassCatalog.DEFAULT_CLASS
 var grid_position: Vector2i
 
 var facing_direction: int
@@ -116,6 +117,7 @@ func to_dictionary() -> Dictionary:
 	return {
 		"peer_id": peer_id,
 		"display_name": display_name,
+		"class_id": class_id,
 		"grid_x": grid_position.x,
 		"grid_y": grid_position.y,
 		"facing_direction": facing_direction,
@@ -198,5 +200,6 @@ static func from_dictionary(
 		),
 	)
 	state.is_meditating = bool(data.get("is_meditating", false))
+	state.class_id = int(data.get("class_id", ClassCatalog.DEFAULT_CLASS))
 	state.active_effects.assign(data.get("active_effects", []))
 	return state

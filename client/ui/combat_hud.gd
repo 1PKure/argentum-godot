@@ -52,6 +52,9 @@ var _reserved_buttons: Array[Button] = []
 var _inventory_slots: Array[InventorySlotButton] = []
 var _inventory_layout := ArenaInventoryLayout.new()
 var _bottom_back: Panel
+var _class_panel: ClassPresetPanel
+var _equipped_label: Label
+var _book_class_id := -1
 
 
 func _ready() -> void:
@@ -112,6 +115,11 @@ func _update_spell_ui() -> void:
 	var selected := SpellCatalog.get_spell(_spell_controller.selected_spell_id)
 	if not selected.is_empty() and not str(selected.unavailable_reason).is_empty():
 		_spell_status.text = str(selected.unavailable_reason)
+	elif not selected.is_empty() and not ClassCatalog.can_cast(_spell_controller.class_id, int(selected.id)):
+		_spell_status.text = "Tu clase no tiene este hechizo en su preset."
+	if _book_class_id != _spell_controller.class_id:
+		_book_class_id = _spell_controller.class_id
+		_filter_spellbook()
 	_update_recovery_controls()
 
 
@@ -154,6 +162,7 @@ func start_session(peer_id: int) -> void:
 
 
 func end_session(message: String) -> void:
+	_class_panel.close_panel()
 	_players.clear()
 	_local_peer_id = 0
 	_connection_label.text = "Sin conexión"
@@ -241,7 +250,8 @@ func _build_interface() -> void:
 		slot.item_used.connect(_request_recovery)
 		slot.item_dropped.connect(_move_inventory_item)
 		_inventory_slots.append(slot)
-	_label(_inventory_panel, "Clic: usar · Arrastrar: mover.\nProvisión de arena ilimitada.\nM: meditar · Q: vida · E: maná.", Rect2(12, 280, 216, 74), 12)
+	_equipped_label = _label(_inventory_panel, "", Rect2(12, 268, 216, 126), 12)
+	_equipped_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_spell_search = LineEdit.new()
 	_spell_search.placeholder_text = "Buscar nombre o ID…"
 	_spell_panel.add_child(_spell_search)
@@ -324,6 +334,17 @@ func _build_interface() -> void:
 		var reserved := _text_button(_frame, "", Rect2(0, 2, 65, 25))
 		reserved.tooltip_text = "Opción no disponible en esta arena."
 		_reserved_buttons.append(reserved)
+	_class_panel = ClassPresetPanel.new()
+	add_child(_class_panel)
+	_reserved_buttons[0].text = "Clases"
+	_reserved_buttons[0].tooltip_text = "Ver y elegir clases, equipo y estadísticas."
+	for style_name: String in ["normal", "hover", "pressed", "disabled"]:
+		var class_style := StyleBoxFlat.new()
+		class_style.bg_color = Color("242118") if style_name in ["hover", "pressed"] else Color("171612")
+		class_style.border_color = Color("756441")
+		class_style.set_border_width_all(1)
+		_reserved_buttons[0].add_theme_stylebox_override(style_name, class_style)
+	_reserved_buttons[0].pressed.connect(_open_classes)
 	for index in range(10):
 		var macro := SpellSlotButton.new()
 		macro.configure(0, index)
@@ -359,8 +380,15 @@ func _filter_spellbook() -> void:
 	var query := _spell_search.text.strip_edges().to_lower()
 	for id: int in _spell_buttons:
 		var spell := SpellCatalog.get_spell(id)
-		_spell_buttons[id].visible = (_show_catalog.button_pressed or SpellCatalog.is_available(id)) and (query.is_empty() or str(spell.name).to_lower().contains(query) or str(id) == query)
+		_spell_buttons[id].visible = (_show_catalog.button_pressed or ClassCatalog.can_cast(_spell_controller.class_id if _spell_controller != null else ClassCatalog.DEFAULT_CLASS, id)) and (query.is_empty() or str(spell.name).to_lower().contains(query) or str(id) == query)
 	_spell_scroll.scroll_vertical = 0
+
+
+func _open_classes() -> void:
+	var state: PlayerState = _players.get(_local_peer_id)
+	if state != null and _spell_controller != null and _spell_controller.server_ready:
+		_spell_controller.cancel_targeting()
+		_class_panel.open_panel(state.class_id)
 
 
 func _request_recovery(action: String) -> void:
@@ -395,6 +423,9 @@ func _update_recovery_controls() -> void:
 	_stats_button.disabled = not ready or (state != null and state.is_alive)
 	_health_potion_button.disabled = not ready or (state != null and not state.is_alive)
 	_mana_potion_button.disabled = not ready or (state != null and not state.is_alive)
+	_reserved_buttons[0].disabled = not ready
+	_meditate_button.disabled = _meditate_button.disabled or (state != null and state.max_mana == 0)
+	_mana_potion_button.disabled = _mana_potion_button.disabled or (state != null and state.max_mana == 0)
 	if state == null:
 		_status_label.text = ""
 		_meditate_button.text = "M · Meditar"
@@ -468,6 +499,8 @@ func _on_snapshot_received(players: Array) -> void:
 	for data: Dictionary in players:
 		var state := PlayerState.from_dictionary(data)
 		_players[state.peer_id] = state
+		if state.peer_id == _local_peer_id and _spell_controller != null:
+			_spell_controller.apply_class(state.class_id)
 	console.append_message("Arena lista · %d jugador(es) conectados." % _players.size())
 	_update_local_stats()
 
@@ -496,7 +529,7 @@ func _on_player_moved(data: Dictionary) -> void:
 func _on_player_stats_updated(data: Dictionary) -> void:
 	var state := PlayerState.from_dictionary(data)
 	var previous: PlayerState = _players.get(state.peer_id)
-	if previous != null:
+	if previous != null and previous.class_id == state.class_id:
 		var health_change := state.current_health - previous.current_health
 		var mana_change := state.current_mana - previous.current_mana
 		var player_name := _player_name(state)
@@ -521,6 +554,17 @@ func _player_name(state: PlayerState) -> String:
 func _update_local_stats() -> void:
 	var state: PlayerState = _players.get(_local_peer_id)
 	_name_label.text = state.display_name if state != null else "Sin personaje"
+	if state != null:
+		var profile := ClassCatalog.get_profile(state.class_id)
+		_name_label.text = "%s · %s" % [state.display_name, profile.name]
+		var equipped := PackedStringArray()
+		for slot: String in ["armor", "weapon", "helmet", "shield", "accessory", "ammunition"]:
+			var item := ClassCatalog.get_item(int(profile[slot]))
+			if not item.is_empty():
+				equipped.append(str(item.Name))
+		_equipped_label.text = "EQUIPADO · %s\n%s\nPociones ilimitadas · Arrastrar: mover" % [profile.name, " · ".join(equipped)]
+	else:
+		_equipped_label.text = "Sin personaje conectado."
 	if state != null and state.is_ghost:
 		_name_label.text += " · Fantasma"
 	_health_bar.max_value = state.max_health if state != null else 100

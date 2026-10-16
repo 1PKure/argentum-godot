@@ -17,6 +17,7 @@ var _local_id := 0
 var _world: ClientWorld
 var _game_area: Control
 var _alive := true
+var class_id := ClassCatalog.DEFAULT_CLASS
 
 
 func _ready() -> void:
@@ -65,7 +66,7 @@ func aim_selected() -> void:
 
 
 func can_launch() -> bool:
-	return session_active and server_ready and _alive and pending_request == 0 and SpellCatalog.is_available(selected_spell_id)
+	return session_active and server_ready and _alive and pending_request == 0 and ClassCatalog.can_cast(class_id, selected_spell_id)
 
 
 func aim_hotkey(slot: int) -> void:
@@ -81,7 +82,10 @@ func aim_spell(id: int) -> void:
 	if not session_active or not server_ready or not _alive:
 		feedback.emit("No podés lanzar en este momento.", "system")
 		return
-	if pending_request != 0 or not SpellCatalog.is_available(id):
+	if not ClassCatalog.can_cast(class_id, id):
+		feedback.emit("Tu clase no tiene este hechizo en su preset.", "system")
+		return
+	if pending_request != 0:
 		return
 	selected_spell_id = id
 	aimed_spell_id = id
@@ -96,12 +100,13 @@ func cancel_targeting() -> void:
 
 
 func assign_hotkey(slot: int, id: int) -> void:
-	if slot < 0 or slot >= bindings.size() or not SpellCatalog.is_available(id):
+	if slot < 0 or slot >= bindings.size() or not ClassCatalog.can_cast(class_id, id):
 		return
 	bindings[slot] = id
 	var config := ConfigFile.new()
+	config.load(BINDINGS_FILE)
 	for index in range(bindings.size()):
-		config.set_value("spells", str(index), bindings[index])
+		config.set_value("class:%d" % class_id, str(index), bindings[index])
 	config.save(BINDINGS_FILE)
 	feedback.emit("Acceso %d: %s." % [(slot + 1) % 10, SpellCatalog.get_spell(id).name], "system")
 	changed.emit()
@@ -184,6 +189,7 @@ func _on_spell_rejected(request_id: int, message: String, _remaining: int) -> vo
 
 func _on_stats_updated(data: Dictionary) -> void:
 	if int(data.get("peer_id", 0)) == _local_id:
+		apply_class(int(data.get("class_id", ClassCatalog.DEFAULT_CLASS)))
 		_alive = bool(data.get("is_alive", true))
 		if not _alive:
 			cancel_targeting()
@@ -191,11 +197,27 @@ func _on_stats_updated(data: Dictionary) -> void:
 			changed.emit()
 
 
+func apply_class(id: int) -> void:
+	if class_id == id:
+		return
+	class_id = id
+	bindings.assign(ClassCatalog.get_profile(class_id).bindings)
+	_load_bindings()
+	selected_spell_id = bindings[0]
+	cancel_targeting()
+	changed.emit()
+
+
 func _load_bindings() -> void:
 	var config := ConfigFile.new()
 	if config.load(BINDINGS_FILE) != OK:
 		return
 	for index in range(bindings.size()):
-		var id := int(config.get_value("spells", str(index), bindings[index]))
-		if id == 0 or SpellCatalog.is_available(id):
+		var section := "class:%d" % class_id
+		# Migrate the previous mage testing hotkeys once; other classes have their
+		# own section and cannot inherit invalid spells from a different preset.
+		if class_id == ClassCatalog.DEFAULT_CLASS and not config.has_section(section):
+			section = "spells"
+		var id := int(config.get_value(section, str(index), bindings[index]))
+		if id == 0 or ClassCatalog.can_cast(class_id, id):
 			bindings[index] = id

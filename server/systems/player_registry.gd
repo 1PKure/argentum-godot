@@ -11,6 +11,7 @@ var _last_recovery_request: Dictionary[int, int] = {}
 var _last_potion_time: Dictionary[int, int] = {}
 var _next_meditation_tick: Dictionary[int, int] = {}
 var _spell_cooldowns: Dictionary = {}
+var _last_combat_time: Dictionary[int, int] = {}
 var _status_system := ArenaStatusSystem.new()
 
 var _arena_id: String = (
@@ -63,9 +64,10 @@ func add_player(
 		spawn_position
 	)
 
-	player.max_health = RecoveryRules.ARENA_MAX_HEALTH
+	var profile := ClassCatalog.get_profile(player.class_id)
+	player.max_health = int(profile.max_health)
 	player.current_health = player.max_health
-	player.max_mana = RecoveryRules.ARENA_MAX_MANA
+	player.max_mana = int(profile.max_mana)
 	player.current_mana = player.max_mana
 	_players[peer_id] = player
 
@@ -113,6 +115,7 @@ func remove_player(
 	_last_attack_time.erase(peer_id)
 	_last_spell_time.erase(peer_id)
 	_last_spell_request.erase(peer_id)
+	_last_combat_time.erase(peer_id)
 
 
 func try_move_player(
@@ -238,6 +241,7 @@ func try_basic_attack(
 	_last_attack_time[
 		attacker_peer_id
 	] = current_time
+	_last_combat_time[attacker_peer_id] = current_time
 
 	var attack_offset: Vector2i = (
 		MovementRules.get_offset(
@@ -245,32 +249,30 @@ func try_basic_attack(
 		)
 	)
 
-	var attack_position: Vector2i = (
-		attacker.grid_position
-		+ attack_offset
-	)
-
-	var target: PlayerState = (
-		_find_player_at_position(
-			attack_position,
-			attacker_peer_id
-		)
-	)
+	var target: PlayerState = null
+	# First living opponent in the facing line; walls stop arrows.
+	for distance in range(1, int(ClassCatalog.get_profile(attacker.class_id).range) + 1):
+		var attack_position := attacker.grid_position + attack_offset * distance
+		if not ArenaData.is_walkable(_arena_id, attack_position):
+			break
+		target = _find_player_at_position(attack_position, attacker_peer_id)
+		if target != null:
+			break
 
 	if target == null:
 		return null
 
-	if not target.apply_damage(
-		CombatRules.BASIC_ATTACK_DAMAGE
-	):
+	var damage := ClassCatalog.physical_damage(attacker.class_id, target.class_id)
+	if not target.apply_damage(damage):
 		return null
+	_last_combat_time[target.peer_id] = current_time
 
 	print(
 		"%s attacked %s for %d damage. HP: %d/%d"
 		% [
 			attacker.display_name,
 			target.display_name,
-			CombatRules.BASIC_ATTACK_DAMAGE,
+			damage,
 			target.current_health,
 			target.max_health
 		]
@@ -296,6 +298,8 @@ func try_cast_spell(caster_id: int, spell_id: int, target_position: Vector2i, re
 		return _spell_error("No podés lanzar hechizos mientras sos un fantasma.")
 	if not SpellCatalog.is_available(spell_id):
 		return _spell_error("Este hechizo todavía no está habilitado en la arena.")
+	if not ClassCatalog.can_cast(caster.class_id, spell_id):
+		return _spell_error("Tu clase no tiene este hechizo en su preset.")
 	if not MovementRules.is_inside_bounds(target_position):
 		return _spell_error("El objetivo está fuera de la arena.")
 	var target: PlayerState = _find_player_at_position(target_position, -1)
@@ -336,10 +340,12 @@ func try_cast_spell(caster_id: int, spell_id: int, target_position: Vector2i, re
 		if spell.effect == "healing":
 			target.restore_health(rolled)
 		else:
-			target.apply_damage(rolled)
+			target.apply_damage(ClassCatalog.magic_damage(rolled, caster.class_id, target.class_id))
 	caster.spend_mana(int(spell.mana))
 	caster.is_meditating = false
 	_last_spell_time[caster_id] = now
+	_last_combat_time[caster_id] = now
+	_last_combat_time[target.peer_id] = now
 	_spell_cooldowns[caster_id][cooldown_key] = now
 	if not target.is_alive:
 		_status_system.clear_player(target)
@@ -361,11 +367,13 @@ func try_recovery_action(peer_id: int, action: String, request_id: int, now: int
 	var player: PlayerState = _players.get(peer_id)
 	if player == null:
 		return _spell_error("No hay un personaje conectado.")
-	if not action in ["meditate", "health_potion", "mana_potion", "respawn"]:
+	if not action in ["meditate", "health_potion", "mana_potion", "respawn"] and not action.begins_with("class:"):
 		return _spell_error("Acción desconocida.")
 	if request_id <= _last_recovery_request.get(peer_id, 0):
 		return _spell_error("La acción ya fue procesada.")
 	_last_recovery_request[peer_id] = request_id
+	if action.begins_with("class:"):
+		return try_select_class(peer_id, int(action.trim_prefix("class:")), now)
 	var amount := 0
 	var message := ""
 	if action == "respawn":
@@ -385,6 +393,8 @@ func try_recovery_action(peer_id: int, action: String, request_id: int, now: int
 	elif not player.is_alive:
 		return _spell_error("No podés meditar ni usar pociones mientras sos un fantasma. Usá Reaparecer.")
 	elif action == "meditate":
+		if player.max_mana <= 0:
+			return _spell_error("Tu clase no utiliza maná ni meditación.")
 		if not player.is_meditating and player.current_mana >= player.max_mana:
 			return _spell_error("Ya tenés el maná completo.")
 		player.is_meditating = not player.is_meditating
@@ -421,10 +431,37 @@ func try_recovery_action(peer_id: int, action: String, request_id: int, now: int
 		"amount": amount, "message": message, "is_meditating": player.is_meditating}}
 
 
+func try_select_class(peer_id: int, class_id: int, now: int = -1) -> Dictionary:
+	var player: PlayerState = _players.get(peer_id)
+	var profile := ClassCatalog.get_profile(class_id)
+	if player == null or profile.is_empty():
+		return _spell_error("Clase desconocida o personaje desconectado.")
+	if now < 0:
+		now = Time.get_ticks_msec()
+	if player.class_id == class_id:
+		return _spell_error("Ya estás usando esta clase.")
+	if not player.is_alive or player.is_meditating or not player.active_effects.is_empty() or player.current_health != player.max_health or player.current_mana != player.max_mana:
+		return _spell_error("Para cambiar de clase necesitás vida y maná completos, sin meditar ni efectos activos.")
+	if now - _last_combat_time.get(peer_id, -ClassCatalog.CHANGE_PEACE_MSEC) < ClassCatalog.CHANGE_PEACE_MSEC:
+		return _spell_error("Esperá 10 segundos sin combatir antes de cambiar de clase.")
+	player.class_id = class_id
+	player.max_health = int(profile.max_health)
+	player.max_mana = int(profile.max_mana)
+	player.current_health = player.max_health
+	player.current_mana = player.max_mana
+	# Keep action and individual cooldowns; selecting a preset never clears them.
+	return {"ok": true, "state": player.to_dictionary(), "event": {
+		"peer_id": peer_id, "player_name": player.display_name, "action": "class",
+		"class_id": class_id, "amount": 0, "message": "Eligió %s." % profile.name,
+		"is_meditating": false}}
+
+
 func advance_runtime(now: int = -1) -> Array[PlayerState]:
 	if now < 0:
 		now = Time.get_ticks_msec()
 	var changed := _status_system.tick(_players, now)
+	for changed_player: PlayerState in changed:
+		_last_combat_time[changed_player.peer_id] = now
 	for player: PlayerState in _players.values():
 		if not player.is_alive or not player.is_meditating:
 			continue
@@ -458,6 +495,7 @@ func apply_damage(
 		amount
 	):
 		return null
+	_last_combat_time[peer_id] = Time.get_ticks_msec()
 
 	return player
 

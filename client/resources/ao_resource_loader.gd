@@ -30,6 +30,7 @@ var _heads: Dictionary = {}
 
 var _texture_cache: Dictionary = {}
 var _fx_visible_bottoms: Dictionary = {}
+var _equipment_frames: Dictionary = {}
 
 var _is_loaded := false
 
@@ -455,6 +456,63 @@ func get_icon_texture(grh_id: int) -> Texture2D:
 	texture.atlas = get_texture(int(frame.file_num))
 	texture.region = frame.region
 	return texture
+
+
+func get_equipment_icon(item_id: int) -> Texture2D:
+	var grh := int(ClassCatalog.get_item(item_id).get("GrhIndex", 0))
+	# One newer shield icon points beyond the public GRH table. Use its actual
+	# directional equipment frame; no original resource is altered.
+	if grh > 0 and not _graphics.get("Graphics", {}).has("Grh%d" % grh):
+		var frames := get_equipment_frames("shield", int(ClassCatalog.get_item(item_id).get("Anim", 0)))
+		return frames.get_frame_texture("walk_down", 0) if frames != null else null
+	return get_icon_texture(grh) if grh > 0 else null
+
+
+func get_equipment_frames(kind: String, id: int) -> SpriteFrames:
+	if id <= 0:
+		return null
+	var cache_key := "%s:%d" % [kind, id]
+	if _equipment_frames.has(cache_key):
+		return _equipment_frames[cache_key]
+	var filename: String = {"weapon": "armas.dat", "shield": "escudos.dat", "helmet": "cascos.ini"}[kind]
+	var prefix: String = {"weapon": "ARMA", "shield": "ESC", "helmet": "HEAD"}[kind]
+	var raw := AODataFile.read_sections(DATA_PATH + filename)
+	var entry: Dictionary = {}
+	for section: String in raw:
+		if section.to_upper() == prefix + str(id):
+			for key: String in raw[section]:
+				entry[key.to_upper()] = raw[section][key]
+			break
+	if entry.is_empty():
+		return null
+	var frames := SpriteFrames.new()
+	frames.remove_animation("default")
+	for direction: String in BODY_DIRECTIONS:
+		var animation := "walk_" + direction
+		frames.add_animation(animation)
+		frames.set_animation_speed(animation, PlayerVisual.ANIMATION_SPEED)
+		var regions: Array[Dictionary] = []
+		if entry.has("STD"):
+			var mold: Dictionary = _molds.get("Molde%d" % int(entry.STD), {})
+			var row := BODY_DIRECTIONS.find(direction)
+			for index in range(int(mold.get("Dir%d" % (row + 1), 0))):
+				regions.append({"file_num": int(entry.FILENUM), "region": Rect2(
+					int(mold.get("X", 0)) + index * int(mold.get("Width", 0)),
+					int(mold.get("Y", 0)) + row * int(mold.get("Height", 0)),
+					int(mold.get("Width", 0)), int(mold.get("Height", 0)))})
+		else:
+			var key: String = {"up": "1", "right": "2", "down": "3", "left": "4"}[direction]
+			var grh := int(entry.get(("HEAD" if kind == "helmet" else "DIR") + key, 0))
+			regions.assign(get_grh_animation(grh).get("frames", []))
+		for region: Dictionary in regions:
+			var texture := AtlasTexture.new()
+			texture.atlas = get_texture(int(region.file_num))
+			texture.region = region.region
+			frames.add_frame(animation, texture)
+		if frames.get_frame_count(animation) == 0:
+			return null
+	_equipment_frames[cache_key] = frames
+	return frames
 
 
 func create_fx_sprite(fx_id: int, looping: bool = true, ground_visible_pixels: bool = false) -> AnimatedSprite2D:

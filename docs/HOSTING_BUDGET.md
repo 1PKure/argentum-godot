@@ -1,22 +1,11 @@
-# Presupuesto inicial de web, cuentas y servidor
+# Política de costo cero
 
-Estimación orientativa consultada el 16 de octubre de 2026, en USD y antes de impuestos. No se ha contratado ni configurado ningún servicio nuevo. La demo actual conserva acceso privado y el dedicado sigue ejecutándose en la PC del desarrollador.
+Decisión del 16 de octubre de 2026: se descarta cualquier servicio o función que requiera pagar. No se contrataron servicios ni se habilitaron cobros. Las cuentas, el registro y una base de datos no son requisitos para avanzar con las clases o el lobby.
 
-Son tres componentes distintos: la web/export de Godot, la autenticación y base de datos de cuentas/perfiles/resultados, y el servidor Godot dedicado que procesa el combate en tiempo real. El movimiento y cada golpe no deben convertirse en escrituras de base de datos; se persisten datos de cuenta, preferencias y resultados autorizados por el servidor.
+La demo conserva su alojamiento privado actual y el cliente exportado de Godot. El dedicado se ejecuta en la PC del desarrollador mediante `tools/Start-PrivateWebTest.cmd`; el cliente web ya propone `wss://127.0.0.1:7777`. Este flujo no agrega servicios de pago ni una base de datos. Para probar así, la PC y el dedicado deben estar encendidos. Localhost se refiere a la PC desde la que se abre la página: el enlace por sí solo no conecta a otra persona a ese servidor.
 
-| Componente | Referencia actual | Uso previsto |
-| --- | --- | --- |
-| Web estática/cliente | Cloudflare Pages publica solicitudes estáticas gratuitas e ilimitadas; las funciones tienen cuotas propias. | Opción para un alojamiento futuro bajo nuestra cuenta, conservando control de audiencia. No es una cotización ni un cambio del alojamiento privado actual. |
-| Cuentas y Postgres administrados | Supabase Free: USD 0, 500 MB de DB y 50.000 usuarios activos mensuales incluidos; puede pausarse tras una semana de inactividad y no incluye backups automáticos. | Desarrollo y pruebas acotadas. El uso y límites deben revisarse antes de abrir la web a más personas. |
-| Cuentas y Postgres administrados de pago | Supabase Pro desde USD 25/mes, con un primer proyecto Micro cubierto por créditos de cómputo y backups diarios de siete días. | Referencia de costo para una primera publicación pequeña con persistencia administrada. Los excesos y complementos se cobran aparte. |
-| Servidor dedicado Godot | Akamai/Linode publica VPS compartidos desde USD 5/mes (1 GB). | Es sólo el precio de entrada, no una medición de capacidad de esta arena. Reservaría inicialmente USD 10–20/mes como presupuesto de prueba; región, RAM/CPU, bots y jugadores simultáneos se validan con mediciones. |
+El próximo lobby puede usar invitados y estado temporal en memoria del dedicado: crear/unirse/listos/iniciar/revancha no necesitan cuentas. Al reiniciar el dedicado se pierden salas y sesiones. Las preferencias de inventario y macros continúan guardándose en el dispositivo.
 
-Mi estimación de presupuesto es aproximadamente USD 10–20/mes para pruebas remotas con DB/auth gratuitos, o USD 35–50/mes con el plan administrado de pago y un VPS pequeño. No garantiza una cantidad de jugadores. No incluye dominio, correo transaccional, impuestos, almacenamiento/transferencia adicionales, backups del VPS ni trabajo de mantenimiento. Es una referencia inicial, no el costo de un lanzamiento masivo ni una tarifa cerrada.
+Si después se necesita acceso remoto, se evaluará una alternativa gratuita que permita un dedicado Godot y WSS, respetando las condiciones de uso y el acceso privado. No se promete disponibilidad continua ni se migrará a una opción de pago si una cuota gratuita se agota. Las cuotas y el soporte técnico deben verificarse al elegir el proveedor. No se incorporarán tarjetas, complementos de pago, dominios pagos ni planes con cargos automáticos.
 
-Antes de elegir el VPS hay que medir latencia desde Argentina y carga real del dedicado; una región barata y distante puede perjudicar el combate. La necesidad se mide por concurrencia y actividad, no sólo por cantidad de cuentas registradas. Puede mantenerse acceso por invitación durante las pruebas. Registro/login no implica publicar el proyecto ni abrir registros sin autorización.
-
-Fuentes oficiales consultadas:
-
-- [Cloudflare Pages: precios](https://developers.cloudflare.com/pages/functions/pricing/).
-- [Supabase: planes, autenticación y base de datos](https://supabase.com/pricing).
-- [Akamai/Linode: cómputo y precios](https://www.akamai.com/cloud/pricing).
+Registro/login y persistencia sólo se consideran si existe una solución gratuita adecuada y sigue teniendo utilidad para las pruebas. Si no, se continúa sin cuentas. El acceso privado al sitio y las cuentas dentro del juego son cosas distintas; esta decisión no amplía la audiencia del sitio.

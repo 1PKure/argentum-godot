@@ -33,6 +33,8 @@ var _body_definition: Dictionary = {}
 var _head_definition: Dictionary = {}
 
 var _head_textures: Dictionary = {}
+var _class_id := 0
+var _equipment: Dictionary[String, AnimatedSprite2D] = {}
 
 
 func _ready() -> void:
@@ -46,6 +48,7 @@ func _ready() -> void:
 	head.texture_filter = (
 		CanvasItem.TEXTURE_FILTER_NEAREST
 	)
+	body.frame_changed.connect(_sync_equipment)
 
 	set_body_id(
 		DEFAULT_BODY_ID
@@ -75,6 +78,40 @@ func set_body_id(
 
 	_build_body_animations()
 	_update_head_position()
+
+
+func set_class_id(id: int) -> void:
+	if _class_id == id:
+		return
+	var profile := ClassCatalog.get_profile(id)
+	if profile.is_empty():
+		return
+	_class_id = id
+	set_body_id(int(profile.body_id))
+	for kind: String in ["weapon", "shield", "helmet"]:
+		if not _equipment.has(kind):
+			var sprite := AnimatedSprite2D.new()
+			sprite.name = kind.capitalize()
+			sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			add_child(sprite)
+			_equipment[kind] = sprite
+		var frames: SpriteFrames = AOResources.get_equipment_frames(kind, int(profile[kind + "_animation"]))
+		_equipment[kind].visible = frames != null
+		if frames != null:
+			_equipment[kind].sprite_frames = frames
+	_sync_equipment()
+
+
+func _sync_equipment() -> void:
+	var animation := _get_animation_name(current_direction)
+	for kind: String in _equipment:
+		var sprite: AnimatedSprite2D = _equipment[kind]
+		if not sprite.visible or not sprite.sprite_frames.has_animation(animation):
+			continue
+		sprite.animation = animation
+		sprite.frame = body.frame % maxi(1, sprite.sprite_frames.get_frame_count(animation))
+		sprite.position = head.position if kind == "helmet" else Vector2.ZERO
+		sprite.z_index = 2 if kind == "helmet" else (-1 if current_direction == Vector2.UP else 1)
 
 
 func set_head_id(
@@ -142,6 +179,7 @@ func set_movement(
 	else:
 		if body.is_playing():
 			body.stop()
+	_sync_equipment()
 
 
 
@@ -402,6 +440,8 @@ func set_ghost_mode(
 
 	body.modulate = color
 	head.modulate = color
+	for sprite: AnimatedSprite2D in _equipment.values():
+		sprite.modulate = color
 
 func _get_direction_name(
 	direction: Vector2

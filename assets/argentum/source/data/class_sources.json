@@ -1,0 +1,192 @@
+{
+  "repository": "ao-org/Recursos",
+  "commit": "89615f34162d9fa0bf0fae4242cd6639edbf772f",
+  "class_enum_repository": "ao-org/argentum-online-server",
+  "class_enum_commit": "9d381f280c10b680cf1f84be5372f8c1dce42840",
+  "class_enum_path": "Codigo/Declares.bas",
+  "objects_source": "Dat/obj.dat",
+  "objects_source_sha256": "99e874ce0df5652b08206b77216fc76bbee45a42886dc85a4b0f683c6ce51d39",
+  "object_ids": [
+    41,
+    44,
+    126,
+    131,
+    132,
+    137,
+    360,
+    366,
+    391,
+    398,
+    495,
+    496,
+    519,
+    530,
+    552,
+    601,
+    1099,
+    1100,
+    1106,
+    1108,
+    1115,
+    1719,
+    1788,
+    1876,
+    2598,
+    2830,
+    2920,
+    2933,
+    3976,
+    3990,
+    4935,
+    4936
+  ],
+  "assets": [
+    {
+      "path": "graphics/112.png",
+      "sha256": "cf26ebc01a45cab5090e88c70309cc95586076e4576fdca3efb6040541de6be6",
+      "bytes": 93358
+    },
+    {
+      "path": "graphics/140.png",
+      "sha256": "8c212eb3bc2d86a91c276990c06ae9ed6ea59daf865f75e8dc34640237f2fc31",
+      "bytes": 722
+    },
+    {
+      "path": "graphics/300.png",
+      "sha256": "1536a11fdc254a7704459c5816ab248906d9d0b664bed5786933e7d272c9d3e3",
+      "bytes": 266418
+    },
+    {
+      "path": "graphics/437.png",
+      "sha256": "5d850f57a3c86e44b374f0a0f84683322d8f10561684d2fb8355bc2e755c4d84",
+      "bytes": 180625
+    },
+    {
+      "path": "graphics/718.png",
+      "sha256": "19c5674cde1dd135c92d41d82840d75dd4d2030732afbc2732202c6d052045f4",
+      "bytes": 2514
+    },
+    {
+      "path": "graphics/1002.png",
+      "sha256": "c49cd0a29de94e9fe559dfd5fc8ca093b4da713bb90d651b1c04eaee6c87d5f6",
+      "bytes": 106106
+    },
+    {
+      "path": "graphics/1004.png",
+      "sha256": "84d1ea09d5915acc2c098711df0e1e66ab201e7732f64a3feeea631bd7da1ca7",
+      "bytes": 81211
+    },
+    {
+      "path": "graphics/1006.png",
+      "sha256": "b84553af0a01b3445135809a69a2d20145f6e75f44c58a037d92c4b9fed14654",
+      "bytes": 95416
+    },
+    {
+      "path": "graphics/1008.png",
+      "sha256": "906ec95024d5a7c81c0b09d11077eac742d103c808676d79634bc3e46e75bde1",
+      "bytes": 80891
+    },
+    {
+      "path": "graphics/1013.png",
+      "sha256": "1a2da9e7d8210b8649dc7aa492e3e48d13c94d48140ea67b5db3777321144332",
+      "bytes": 92453
+    },
+    {
+      "path": "graphics/1017.png",
+      "sha256": "c7762f41b5e7203e5c92ca73db24f00882833a9b1bc18e6473ac3223964bb949",
+      "bytes": 294667
+    },
+    {
+      "path": "graphics/1021.png",
+      "sha256": "594992c6d66551597fe2a5591de0f28d0782dad78ee7eab69656c6e0a7ebcc6e",
+      "bytes": 103257
+    },
+    {
+      "path": "graphics/1982.png",
+      "sha256": "866a312065a1b4af5c2dfb0968926d36eabeaaa225a669b7a43edb5ae0ba0da4",
+      "bytes": 4010
+    },
+    {
+      "path": "graphics/2000.png",
+      "sha256": "274a68d3b92b80a6ae927e2b77352d718dd9cdb0507387a539358aa66e5359d2",
+      "bytes": 33103
+    },
+    {
+      "path": "graphics/2001.png",
+      "sha256": "d89b764b6b57470efa020b15a3530a418373ba6238f92f0e509739923d3a939c",
+      "bytes": 19340
+    },
+    {
+      "path": "graphics/2002.png",
+      "sha256": "4dc21086b49cbc6e26fc0843b8252bd3c8d782522e5ed80e95dd3391ec096c56",
+      "bytes": 36986
+    },
+    {
+      "path": "graphics/2005.png",
+      "sha256": "87fecbb3801db432accf2178e974eef1c6b2e87db8bed616d30a418d517bead1",
+      "bytes": 139995
+    },
+    {
+      "path": "graphics/2008.png",
+      "sha256": "783b6b966ad25ae544ba3c96b23a80a4d9a64473becdd347b86b5d01b8acad9b",
+      "bytes": 1789
+    },
+    {
+      "path": "graphics/2021.png",
+      "sha256": "711c1a09d25bcafd46b31ef7e762a62381b8943cb8964615eab7a0fa8ca7d562",
+      "bytes": 3327
+    },
+    {
+      "path": "graphics/2035.png",
+      "sha256": "cad03a185c7aa4d283c9ce02e672ebf26c3586faccdc455ad8f8566115051bb1",
+      "bytes": 4780
+    },
+    {
+      "path": "graphics/2047.png",
+      "sha256": "bbab38a1164c5e424c1407219b6da6c901f98dc82231bbd63e8d41f55fae31dc",
+      "bytes": 3416
+    },
+    {
+      "path": "graphics/2079.png",
+      "sha256": "08780bd99d624b5550df676a331aa483b0ff37972af257341600fb1b63cf0965",
+      "bytes": 1761
+    },
+    {
+      "path": "graphics/2092.png",
+      "sha256": "25f7b00321bce0a26fa5885e0a144eac15bfdacfeec7ba2542834b7b9c71e87f",
+      "bytes": 3370
+    },
+    {
+      "path": "graphics/2102.png",
+      "sha256": "7e079ce7738a280a71c930cf92b2be4be2241576cf5024a68a80f8825336c56d",
+      "bytes": 2911
+    },
+    {
+      "path": "graphics/2140.png",
+      "sha256": "01f5af581d55bff90ed16fdfacdc60bcaa92d23ff5870783089b9bc66f7c16c7",
+      "bytes": 168797
+    },
+    {
+      "path": "graphics/2141.png",
+      "sha256": "4eb17fa002410a2ce831d28528b09e0ec7525aefb7ca930a626e82b8cbe40d58",
+      "bytes": 52545
+    },
+    {
+      "path": "graphics/2300.png",
+      "sha256": "d1965fec73ba384a44dae977b43d4c908e469f94fd89ffa753f0d7e66168eb19",
+      "bytes": 22208
+    },
+    {
+      "path": "graphics/6032.png",
+      "sha256": "876afd1ef7ad1b56887c334bf3183d3e83c7534129ef345e4663c1c14dba2c03",
+      "bytes": 108487
+    }
+  ],
+  "data_sha256": {
+    "Balance.dat": "6271d6df1999e28c1fecf4ba6b9f6bad956bcffccff2b957761411cbb7c1644c",
+    "armas.dat": "3f4c368abd0cddfbdb4fd1d856cd06d619013f05af0047ed2e7ea18ef2cc8f45",
+    "escudos.dat": "81eca2db18c65aceff4adeb4ba2b79f99ae8269718d4cd7d3346a4e323a9df7f",
+    "cascos.ini": "bcda184dd8810b461f9214cb87388e7c28cf93e06b5219de2a65b05d351949db",
+    "arena_equipment.ini": "70e4c65c5673567ef0460594689d22ba289dfdbd1efc965bdfd4a345678d618d"
+  }
+}

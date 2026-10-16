@@ -25,9 +25,15 @@ func apply_spell(caster: PlayerState, target: PlayerState, spell: Dictionary, no
 				list.remove_at(index)
 		var interval := int(source.get("TickTime", "1000"))
 		var ticks := int(source.get("Ticks", "1"))
+		var min_power := int(source.get("TickPowerMin", "0"))
+		var max_power := int(source.get("TickPowerMax", "0"))
+		if min_power < 0:
+			min_power = -ClassCatalog.magic_damage(-min_power, caster.class_id, target.class_id)
+		if max_power < 0:
+			max_power = -ClassCatalog.magic_damage(-max_power, caster.class_id, target.class_id)
 		list.append({"kind": "periodic", "name": str(spell.name), "eot_id": int(spell.eot_id),
 			"caster_id": caster.peer_id, "negative": int(source.get("BuffType", "1")) == 2,
-			"min": int(source.get("TickPowerMin", "0")), "max": int(source.get("TickPowerMax", "0")),
+			"min": min_power, "max": max_power,
 			"interval": interval, "next_tick": now + interval, "ticks": ticks, "expires": now + ticks * interval + 1})
 		effects[target.peer_id] = list
 		message = str(spell.name)
