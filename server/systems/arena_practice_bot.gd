@@ -6,23 +6,28 @@ signal removed(peer_id: int)
 signal status_changed(status: Dictionary)
 
 const BOT_ID := -1000 # Entity ID only; never a network recipient or the -1 lookup sentinel.
-const THINK_MSEC := 150
+const THINK_MSEC := 120
 const COMMAND_INTERVAL_MSEC := 400
 var registry: PlayerRegistry
 var owner_id := 0
 var phase := "idle"
-var _next_think := 0
+var _ready_at := 0
+var _next_observation := 0
+var _observed_cell := Vector2i.ZERO
+var _observed_rooted := false
 var _next_move := 0
 var _next_choice := 0
+var _move_goal := Vector2i(-1, -1)
 var _next_offense := 0
 var _potion_due := 0
+var _last_potion := ""
 var _root_due := 0
 var _root_observed := false
-var _intent: Dictionary = {}
-var _movement_mode := 0
+var _defending := false
+var _next_heal := 0
+var _movement_mode := 1
 var _rng := RandomNumberGenerator.new()
 var _next_control := 0
-var _turn := 1
 var _cast_request := 0
 var _recovery_request := 0
 var _shot_request := 0
@@ -87,12 +92,16 @@ func request(peer_id: int, enabled: bool, class_id: int, request_id: int, now: i
 	_cast_request = 0
 	_recovery_request = 0
 	_shot_request = 0
-	_next_think = now + _rng.randi_range(900, 1200)
-	_next_move = _next_think
-	_next_offense = _next_think
+	_ready_at = now + _rng.randi_range(600, 850)
+	_next_observation = _ready_at
+	_observed_cell = owner.grid_position
+	_observed_rooted = false
+	_next_move = _ready_at
+	_next_offense = _ready_at
 	_next_choice = 0
-	_movement_mode = 0
-	_next_control = now + _rng.randi_range(9000, 14000)
+	_move_goal = Vector2i(-1, -1)
+	_movement_mode = 1
+	_next_control = now + _rng.randi_range(6000, 9000)
 	reset_world.emit()
 	status_changed.emit(status())
 	return {"ok": true}
@@ -103,7 +112,9 @@ func remove_bot(notify: bool = true) -> void:
 		removed.emit(BOT_ID)
 	owner_id = 0
 	phase = "idle"
-	_intent.clear()
+	_defending = false
+	_next_heal = 0
+	_last_potion = ""
 	_potion_due = 0
 	_root_due = 0
 	_root_observed = false
@@ -133,130 +144,177 @@ func tick(now: int = -1) -> Array[Dictionary]:
 		return actions
 	if not bot.is_alive or not target.is_alive:
 		phase = "won" if not bot.is_alive else "lost"
-		_intent.clear()
 		status_changed.emit(status())
 		return actions
-	if now < _next_think:
+	if now < _ready_at:
 		return actions
-	_next_think = now + THINK_MSEC
-	# AI delays add to, and never bypass, the authoritative player rules.
-	var rooted := bot.active_effects.has("Paralizado") or bot.active_effects.has("Inmovilizado")
-	if rooted and not _root_observed:
-		_root_due = now + _rng.randi_range(650, 1050)
-	_root_observed = rooted
-	if rooted and now >= _root_due and ClassCatalog.can_cast(bot.class_id, 27):
-		_root_due = now + _rng.randi_range(600, 900)
-		if _cast(27, bot.grid_position, now, actions):
-			_root_observed = false
-			_intent.clear()
-			_next_offense = now + _rng.randi_range(1450, 1900)
-	_tick_potions(bot, now, actions)
-	var delta := target.grid_position - bot.grid_position
-	var distance := maxi(absi(delta.x), absi(delta.y))
+	# Perception has human-scale latency. Movement and recovery do not wait for it.
+	if now >= _next_observation:
+		_observed_cell = target.grid_position
+		_observed_rooted = target.active_effects.has("Paralizado") or target.active_effects.has("Inmovilizado")
+		_next_observation = now + _rng.randi_range(THINK_MSEC - 30, THINK_MSEC + 30)
 	var caster := bot.class_id in [1, 2, 5, 6]
 	var ranged := caster or bot.class_id == 8
+	var distance := _distance(bot.grid_position, _observed_cell)
+	if not _defending and (bot.current_health < bot.max_health * 0.45 or (caster and bot.current_mana < bot.max_mana * 0.18)):
+		_defending = true
+		_next_choice = 0
+	elif _defending and bot.current_health >= bot.max_health * 0.65 and (not caster or bot.current_mana >= bot.max_mana * 0.35):
+		_defending = false
+		_next_choice = 0
+	var rooted := bot.active_effects.has("Paralizado") or bot.active_effects.has("Inmovilizado")
+	if rooted and not _root_observed:
+		_root_due = now + _rng.randi_range(350, 550)
+	_root_observed = rooted
+	var removing := rooted and ClassCatalog.can_cast(bot.class_id, 27) and bot.current_mana >= int(SpellCatalog.get_spell(27).mana)
+	if removing and now >= _root_due:
+		_root_due = now + 60
+		if _cast(27, bot.grid_position, now, actions):
+			_root_observed = false
+	_tick_potions(bot, now, actions)
 	if bot.is_meditating:
-		if bot.current_mana >= bot.max_mana * 0.45 or distance <= 2:
+		if bot.current_mana >= bot.max_mana * 0.3 or distance <= 2:
 			_recover("meditate", now, actions)
 		else:
 			return actions
-	if caster and bot.current_mana < 100 and distance >= 3:
-		_intent.clear()
+	if caster and bot.current_mana < 100 and distance >= 4 and not removing:
 		_recover("meditate", now, actions)
 		return actions
-	# Aim at a remembered public cell; never track the enemy during this delay.
-	# Standing still to aim also removes the old cast-then-step-up pattern.
-	if not _intent.is_empty():
-		if now >= int(_intent.due):
-			if _intent.kind == "spell":
-				_cast(int(_intent.spell), _intent.cell, now, actions)
-			else:
-				_shot_request += 1
-				var shot := registry.try_ranged_attack(BOT_ID, _intent.cell, _shot_request, now)
-				if shot.ok:
-					actions.append({"kind": "cast", "result": shot})
-			_intent.clear()
-		return actions
-	if now >= _next_offense:
-		_next_offense = now + _rng.randi_range(1450, 1900) if caster else now + _rng.randi_range(900, 1250)
-		if bot.current_health < bot.max_health * 0.35 and _rng.randf() < 0.45 and _cast(31, bot.grid_position, now, actions):
-			return actions
-		if ranged and distance <= 8 and CombatRules.has_clear_shot(registry.get_arena_id(), bot.grid_position, target.grid_position):
-			var spell := 0
-			if caster:
-				spell = int(ClassCatalog.get_profile(bot.class_id).bindings[2])
-				var choice := _rng.randf()
-				if now >= _next_control and bot.current_mana > 700 and not rooted and not target.active_effects.has("Paralizado") and choice < 0.35:
-					spell = 25
-					_next_control = now + _rng.randi_range(10000, 15000)
-				elif choice < 0.25:
-					spell = 3
-				elif choice > 0.9 and ClassCatalog.can_cast(bot.class_id, 53) and bot.current_mana >= 1000:
-					spell = 53
-				if not ClassCatalog.can_cast(bot.class_id, spell) or bot.current_mana < int(SpellCatalog.get_spell(spell).mana):
-					spell = 3
-			var cell := target.grid_position
-			if _rng.randf() < 0.2:
-				cell += MovementRules.get_offset(_rng.randi_range(0, 3))
-			_intent = {"kind": "spell" if caster else "shot", "spell": spell, "cell": cell, "due": now + _rng.randi_range(350, 600)}
-			return actions
-		elif not ranged and absi(delta.x) + absi(delta.y) == 1 and _rng.randf() >= 0.15:
-			bot.facing_direction = _direction(delta)
-			var target_state := registry.try_basic_attack(BOT_ID, now)
-			if target_state != null:
-				actions.append({"kind": "melee", "attacker": bot.to_dictionary(), "target": target_state.to_dictionary()})
+	# A defensive spell uses the same global cast interval as an attack.
+	if not removing and now >= _next_offense:
+		var healed := false
+		if now >= _next_heal and bot.current_health < bot.max_health * 0.45:
+			_next_heal = now + _rng.randi_range(1800, 2400)
+			if _rng.randf() < 0.65:
+				healed = _cast(31, bot.grid_position, now, actions)
+		if not healed:
+			_attack(bot, ranged, caster, now, actions)
 	if not target.is_alive:
 		phase = "lost"
 		status_changed.emit(status())
 		return actions
-	if now < _next_move:
-		return actions
-	_next_move = now + _rng.randi_range(220, 340)
-	var direction := _movement_step(bot, target, ranged, now)
-	if direction != -1:
-		var moved := registry.try_move_player(BOT_ID, direction, now)
-		if moved != null:
-			actions.append({"kind": "move", "state": moved.to_dictionary()})
+	# Keep a movement burst running while casting or drinking, at player cadence.
+	if not bot.is_meditating and now >= _next_move:
+		var direction := _movement_step(bot, _observed_cell, ranged, now)
+		if direction != -1:
+			var moved := registry.try_move_player(BOT_ID, direction, now)
+			if moved != null:
+				_next_move = now + MovementRules.MOVE_INTERVAL_MSEC
+				actions.append({"kind": "move", "state": moved.to_dictionary()})
 	return actions
 
+func _attack(bot: PlayerState, ranged: bool, caster: bool, now: int, actions: Array[Dictionary]) -> void:
+	var delta := _observed_cell - bot.grid_position
+	if ranged:
+		if _distance(bot.grid_position, _observed_cell) > 8 or not CombatRules.has_clear_shot(registry.get_arena_id(), bot.grid_position, _observed_cell):
+			return
+		var spell := 0
+		if caster:
+			spell = int(ClassCatalog.get_profile(bot.class_id).bindings[2])
+			var choice := _rng.randf()
+			if now >= _next_control and not _observed_rooted and bot.current_mana > 700 and choice < 0.3:
+				spell = 25
+				_next_control = now + _rng.randi_range(8000, 12000)
+			elif choice < 0.1:
+				spell = 3
+			elif choice > 0.95 and ClassCatalog.can_cast(bot.class_id, 53) and bot.current_mana >= 1000:
+				spell = 53
+			if not ClassCatalog.can_cast(bot.class_id, spell) or bot.current_mana < int(SpellCatalog.get_spell(spell).mana):
+				spell = 3
+		var cell := _observed_cell
+		if _rng.randf() < 0.06:
+			cell += MovementRules.get_offset(_rng.randi_range(0, 3))
+		# An inaccurate click costs the opportunity too; no free rapid retries.
+		var interval := SpellCatalog.CAST_INTERVAL_MSEC if caster else CombatRules.BASIC_ATTACK_COOLDOWN_MSEC
+		_next_offense = now + interval + _rng.randi_range(30, 100)
+		if caster:
+			_cast(spell, cell, now, actions)
+		else:
+			_shot_request += 1
+			var shot := registry.try_ranged_attack(BOT_ID, cell, _shot_request, now)
+			if shot.ok:
+				actions.append({"kind": "cast", "result": shot})
+	elif absi(delta.x) + absi(delta.y) == 1:
+		# Leave a real recovery window after a melee hit when health is low.
+		if _defending and _potion_due != 0:
+			return
+		_next_offense = now + CombatRules.BASIC_ATTACK_COOLDOWN_MSEC + _rng.randi_range(30, 100)
+		if _rng.randf() < 0.06:
+			return
+		bot.facing_direction = _direction(delta)
+		var target_state := registry.try_basic_attack(BOT_ID, now)
+		if target_state != null:
+			actions.append({"kind": "melee", "attacker": bot.to_dictionary(), "target": target_state.to_dictionary()})
+
 func _tick_potions(bot: PlayerState, now: int, actions: Array[Dictionary]) -> void:
-	var action := "health_potion" if bot.current_health < bot.max_health * 0.55 else "mana_potion" if bot.max_mana > 0 and bot.current_mana < bot.max_mana * 0.35 else ""
-	if action.is_empty():
+	var red := bot.current_health < bot.max_health * 0.78 and bot.max_health - bot.current_health >= 27
+	var blue := bot.max_mana > 0 and bot.current_mana < bot.max_mana * 0.65
+	if not red and not blue:
 		_potion_due = 0
 		return
 	if _potion_due == 0:
-		_potion_due = now + _rng.randi_range(400, 700)
-	elif now >= _potion_due:
-		_recover(action, now, actions)
-		_potion_due = now + _rng.randi_range(750, 1050)
+		_potion_due = now + _rng.randi_range(160, 260)
+		return
+	if now < _potion_due:
+		return
+	var action := "health_potion" if red else "mana_potion"
+	if red and blue and bot.current_health >= bot.max_health * 0.4:
+		if bot.current_mana < bot.max_mana * 0.2 or _last_potion == "health_potion":
+			action = "mana_potion"
+	if _recover(action, now, actions):
+		_last_potion = action
+		_potion_due = now + RecoveryRules.POTION_INTERVAL_MSEC + _rng.randi_range(0, 40)
+	else:
+		# A normal attack/potion gap can block this; retain the pending decision.
+		_potion_due = now + 40
 
-func _movement_step(bot: PlayerState, target: PlayerState, ranged: bool, now: int) -> int:
-	var delta := target.grid_position - bot.grid_position
-	var distance := maxi(absi(delta.x), absi(delta.y))
-	if not ranged or distance < 3 or distance > 7 or not CombatRules.has_clear_shot(registry.get_arena_id(), bot.grid_position, target.grid_position):
-		return _path_step(bot, target, ranged)
-	if now >= _next_choice:
-		_next_choice = now + _rng.randi_range(800, 1500)
-		var roll := _rng.randf()
-		_movement_mode = 0 if roll < 0.5 else 1 if roll < 0.75 else 2 if roll < 0.85 else 3
-		_turn = -1 if _rng.randf() < 0.5 else 1
-	if _movement_mode == 0:
-		return -1
-	var directions := _directions()
-	for direction: int in directions:
-		var offset := MovementRules.get_offset(direction)
-		var cell := bot.grid_position + offset
-		var after := target.grid_position - cell
-		var after_distance := maxi(absi(after.x), absi(after.y))
-		if not _free(cell) or after_distance < 3 or after_distance > 7 or not CombatRules.has_clear_shot(registry.get_arena_id(), cell, target.grid_position):
-			continue
-		if _movement_mode == 1:
-			var sideways := Vector2i(0, _turn) if absi(delta.x) >= absi(delta.y) else Vector2i(_turn, 0)
-			if offset == sideways:
+func _movement_step(bot: PlayerState, target: Vector2i, ranged: bool, now: int) -> int:
+	var distance := _distance(bot.grid_position, target)
+	if not ranged and not _defending:
+		return _path_step(bot, target, false)
+	if ranged and (distance < 3 or distance > 7 or not CombatRules.has_clear_shot(registry.get_arena_id(), bot.grid_position, target)):
+		return _path_step(bot, target, true)
+	# A goal persists for several tiles, rather than rolling each step or after a cast.
+	if now < _next_choice:
+		if _movement_mode == 0:
+			return -1
+		if bot.grid_position != _move_goal:
+			var direction := _direction(_move_goal - bot.grid_position)
+			if _free(bot.grid_position + MovementRules.get_offset(direction)):
 				return direction
-		elif (_movement_mode == 2 and after_distance < distance) or (_movement_mode == 3 and after_distance > distance):
-			return direction
-	return -1
+	_next_choice = now + _rng.randi_range(480, 850)
+	var roll := _rng.randf()
+	_movement_mode = 3 if _defending else 0 if roll < 0.1 else 1 if roll < 0.65 else 2 if roll < 0.85 else 3
+	if _movement_mode == 0:
+		_next_choice = now + _rng.randi_range(150, 260)
+		return -1
+	var delta := target - bot.grid_position
+	var candidates: Array[Vector2i] = []
+	for direction: int in _directions():
+		var offset := MovementRules.get_offset(direction)
+		if _movement_mode == 1 and ((absi(delta.x) >= absi(delta.y) and offset.x != 0) or (absi(delta.x) < absi(delta.y) and offset.y != 0)):
+			continue
+		var cell := bot.grid_position
+		for step in range(_rng.randi_range(2, 4)):
+			var next := cell + offset
+			var after := _distance(next, target)
+			if not _free(next) or after < 2 or after > 7:
+				break
+			if ranged and not CombatRules.has_clear_shot(registry.get_arena_id(), next, target):
+				break
+			if (_movement_mode == 2 and after > distance) or (_movement_mode == 3 and after < distance):
+				break
+			cell = next
+		if cell != bot.grid_position:
+			candidates.append(cell)
+	if candidates.is_empty():
+		_move_goal = Vector2i(-1, -1)
+		return -1
+	_move_goal = candidates[_rng.randi_range(0, candidates.size() - 1)]
+	return _direction(_move_goal - bot.grid_position)
+
+func _distance(a: Vector2i, b: Vector2i) -> int:
+	return maxi(absi(a.x - b.x), absi(a.y - b.y))
 
 func _directions() -> Array[int]:
 	var directions: Array[int] = [0, 1, 2, 3]
@@ -274,14 +332,16 @@ func _cast(spell_id: int, target: Vector2i, now: int, actions: Array[Dictionary]
 	_cast_request += 1
 	var result := registry.try_cast_spell(BOT_ID, spell_id, target, _cast_request, now)
 	if result.ok:
+		_next_offense = maxi(_next_offense, now + SpellCatalog.CAST_INTERVAL_MSEC + _rng.randi_range(30, 100))
 		actions.append({"kind": "cast", "result": result})
 	return bool(result.ok)
 
-func _recover(action: String, now: int, actions: Array[Dictionary]) -> void:
+func _recover(action: String, now: int, actions: Array[Dictionary]) -> bool:
 	_recovery_request += 1
 	var result := registry.try_recovery_action(BOT_ID, action, _recovery_request, now)
 	if result.ok:
 		actions.append({"kind": "recovery", "result": result})
+	return bool(result.ok)
 
 func _free(cell: Vector2i) -> bool:
 	if not ArenaData.is_walkable(registry.get_arena_id(), cell):
@@ -297,15 +357,15 @@ func _firing_position(cell: Vector2i, target: Vector2i) -> bool:
 	var distance := maxi(absi(delta.x), absi(delta.y))
 	return distance >= 4 and distance <= 6 and CombatRules.has_clear_shot(registry.get_arena_id(), cell, target)
 
-func _path_step(bot: PlayerState, target: PlayerState, ranged: bool) -> int:
+func _path_step(bot: PlayerState, target: Vector2i, ranged: bool) -> int:
 	var queue: Array[Vector2i] = [bot.grid_position]
 	var first: Dictionary = {bot.grid_position: -1}
 	var index := 0
 	while index < queue.size():
 		var cell := queue[index]
 		index += 1
-		var delta := target.grid_position - cell
-		if (_firing_position(cell, target.grid_position) if ranged else absi(delta.x) + absi(delta.y) == 1):
+		var delta := target - cell
+		if (_firing_position(cell, target) if ranged else absi(delta.x) + absi(delta.y) == 1):
 			return int(first[cell])
 		for direction: int in _directions():
 			var next := cell + MovementRules.get_offset(direction)

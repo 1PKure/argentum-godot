@@ -82,7 +82,7 @@ func _run() -> void:
 		var actions := manager.tick(141450 + step * 150)
 		for action: Dictionary in actions:
 			if action.kind == "cast" and int(action.result.event.spell_id) == 27:
-				removed_legally = step * 150 >= 650 and bot.current_mana == before - int(SpellCatalog.get_spell(27).mana)
+				removed_legally = step * 150 >= 350 and bot.current_mana == before - int(SpellCatalog.get_spell(27).mana)
 	_check(removed_legally and bot.active_effects.is_empty(), "Delayed Remove uses the permitted spell and real mana cost")
 	request_id += 1
 	manager.request(301, true, 1, request_id, 150000)
@@ -91,12 +91,12 @@ func _run() -> void:
 	bot.current_health = 100
 	manager.tick(151300)
 	_check(bot.is_meditating and bot.current_health == 100 and bot.current_mana == 0, "Depleted bot starts normal meditation and waits before its first potion")
-	manager.tick(152050)
+	manager.tick(151600)
 	_check(bot.is_meditating and bot.current_health == 127 and bot.current_mana == 0, "Delayed red potion preserves meditation and restores normal HP")
-	manager.tick(152500)
-	_check(bot.current_health == 127, "Bot cannot repeat a potion at the player's faster cadence")
-	manager.tick(153100)
-	_check(bot.is_meditating and bot.current_health == 154, "Bot drinks again only after its slower decision interval")
+	manager.tick(151899)
+	_check(bot.current_health == 127, "Bot cannot repeat a potion before the shared 300 ms boundary")
+	manager.tick(151960)
+	_check(bot.is_meditating and bot.current_health == 154, "Bot repeats potion recovery close to the normal player cadence")
 	registry.advance_runtime(153300)
 	_check(bot.current_mana == int(bot.max_mana * 0.05), "Bot meditation regenerates through the same server runtime")
 	request_id += 1
@@ -134,6 +134,7 @@ func _run() -> void:
 	manager.peer_joining()
 	_check(not registry.has_player(ArenaPracticeBot.BOT_ID), "Joining player cleanup happens before their snapshot")
 	_test_training_behavior()
+	_test_exchange()
 	for item: Node in registries:
 		item.queue_free()
 	await process_frame
@@ -142,67 +143,179 @@ func _run() -> void:
 
 func _test_training_behavior() -> void:
 	var paths: Dictionary = {}
-	var delayed_aim := true
-	var stale_aim := true
-	var legal_cadence := true
-	var bounded_pressure := true
-	var potion_cadence := true
-	var varied_pacing: Dictionary = {}
+	var static_hits := 0
+	var moving_hits := 0
+	var total_attempts := 0
+	var smooth_steps := 0
+	var simultaneous := 0
+	var legal_casts := true
+	var legal_moves := true
+	var legal_potions := true
+	var quick_potions := true
+	var both_colors := true
+	var recovery_windows := true
 	for seed_value in range(1, 9):
+		var path: Array[Vector2i] = []
+		for mobile in [false, true]:
+			var f := _fixture()
+			var registry: PlayerRegistry = f.registry
+			var human: PlayerState = f.human
+			var manager := ArenaPracticeBot.new(registry, seed_value)
+			manager.request(301, true, 1, 1, 10000)
+			var bot := registry.get_player(ArenaPracticeBot.BOT_ID)
+			human.max_health = 10000
+			human.current_health = 10000
+			var last_cast := 0
+			var last_move := 0
+			var last_attempt := manager._next_offense
+			var removal_due := 0
+			var removal_id := 0
+			var next_human_move := 11000
+			var vertical := MovementRules.Direction.SOUTH
+			for step in range(1200):
+				var now := 10000 + step * 20
+				registry.advance_runtime(now)
+				if mobile and not human.active_effects.is_empty():
+					if removal_due == 0:
+						removal_due = now + 400
+					elif now >= removal_due:
+						removal_id += 1
+						registry.try_cast_spell(301, 27, human.grid_position, removal_id, now)
+						removal_due = now + 80
+				else:
+					removal_due = 0
+				if mobile and now >= next_human_move:
+					next_human_move = now + MovementRules.MOVE_INTERVAL_MSEC
+					if human.grid_position.y >= 8:
+						vertical = MovementRules.Direction.NORTH
+					elif human.grid_position.y <= 3:
+						vertical = MovementRules.Direction.SOUTH
+					registry.try_move_player(301, vertical, now)
+				var actions := manager.tick(now)
+				var moved := false
+				var cast := false
+				if mobile and last_attempt != manager._next_offense:
+					total_attempts += 1
+					last_attempt = manager._next_offense
+				for action: Dictionary in actions:
+					if action.kind == "move":
+						moved = true
+						if last_move > 0:
+							legal_moves = legal_moves and now - last_move >= MovementRules.MOVE_INTERVAL_MSEC
+							if now - last_move <= 140:
+								smooth_steps += 1
+						last_move = now
+						if not mobile:
+							path.append(bot.grid_position)
+					elif action.kind == "cast":
+						cast = true
+						if last_cast > 0:
+							legal_casts = legal_casts and now - last_cast >= SpellCatalog.CAST_INTERVAL_MSEC
+						last_cast = now
+						if int(action.result.event.target_id) == 301:
+							if mobile:
+								moving_hits += 1
+							else:
+								static_hits += 1
+				if cast and moved:
+					simultaneous += 1
+			paths[str(path)] = true
+		# Under pressure it must alternate resources and drink at the real interval.
 		var f := _fixture()
 		var registry: PlayerRegistry = f.registry
 		var manager := ArenaPracticeBot.new(registry, seed_value)
-		manager.request(301, true, 1, 1, 10000)
+		manager.request(301, true, 1, 1, 50000)
 		var bot := registry.get_player(ArenaPracticeBot.BOT_ID)
-		bot.grid_position = Vector2i(10, 5)
-		var first := manager.tick(11300)
-		delayed_aim = delayed_aim and first.all(func(action: Dictionary) -> bool: return action.kind != "cast")
-		# Move away from the cell remembered at aim time before the release.
-		f.human.grid_position = Vector2i(4, 9)
-		for step in range(1, 5):
-			manager.tick(11300 + step * 150)
-		stale_aim = stale_aim and f.human.current_health == f.human.max_health and bot.current_mana == bot.max_mana
-		manager.request(301, true, 1, 2, 20000)
-		bot = registry.get_player(ArenaPracticeBot.BOT_ID)
-		f.human.max_health = 10000
-		f.human.current_health = 10000
-		var path: Array[Vector2i] = []
-		var casts: Array[int] = []
-		for step in range(120):
-			var now := 21300 + step * 150
-			registry.advance_runtime(now)
-			var actions := manager.tick(now)
-			for action: Dictionary in actions:
-				if action.kind == "move":
-					path.append(bot.grid_position)
-				elif action.kind == "cast":
-					casts.append(now)
-		for index in range(1, casts.size()):
-			legal_cadence = legal_cadence and casts[index] - casts[index - 1] >= SpellCatalog.CAST_INTERVAL_MSEC
-		bounded_pressure = bounded_pressure and casts.size() >= 4 and casts.size() <= 12
-		paths[str(path)] = true
-		varied_pacing[str(casts)] = true
-		# Red and blue share the bot's slower reaction gate as well as server validation.
-		manager.request(301, true, 1, 3, 50000)
-		bot = registry.get_player(ArenaPracticeBot.BOT_ID)
-		bot.current_health = 50
+		bot.current_health = 100
 		bot.current_mana = 0
 		var drinks: Array[int] = []
-		for step in range(40):
-			var now := 51300 + step * 150
+		var colors: Dictionary = {}
+		for step in range(300):
+			var now := 51300 + step * 20
 			registry.advance_runtime(now)
 			for action: Dictionary in manager.tick(now):
 				if action.kind == "recovery" and str(action.result.event.action).ends_with("potion"):
 					drinks.append(now)
-		potion_cadence = potion_cadence and drinks.size() >= 2 and drinks[0] >= 51700
+					colors[str(action.result.event.action)] = true
+		both_colors = both_colors and colors.size() == 2
+		quick_potions = quick_potions and drinks.size() >= 10 and drinks[0] >= 51460 and drinks[0] <= 51560
 		for index in range(1, drinks.size()):
-			potion_cadence = potion_cadence and drinks[index] - drinks[index - 1] >= 750
-	_check(delayed_aim, "Ranged bot aims before firing instead of instant perfect targeting")
-	_check(stale_aim, "Moving after the bot aims makes its stale cell miss without free damage")
-	_check(paths.size() > 1 and varied_pacing.size() > 1, "Fixed independent seeds produce varied paths and attack timings")
-	_check(bounded_pressure, "Training casts stay between 4 and 12 in eighteen seconds across eight fixed seeds")
-	_check(legal_cadence, "Random AI decisions never bypass the server spell interval")
-	_check(potion_cadence, "Bot potion reaction and repetition remain slower than human 300 ms cadence")
+			legal_potions = legal_potions and drinks[index] - drinks[index - 1] >= RecoveryRules.POTION_INTERVAL_MSEC
+			quick_potions = quick_potions and drinks[index] - drinks[index - 1] <= 380
+		# A melee bot has to leave the attack->potion window to actually recover.
+		manager.request(301, true, 3, 2, 60000)
+		bot = registry.get_player(ArenaPracticeBot.BOT_ID)
+		bot.grid_position = Vector2i(5, 5)
+		registry.try_basic_attack(ArenaPracticeBot.BOT_ID, 61000)
+		bot.current_health = 80
+		var recovered := false
+		for step in range(120):
+			var now := 61020 + step * 20
+			for action: Dictionary in manager.tick(now):
+				if action.kind == "recovery" and action.result.event.action == "health_potion":
+					recovered = true
+		recovery_windows = recovery_windows and recovered and bot.current_health > 80
+	print("Agite metrics: static_hits=%d moving_hits=%d moving_attempts=%d continuous_steps=%d cast_and_move=%d" % [static_hits, moving_hits, total_attempts, smooth_steps, simultaneous])
+	_check(paths.size() > 1, "Movement bursts vary between seeds rather than repeating a fixed approach/up pattern")
+	_check(smooth_steps >= 300 and legal_moves, "Bot sustains consecutive movement at the same 120 ms cadence as a player")
+	_check(simultaneous >= 8, "Casting and movement can happen together instead of freezing for every attack")
+	_check(static_hits >= 100, "Stationary opponents receive sustained combat pressure across eight seeds")
+	_check(moving_hits >= 40 and moving_hits < total_attempts, "Moving opponents can be hit and can also evade delayed perception")
+	_check(legal_casts, "All attacks and defensive spells respect the normal server spell interval")
+	_check(legal_potions and quick_potions, "Potions repeat close to 300 ms without an artificial 750-1050 ms lock")
+	_check(both_colors, "Under pressure the bot recovers health and mana instead of starving one resource")
+	_check(recovery_windows, "Wounded melee bots defend and recover through the real attack-potion gap")
+
+func _test_exchange() -> void:
+	var returned_hits := 0
+	var recoveries := 0
+	var received_arrows := 0
+	var human_wins := 0
+	for seed_value in range(4):
+		var f := _fixture()
+		var registry: PlayerRegistry = f.registry
+		var human: PlayerState = f.human
+		registry.try_select_class(301, 8, 1000)
+		var manager := ArenaPracticeBot.new(registry, 900 + seed_value)
+		manager.request(301, true, 1, 1, 10000)
+		var next_walk := 11000
+		var next_shot := 12000
+		var next_potion := 11000
+		var shot_id := 0
+		var potion_id := 0
+		var vertical := MovementRules.Direction.SOUTH
+		for step in range(1200):
+			var now := 10000 + step * 20
+			registry.advance_runtime(now)
+			var bot := registry.get_player(ArenaPracticeBot.BOT_ID)
+			if not human.is_alive or not bot.is_alive:
+				if not bot.is_alive:
+					human_wins += 1
+				break
+			if now >= next_walk:
+				next_walk = now + MovementRules.MOVE_INTERVAL_MSEC
+				if human.grid_position.y >= 8:
+					vertical = MovementRules.Direction.NORTH
+				elif human.grid_position.y <= 3:
+					vertical = MovementRules.Direction.SOUTH
+				registry.try_move_player(301, vertical, now)
+			if now >= next_shot:
+				next_shot = now + 1800
+				shot_id += 1
+				if registry.try_ranged_attack(301, bot.grid_position, shot_id, now).ok:
+					received_arrows += 1
+			if now >= next_potion and human.current_health <= human.max_health - 27:
+				next_potion = now + 320
+				potion_id += 1
+				registry.try_recovery_action(301, "health_potion", potion_id, now)
+			for action: Dictionary in manager.tick(now):
+				if action.kind == "cast" and int(action.result.event.target_id) == 301:
+					returned_hits += 1
+				elif action.kind == "recovery" and str(action.result.event.action).ends_with("potion"):
+					recoveries += 1
+	print("Exchange metrics: player_arrows=%d bot_hits=%d bot_potions=%d player_wins=%d/4" % [received_arrows, returned_hits, recoveries, human_wins])
+	_check(received_arrows >= 12 and returned_hits >= 12 and recoveries >= 20, "Real ranged damage makes the bot alternate retaliation, movement and recovery")
+	_check(human_wins > 0, "An active player using legal movement, arrows and potions can defeat the bot")
 
 func _check(ok: bool, message: String) -> void:
 	checks += 1

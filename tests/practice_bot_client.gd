@@ -7,12 +7,17 @@ var controller: Node
 var network: Node
 var local_id := 0
 var events: Array[Dictionary] = []
+var bot_steps: Array[int] = []
 var completions: Array[Dictionary] = []
 
 func _initialize() -> void:
 	call_deferred("_run")
 
 func _run() -> void:
+	root.get_node("PlayerNetwork").player_moved.connect(func(data: Dictionary) -> void:
+		if int(data.peer_id) == ArenaPracticeBot.BOT_ID:
+			bot_steps.append(Time.get_ticks_msec())
+	)
 	network = root.get_node("BotNetwork")
 	network.completed.connect(func(ok: bool, message: String) -> void: completions.append({"ok": ok, "message": message}))
 	root.get_node("SpellNetwork").spell_resolved.connect(func(event: Dictionary) -> void: events.append(event))
@@ -38,6 +43,24 @@ func _run() -> void:
 	var spawn: Vector2i = hud._players[ArenaPracticeBot.BOT_ID].grid_position
 	await _wait_for(func() -> bool: return hud._players[ArenaPracticeBot.BOT_ID].grid_position != spawn)
 	_check(hud._players[ArenaPracticeBot.BOT_ID].grid_position != spawn, "Bot movement is synchronized from server decisions")
+	# Keep the local player walking while the bot attacks and recovers.
+	bot_steps.clear()
+	var last_potion := 0
+	for direction: Key in [KEY_S, KEY_D, KEY_W, KEY_A]:
+		_key(direction, true)
+		for step in range(4):
+			await create_timer(0.2).timeout
+			if hud._players[local_id].is_alive and hud._players[local_id].current_health <= hud._players[local_id].max_health - 27 and Time.get_ticks_msec() - last_potion >= 340:
+				_key(KEY_Q, true)
+				_key(KEY_Q, false)
+				last_potion = Time.get_ticks_msec()
+		_key(direction, false)
+	var flowing_pairs := 0
+	for index in range(1, bot_steps.size()):
+		if bot_steps[index] - bot_steps[index - 1] <= 180:
+			flowing_pairs += 1
+	_check(bot_steps.size() >= 10 and flowing_pairs >= 5, "Replicated bot sustains continuous movement while its opponent walks and drinks")
+
 	await _wait_for(func() -> bool: return hud._players[local_id].current_health < hud._players[local_id].max_health, 15)
 	_check(events.any(func(event: Dictionary) -> bool: return int(event.caster_id) == ArenaPracticeBot.BOT_ID and not event.has("mana_cost")) and hud.console.get_parsed_text().contains("te lanzó"), "Bot casts actual spells with local combat feedback and no leaked mana cost")
 	await _capture("bot-mage-combat.png")
