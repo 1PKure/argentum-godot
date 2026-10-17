@@ -5,8 +5,8 @@ extends RefCounted
 const MEDITATION_WARMUP_MSEC := 2000
 const MEDITATION_INTERVAL_MSEC := 1000
 const MEDITATION_PERCENT := 5
-const POTION_INTERVAL_MSEC := 330 # Arena tuning; AO20 IntervaloUserPuedeUsarU: 380 ms.
-const ATTACK_POTION_GAP_MSEC := 700 # Arena tuning; source reference: 800 ms.
+const POTION_INTERVAL_MSEC := 300 # Arena tuning; previous: 330 ms, AO20 source: 380 ms.
+const ATTACK_POTION_GAP_MSEC := 650 # Arena tuning; previous: 700 ms, source: 800 ms.
 const POTION_FILE := "res://assets/argentum/source/data/arena_consumables.ini"
 
 

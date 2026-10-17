@@ -68,9 +68,9 @@ func _run() -> void:
 	result = registry.try_ranged_attack(801, target.grid_position, 3, 10000)
 	_check(result.ok and result.event.amount > 0 and player.current_mana == 0, "Click-targeted diagonal arrow applies real damage without mana")
 	var health := target.current_health
-	_check(not registry.try_ranged_attack(801, target.grid_position, 3, 10650).ok and target.current_health == health, "Arrow request replay cannot duplicate damage")
-	_check(not registry.try_ranged_attack(801, target.grid_position, 4, 10649).ok, "Arrow cooldown rejects one millisecond early")
-	_check(registry.try_ranged_attack(801, target.grid_position, 5, 10650).ok, "Arrow accepts at the 650 ms boundary")
+	_check(not registry.try_ranged_attack(801, target.grid_position, 3, 10600).ok and target.current_health == health, "Arrow request replay cannot duplicate damage")
+	_check(not registry.try_ranged_attack(801, target.grid_position, 4, 10599).ok, "Arrow cooldown rejects one millisecond early")
+	_check(registry.try_ranged_attack(801, target.grid_position, 5, 10600).ok, "Arrow accepts at the 600 ms boundary")
 	var weapon_id := int(player.equipped_items.weapon)
 	var weapon_index := player.inventory.find(weapon_id)
 	var revision := player.inventory_revision

@@ -11,7 +11,7 @@ See [the first Web test guide](docs/WEB_TEST.md) for local testing, export instr
 
 The AO20 frame includes inventory/spell panels, synchronized health/mana, arena minimap and a bounded combat console. The book imports all 213 original AO20 entries and enables 39 spells with implemented PvP rules: select → Launch → target click, or a numeric hotkey → target click. Drag spells onto the hotkey bar to reassign them. Escape/right click cancels aiming; WASD stays active and CTRL remains a physical attack without a mana cost.
 
-Use the same branch for the dedicated server and restart it after updating. `tools/Start-PrivateWebTest.cmd` imports the project before launching WSS. The spell protocol checks server support with protocol 5; player updates now redact enemy mana and physical hits use participant-only feedback.
+Use the same branch for the dedicated server and restart it after updating. `tools/Start-PrivateWebTest.cmd` imports the project before launching WSS. The spell protocol checks server support with protocol 8; player updates now redact enemy mana and physical hits use participant-only feedback.
 
 See [the interface scope and Windows test guide](docs/COMBAT_UI.md). AO20 artwork attribution, provenance and its separate license are in `assets/argentum/interface/ao20/`.
 
@@ -33,3 +33,9 @@ The **Clases** button opens nine AO20-based arena presets with visible armor, we
 Only free infrastructure is in scope. Accounts are optional; the private web client still connects to the local WSS dedicated. See [the zero-cost policy](docs/HOSTING_BUDGET.md).
 
 Equipment now lives in the server inventory: drag to move/swap, click to equip/unequip, E marks equipped items. Presets can be switched or reset freely during practice. Initial macros follow control/remover/damage/healing categories. The Zoom 1×/2× control (default 1×) renders the world at integer source-pixel scale; see [CLASSES.md](docs/CLASSES.md).
+
+## Practice bot
+
+Use **Bot** in the combat HUD while alone: choose one of the nine classes and activate, restart or remove the server-driven opponent. It uses existing movement/combat/recovery rules. Starting or restarting prepares both presets; death stops the practice. A second human joining or the owner's disconnect removes the bot. No lobby isolation is added yet. See [BOTS.md](docs/BOTS.md) for controls, behavior, tests and limits. Class statistics and damage stay at the accepted baseline. The bot keeps player movement/action intervals, uses short perception delays and moves in varied bursts while attacking or recovering; see [ACTION_INTERVALS.md](docs/ACTION_INTERVALS.md) for the slightly faster player cadence. Restart the dedicated server after updating; protocol 8 is required.
+
+Numeric macros and clicked hotkeys preserve the chosen inventory/spell tab. Drinking red/blue potions by click or Q/E keeps the target cursor armed, so manual Launch and macros can be used independently.

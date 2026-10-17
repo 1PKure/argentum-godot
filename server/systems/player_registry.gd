@@ -124,7 +124,8 @@ func remove_player(
 
 func try_move_player(
 	peer_id: int,
-	direction: int
+	direction: int,
+	current_time: int = -1
 ) -> PlayerState:
 	if not _players.has(peer_id):
 		return null
@@ -144,9 +145,8 @@ func try_move_player(
 	):
 		return null
 
-	var current_time: int = (
-		Time.get_ticks_msec()
-	)
+	if current_time < 0:
+		current_time = Time.get_ticks_msec()
 
 	var last_move_time: int = (
 		_last_move_time.get(

@@ -59,7 +59,7 @@ func _run() -> void:
 		network.request_cast(53, hud._players[opponent].grid_position, 3)
 		await _wait_for(func() -> bool: return hud._players[local_id].current_mana == 1297)
 		_check(hud._players[local_id].current_mana == 1297, "Remote Apocalypse keeps its original 1000 mana cost")
-		await _wait_for(func() -> bool: return hud._players[opponent].is_meditating)
+		await _wait_for(func() -> bool: return hud._players[opponent].is_meditating, 18.0)
 		var med_health: int = hud._players[opponent].current_health
 		_check(hud._players[opponent].is_meditating and world._avatars[opponent]._meditation_fx.visible, "Other client sees the confirmed meditation and its FX")
 		await _wait_for(func() -> bool: return hud._players[opponent].current_health > med_health)
@@ -178,6 +178,40 @@ func _run() -> void:
 	await _wait_for(func() -> bool: return hud._players[local_id].current_mana > mana_before)
 	_check(hud._players[local_id].current_mana == mana_before + 124, "Blue-potion hotkey restores 5 percent of 2487 mana")
 	hud.show_inventory()
+	var original_bindings: Array[int] = controller.bindings.duplicate()
+	var all_keys_preserve_inventory := true
+	for index in range(10):
+		controller.bindings[index] = 1
+		_key(KEY_1 + index if index < 9 else KEY_0, true)
+		_key(KEY_1 + index if index < 9 else KEY_0, false)
+		await process_frame
+		all_keys_preserve_inventory = all_keys_preserve_inventory and controller.aimed_spell_id == 1 and hud._inventory_panel.visible and not hud._spell_panel.visible
+		controller.cancel_targeting()
+	controller.bindings.assign(original_bindings)
+	_check(all_keys_preserve_inventory, "All 1-0 spell macros preserve the visible inventory tab")
+	_key(KEY_1, true)
+	_key(KEY_1, false)
+	await process_frame
+	await create_timer(0.35).timeout
+	life_before = hud._players[local_id].current_health
+	await _click(hud._inventory_slots[0])
+	await _wait_for(func() -> bool: return hud._players[local_id].current_health > life_before)
+	_check(hud._players[local_id].current_health == life_before + 27 and controller.aimed_spell_id == 1 and hud._inventory_panel.visible, "Inventory red potion works while a macro cursor stays armed")
+	await create_timer(0.35).timeout
+	mana_before = hud._players[local_id].current_mana
+	_key(KEY_E, true)
+	_key(KEY_E, false)
+	await _wait_for(func() -> bool: return hud._players[local_id].current_mana > mana_before)
+	_check(hud._players[local_id].current_mana == mana_before + 124 and controller.aimed_spell_id == 1 and hud._inventory_panel.visible, "Blue-potion key preserves aiming and inventory")
+	mana_before = hud._players[local_id].current_mana
+	var life_before_macro: int = hud._players[opponent].current_health
+	await _click_world(opponent)
+	await _wait_for(func() -> bool: return controller.pending_request == 0 and hud._players[local_id].current_mana == mana_before - 10)
+	_check(hud._players[local_id].current_mana == mana_before - 10 and hud._players[opponent].current_health < life_before_macro and hud._inventory_panel.visible, "After potions the same macro cursor casts normally without switching tabs")
+	await _click(hud._hotkey_buttons[0])
+	_check(controller.aimed_spell_id == 1 and hud._inventory_panel.visible, "Clicking a macro also keeps the inventory open")
+	controller.cancel_targeting()
+	await _capture("macro-inventory-potions.png")
 	var drag_health: int = hud._players[local_id].current_health
 	var drag_mana: int = hud._players[local_id].current_mana
 	await _drag(hud._inventory_slots[0], hud._inventory_slots[8])

@@ -85,7 +85,9 @@ func _run() -> void:
 	controller.cancel_targeting()
 	_check(controller.aimed_spell_id == 0, "Cancel releases targeting")
 	controller.bindings[0] = 1
+	hud.show_inventory()
 	controller.aim_hotkey(0)
+	_check(hud._inventory_panel.visible and not hud._spell_panel.visible, "Preparing a macro keeps the chosen inventory tab")
 	_check(controller.selected_spell_id == 1 and controller.aimed_spell_id == 1, "Numeric macro selects and arms in a single action")
 	var key := InputEventKey.new()
 	key.keycode = KEY_ESCAPE
