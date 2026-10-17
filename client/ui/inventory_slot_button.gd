@@ -9,6 +9,7 @@ var action := ""
 var layout: ArenaInventoryLayout
 var _drag_started := false
 var _equipped_badge: Label
+var potion_selected := false
 
 
 func _ready() -> void:
@@ -58,7 +59,8 @@ func configure(index: int, inventory: ArenaInventoryLayout) -> void:
 	elif not action.is_empty():
 		var potion := RecoveryRules.get_potion(action)
 		icon = AOResources.get_icon_texture(int(potion.get("icon_grh", 0)))
-		tooltip_text = "%s · Provisión de arena ilimitada\nClic para usar · Arrastrá para mover o intercambiar" % potion.get("name", "Poción")
+		tooltip_text = "%s · Provisión de arena ilimitada\nClic: seleccionar y beber · Espacio: usar seleccionada
+Arrastrá para mover o intercambiar" % potion.get("name", "Poción")
 
 
 func _on_pressed() -> void:
@@ -92,3 +94,13 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_DRAG_END:
 		# Releasing a drag (even outside the grid) must never drink the item.
 		set_deferred("_drag_started", false)
+
+
+func set_potion_selected(selected_action: String) -> void:
+	potion_selected = action in ["health_potion", "mana_potion"] and action == selected_action
+	queue_redraw()
+
+
+func _draw() -> void:
+	if potion_selected:
+		draw_rect(Rect2(Vector2.ONE, size - Vector2.ONE * 2), Color("e9c66f"), false, 2.0)

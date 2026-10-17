@@ -1,22 +1,30 @@
 # Cadencia de la arena
 
-Ajuste solicitado para que el combate sea ligeramente más rápido. Estos son valores propios del prototipo, aplicados por el servidor; no son una copia exacta del balance AO20 ni modifican los DAT/INI originales.
+Perfil solicitado para probar combate algo más ágil y clic + Usar. Valores propios de la arena; los DAT/INI originales y las estadísticas/daño de clases se conservan.
 
-| Acción o cruce | Perfil anterior | Perfil actual |
+| Acción | Antes | Actual |
 | --- | ---: | ---: |
-| Poción → poción, compartido entre roja/azul | 330 ms | 300 ms |
-| Golpe → golpe | 650 ms | 600 ms |
-| Hechizo → hechizo, intervalo global | 1100 ms | 1000 ms |
-| Golpe → hechizo | 700 ms | 650 ms |
-| Hechizo → golpe | 700 ms | 650 ms |
-| Golpe → poción | 700 ms | 650 ms |
+| Poción por clic | 300 ms | 280 ms |
+| Poción por Usar / Espacio / Q/E | 300 ms | 280 ms |
+| Alternar clic + Usar | Un único intervalo | Mínimo común 200 ms |
+| Hechizo → hechizo | 1000 ms | 950 ms |
+| Golpe/arco → golpe/arco | 600 ms | 550 ms |
+| Golpe → hechizo | 650 ms | 600 ms |
+| Hechizo → golpe | 650 ms | 600 ms |
+| Golpe → poción, por cualquier vía | 650 ms | 600 ms |
 
-La reducción es de aproximadamente 7–9%. No agrega bloqueos nuevos de poción → golpe ni poción ↔ hechizo. Se conservan el daño, los costes, la cantidad recuperada, las recargas individuales de cada hechizo, la duración de estados y la meditación. El movimiento mantiene su cadencia de 120 ms.
+Clic y Usar tienen tiempos propios, compartidos entre roja/azul. El mínimo común de 200 ms se aplica además de ambos tiempos: dos acciones simultáneas no producen dos pociones instantáneas. Q/E comparte la vía de Usar. Cambiar de color, alternar teclas, repetir solicitudes o inventar otra vía no añade capacidad. El límite teórico es 3,57 pociones/s por una sola vía y 5/s al alternar: hasta un 40% más, sujeto a recursos, bloqueo tras golpe, conexión y ejecución.
 
-Los valores viven en CombatRules, RecoveryRules y SpellCatalog. La validación y el gasto siguen en PlayerRegistry. El tiempo opcional de sus métodos internos permite probar los límites con precisión; el cliente no envía timestamps ni decide cuándo una acción se acepta. Las firmas RPC no cambian. El protocolo pasa a **8** para que un cliente actualizado no acepte por error el dedicado anterior con el bot y las cadencias viejas; hay que reiniciarlo tras Pull.
+El cliente conserva brevemente un clic o toque de Usar mientras espera el intervalo y coordina la repetición al mantener Espacio. El servidor decide cuándo se acepta y cuánto restaura. Un rechazo temprano no gasta ni duplica recursos. Los límites se aplican a todos los colores y vías; el cliente no envía timestamps de validación. Abrir un modal, morir, desconectar o perder foco cancela repetición y entradas pendientes. Escribir Espacio en un campo de texto no bebe.
 
-Se separan las claves de recarga por hechizo (`spell:ID`) de las claves de grupo compartido (`group:CdEffectId`). Antes Dardo Mágico, ID 1, podía bloquear accidentalmente Restauración, grupo 1. Las variantes que pertenecen realmente al mismo grupo siguen compartiendo sus 30 segundos; el intervalo global reducido no los saltea.
+La provisión sigue siendo ilimitada en esta arena. Seleccionar una poción llena no la bebe ni cambia el recurso de otro color. La selección sigue al objeto si se arrastra; el flujo se describe en [RECOVERY.md](RECOVERY.md).
 
-`tests/action_intervals_smoke.gd` verifica el milisegundo anterior y el límite exacto, ambos sentidos de golpe/magia, el cruce golpe/poción, cambio de color, solicitudes repetidas y recargas individuales. La prueba con servidor y dos clientes conserva la validación de clics, macros, CTRL y pociones mientras se medita. La sensación final se evalúa jugando esta revisión con el servidor actualizado.
+No se agregan bloqueos de poción → golpe ni poción ↔ hechizo. Se conservan costes, cantidad recuperada, recargas individuales y de grupo, estados y meditación. El movimiento del jugador sigue a 120 ms. Los intervalos viven en CombatRules, SpellCatalog y RecoveryRules; PlayerRegistry valida las dos vías, el mínimo común y los nonces. Servidor/cliente requieren protocolo **9**.
 
-El bot conserva estas cadencias. Añade sólo reacción y pequeños márgenes (30–100 ms al ataque y 0–40 ms a la poción), sin una segunda espera larga de recuperación. La percepción del objetivo, la estrategia de movimiento y el uso de recursos se procesan por separado; caminar usa los 120 ms del jugador incluso durante un lanzamiento. Ver [BOTS.md](BOTS.md). Los macros preservan el panel elegido y beber no cancela el cursor.
+## Bot
+
+El bot conserva movimiento continuo por trayectos variados, con pasos de **150 ms**. Magia cada **1150–1250 ms**, golpe/arco cada **650–750 ms** y pociones cada **350–390 ms**, siempre sujetos a los límites reales del servidor. No usa la combinación clic + Usar. Se conservan percepción, errores ocasionales, reacción de Remover, prioridad de recursos y defensa, sin volver a congelarlo al lanzar. Así se reduce moderadamente su presión mientras el jugador prueba las cadencias nuevas.
+
+## Validación
+
+`action_intervals_smoke.gd` verifica límites exactos y el milisegundo anterior, ambos cruces, colores, alias Q/E, mínimo común, no repetición y una ventana comparable donde clic + Usar admite más pociones. `potion_use_client.gd` recorre selección, Espacio sostenido, combinación, arrastre, botón Usar, macros y cancelación por menú/foco/desconexión con un cliente gráfico y dedicado reales. `hud_layout_client.gd` revisa Usar y Meditar en cuatro resoluciones. El ajuste subjetivo se evalúa jugando esta revisión.

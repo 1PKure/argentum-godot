@@ -47,6 +47,7 @@ var _show_catalog: CheckButton
 var _spell_scroll: ScrollContainer
 var _spell_list: VBoxContainer
 var _meditate_button: Button
+var _use_button: Button
 var _health_potion_button: Button
 var _mana_potion_button: Button
 var _status_label: Label
@@ -82,6 +83,7 @@ func _ready() -> void:
 	PlayerNetwork.player_stats_updated.connect(_on_player_stats_updated)
 	SpellNetwork.spell_resolved.connect(_on_spell_event)
 	RecoveryNetwork.action_resolved.connect(_on_recovery_event)
+	RecoveryNetwork.selection_changed.connect(_refresh_potion_selection)
 	BotNetwork.changed.connect(_on_bot_status)
 	InventoryNetwork.rejected.connect(func(message: String) -> void: console.append_message(message))
 	RecoveryNetwork.action_rejected.connect(func(message: String) -> void: console.append_message(message))
@@ -142,11 +144,13 @@ func _update_spell_ui() -> void:
 
 
 func _on_spell_selected(id: int) -> void:
+	_release_text_focus()
 	if _spell_controller != null:
 		_spell_controller.select_spell(id)
 
 
 func _on_hotkey_pressed(slot: int) -> void:
+	_release_text_focus()
 	if _spell_controller != null:
 		_spell_controller.aim_hotkey(slot)
 
@@ -157,6 +161,7 @@ func _on_hotkey_assigned(slot: int, id: int) -> void:
 
 
 func _on_launch_pressed() -> void:
+	_release_text_focus()
 	if _spell_controller != null:
 		_spell_controller.aim_selected()
 
@@ -351,8 +356,12 @@ func _build_interface() -> void:
 	_mana_label = _label(_frame, "—", Rect2(0, 0, 216, 22), 14)
 	_health_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_mana_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_meditate_button = _text_button(_frame, "Meditar", Rect2(0, 0, 232, 27))
+	_meditate_button = _text_button(_frame, "Meditar", Rect2(0, 0, 113, 27))
 	_meditate_button.pressed.connect(_on_meditate_pressed)
+	_use_button = _text_button(_frame, "Usar · Espacio", Rect2(0, 0, 113, 27))
+	_use_button.add_theme_font_size_override("font_size", 12)
+	_use_button.button_down.connect(_begin_use_button)
+	_use_button.button_up.connect(func() -> void: RecoveryNetwork.stop_using_selected("button"))
 	_health_potion_button = _text_button(_frame, "Vida", Rect2(0, 0, 113, 27))
 	_health_potion_button.pressed.connect(_request_recovery.bind("health_potion"))
 	_mana_potion_button = _text_button(_frame, "Maná", Rect2(0, 0, 113, 27))
@@ -453,7 +462,7 @@ func _build_menu() -> void:
 	controls.add_theme_constant_override("h_separation", 20)
 	controls.add_theme_constant_override("v_separation", 8)
 	content.add_child(controls)
-	for row: Array in [["WASD", "Movimiento"], ["CTRL", "Ataque físico"], ["1–0", "Accesos rápidos"], ["M", "Meditar"], ["Q / E", "Poción de vida / maná"], ["Esc / clic derecho", "Cancelar apuntado"]]:
+	for row: Array in [["WASD", "Movimiento"], ["CTRL", "Ataque físico"], ["1–0", "Accesos rápidos"], ["M", "Meditar"], ["Espacio / Usar", "Poción seleccionada (mantener: repetir)"], ["Q / E", "Poción de vida / maná"], ["Esc / clic derecho", "Cancelar apuntado"]]:
 		for text_value: String in row:
 			var label := Label.new()
 			label.text = text_value
@@ -564,9 +573,10 @@ func _open_classes() -> void:
 
 
 func _request_recovery(action: String) -> void:
+	_release_text_focus()
 	if _spell_controller != null and action not in ["health_potion", "mana_potion"]:
 		_spell_controller.cancel_targeting()
-	RecoveryNetwork.request_action(action)
+	RecoveryNetwork.request_action(action, "click" if action in ["health_potion", "mana_potion"] else "direct")
 
 
 func _on_meditate_pressed() -> void:
@@ -596,6 +606,7 @@ func _update_recovery_controls() -> void:
 	_stats_button.disabled = not ready or (state != null and state.is_alive)
 	_health_potion_button.disabled = not ready or (state != null and not state.is_alive)
 	_mana_potion_button.disabled = not ready or (state != null and not state.is_alive)
+	_use_button.disabled = not ready or (state != null and not state.is_alive) or (state != null and state.max_mana == 0 and RecoveryNetwork.selected_potion == "mana_potion")
 	_reserved_buttons[0].disabled = not ready
 	_reserved_buttons[2].disabled = not ready
 	_meditate_button.disabled = _meditate_button.disabled or (state != null and state.max_mana == 0)
@@ -656,6 +667,7 @@ func _fit_interface() -> void:
 	_health_label.position = _health_bar.position + Vector2(0, -3)
 	_mana_label.position = _mana_bar.position + Vector2(0, -3)
 	_meditate_button.position = Vector2(side_x + 20, height - 66)
+	_use_button.position = Vector2(side_x + 139, height - 66)
 	_health_potion_button.position = Vector2(side_x + 20, height - 34)
 	_mana_potion_button.position = Vector2(side_x + 139, height - 34)
 	_stats_button.position = Vector2(side_x + 6, height - 187)
@@ -752,6 +764,7 @@ func _update_local_stats() -> void:
 	elif state == null:
 		_inventory_revision = -1
 		_inventory_peer = 0
+	_refresh_potion_selection()
 	_minimap.players = _players
 	_minimap.local_peer_id = _local_peer_id
 	_minimap.queue_redraw()
@@ -884,3 +897,23 @@ func _on_bot_status() -> void:
 			console.append_message("Bot desactivado.")
 	_last_bot_phase = phase
 	_last_bot_owner = owner
+
+
+func _refresh_potion_selection() -> void:
+	for slot: InventorySlotButton in _inventory_slots:
+		slot.set_potion_selected(RecoveryNetwork.selected_potion)
+	if _use_button != null:
+		_use_button.tooltip_text = "%s · Espacio o mantener Usar" % RecoveryRules.get_potion(RecoveryNetwork.selected_potion).name
+	if _meditate_button != null:
+		_update_recovery_controls()
+
+
+func _release_text_focus() -> void:
+	var focused := get_viewport().gui_get_focus_owner()
+	if focused is LineEdit or focused is TextEdit:
+		focused.release_focus()
+
+
+func _begin_use_button() -> void:
+	_release_text_focus()
+	RecoveryNetwork.begin_using_selected("button")

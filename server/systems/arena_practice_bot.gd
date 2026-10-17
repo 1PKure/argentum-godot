@@ -8,6 +8,10 @@ signal status_changed(status: Dictionary)
 const BOT_ID := -1000 # Entity ID only; never a network recipient or the -1 lookup sentinel.
 const THINK_MSEC := 120
 const COMMAND_INTERVAL_MSEC := 400
+const MOVE_INTERVAL_MSEC := 150
+const CAST_INTERVAL_MSEC := 1150
+const ATTACK_INTERVAL_MSEC := 650
+const POTION_INTERVAL_MSEC := 350
 var registry: PlayerRegistry
 var owner_id := 0
 var phase := "idle"
@@ -199,7 +203,7 @@ func tick(now: int = -1) -> Array[Dictionary]:
 		if direction != -1:
 			var moved := registry.try_move_player(BOT_ID, direction, now)
 			if moved != null:
-				_next_move = now + MovementRules.MOVE_INTERVAL_MSEC
+				_next_move = now + MOVE_INTERVAL_MSEC
 				actions.append({"kind": "move", "state": moved.to_dictionary()})
 	return actions
 
@@ -225,8 +229,8 @@ func _attack(bot: PlayerState, ranged: bool, caster: bool, now: int, actions: Ar
 		if _rng.randf() < 0.06:
 			cell += MovementRules.get_offset(_rng.randi_range(0, 3))
 		# An inaccurate click costs the opportunity too; no free rapid retries.
-		var interval := SpellCatalog.CAST_INTERVAL_MSEC if caster else CombatRules.BASIC_ATTACK_COOLDOWN_MSEC
-		_next_offense = now + interval + _rng.randi_range(30, 100)
+		var interval := maxi(SpellCatalog.CAST_INTERVAL_MSEC, CAST_INTERVAL_MSEC) if caster else maxi(CombatRules.BASIC_ATTACK_COOLDOWN_MSEC, ATTACK_INTERVAL_MSEC)
+		_next_offense = now + interval + _rng.randi_range(0, 100)
 		if caster:
 			_cast(spell, cell, now, actions)
 		else:
@@ -238,7 +242,7 @@ func _attack(bot: PlayerState, ranged: bool, caster: bool, now: int, actions: Ar
 		# Leave a real recovery window after a melee hit when health is low.
 		if _defending and _potion_due != 0:
 			return
-		_next_offense = now + CombatRules.BASIC_ATTACK_COOLDOWN_MSEC + _rng.randi_range(30, 100)
+		_next_offense = now + maxi(CombatRules.BASIC_ATTACK_COOLDOWN_MSEC, ATTACK_INTERVAL_MSEC) + _rng.randi_range(0, 100)
 		if _rng.randf() < 0.06:
 			return
 		bot.facing_direction = _direction(delta)
@@ -263,7 +267,7 @@ func _tick_potions(bot: PlayerState, now: int, actions: Array[Dictionary]) -> vo
 			action = "mana_potion"
 	if _recover(action, now, actions):
 		_last_potion = action
-		_potion_due = now + RecoveryRules.POTION_INTERVAL_MSEC + _rng.randi_range(0, 40)
+		_potion_due = now + maxi(RecoveryRules.POTION_INTERVAL_MSEC, POTION_INTERVAL_MSEC) + _rng.randi_range(0, 40)
 	else:
 		# A normal attack/potion gap can block this; retain the pending decision.
 		_potion_due = now + 40
@@ -332,7 +336,7 @@ func _cast(spell_id: int, target: Vector2i, now: int, actions: Array[Dictionary]
 	_cast_request += 1
 	var result := registry.try_cast_spell(BOT_ID, spell_id, target, _cast_request, now)
 	if result.ok:
-		_next_offense = maxi(_next_offense, now + SpellCatalog.CAST_INTERVAL_MSEC + _rng.randi_range(30, 100))
+		_next_offense = maxi(_next_offense, now + maxi(SpellCatalog.CAST_INTERVAL_MSEC, CAST_INTERVAL_MSEC) + _rng.randi_range(0, 100))
 		actions.append({"kind": "cast", "result": result})
 	return bool(result.ok)
 

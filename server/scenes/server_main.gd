@@ -68,14 +68,15 @@ func _process(_delta: float) -> void:
 		_publish_bot_action(action)
 
 
-func _on_recovery_action_requested(peer_id: int, action: String, request_id: int) -> void:
-	var result := player_registry.try_recovery_action(peer_id, action, request_id)
+func _on_recovery_action_requested(peer_id: int, action: String, request_id: int, source: String) -> void:
+	var result := player_registry.try_recovery_action(peer_id, action, request_id, -1, source)
 	if not result.ok:
-		RecoveryNetwork.send_rejection(peer_id, str(result.message))
+		RecoveryNetwork.send_rejection(peer_id, request_id, str(result.message), int(result.get("remaining_msec", 0)))
 		return
 	PlayerNetwork.broadcast_player_stats_updated(result.state)
 	if action == "respawn":
 		PlayerNetwork.broadcast_player_moved(result.state)
+	result.event.request_id = request_id
 	RecoveryNetwork.broadcast_result(result.event)
 
 

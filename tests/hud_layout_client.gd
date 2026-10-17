@@ -32,7 +32,7 @@ func _run() -> void:
 	var tile: Vector2i = hud._players[local_id].grid_position
 	var health: int = hud._players[local_id].current_health
 	var mana: int = hud._players[local_id].current_mana
-	for key: Key in [KEY_1, KEY_CTRL, KEY_M, KEY_Q, KEY_E]:
+	for key: Key in [KEY_1, KEY_CTRL, KEY_M, KEY_Q, KEY_E, KEY_SPACE]:
 		_key(key, true)
 		_key(key, false)
 	_key(KEY_D, true)
@@ -73,6 +73,7 @@ func _run() -> void:
 		_check(hud._menu_panel.z_index > hud._bottom_back.z_index, "Menu draws above footer at %s" % resolution)
 		_check(not hud._menu_credits.get_global_rect().intersects(hud._menu_disconnect_button.get_global_rect()), "Credits and disconnect do not overlap at %s" % resolution)
 		_check(not hud._menu_close_button.get_global_rect().intersects(hud._menu_disconnect_button.get_global_rect()), "Menu actions have distinct hit areas at %s" % resolution)
+		_check(not hud._use_button.get_global_rect().intersects(hud._meditate_button.get_global_rect()) and Rect2(Vector2.ZERO, root.get_visible_rect().size).encloses(hud._use_button.get_global_rect()), "Use and Meditate fit without overlap at %s" % resolution)
 		_check(not hud._status_label.get_global_rect().intersects(hud._meditate_button.get_global_rect()) and not hud._status_label.get_global_rect().intersects(hud._mana_label.get_global_rect()), "Status has a dedicated footer row at %s" % resolution)
 		_check(not hud._spell_status.get_global_rect().intersects(hud._launch_button.get_global_rect()) and not hud._spell_status.get_global_rect().intersects(hud._spell_scroll.get_global_rect()), "Long spell status stays separate from list and Launch at %s" % resolution)
 	root.size = Vector2i(1280, 800)

@@ -126,6 +126,13 @@ func assign_hotkey(slot: int, id: int) -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not session_active or not event is InputEventKey or not event.pressed or event.echo:
 		return
+	var focus := get_viewport().gui_get_focus_owner()
+	if focus is LineEdit or focus is TextEdit:
+		return
+	if event.keycode == KEY_SPACE and not event.alt_pressed and not event.meta_pressed:
+		RecoveryNetwork.begin_using_selected()
+		get_viewport().set_input_as_handled()
+		return
 	if event.keycode == KEY_CTRL:
 		aim_basic_attack()
 		get_viewport().set_input_as_handled()

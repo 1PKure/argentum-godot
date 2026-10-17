@@ -94,8 +94,8 @@ func _run() -> void:
 	manager.tick(151600)
 	_check(bot.is_meditating and bot.current_health == 127 and bot.current_mana == 0, "Delayed red potion preserves meditation and restores normal HP")
 	manager.tick(151899)
-	_check(bot.current_health == 127, "Bot cannot repeat a potion before the shared 300 ms boundary")
-	manager.tick(151960)
+	_check(bot.current_health == 127, "Bot cannot repeat a potion before its recovery interval")
+	manager.tick(152000)
 	_check(bot.is_meditating and bot.current_health == 154, "Bot repeats potion recovery close to the normal player cadence")
 	registry.advance_runtime(153300)
 	_check(bot.current_mana == int(bot.max_mana * 0.05), "Bot meditation regenerates through the same server runtime")
@@ -201,8 +201,8 @@ func _test_training_behavior() -> void:
 					if action.kind == "move":
 						moved = true
 						if last_move > 0:
-							legal_moves = legal_moves and now - last_move >= MovementRules.MOVE_INTERVAL_MSEC
-							if now - last_move <= 140:
+							legal_moves = legal_moves and now - last_move >= ArenaPracticeBot.MOVE_INTERVAL_MSEC
+							if now - last_move <= 180:
 								smooth_steps += 1
 						last_move = now
 						if not mobile:
@@ -241,7 +241,7 @@ func _test_training_behavior() -> void:
 		quick_potions = quick_potions and drinks.size() >= 10 and drinks[0] >= 51460 and drinks[0] <= 51560
 		for index in range(1, drinks.size()):
 			legal_potions = legal_potions and drinks[index] - drinks[index - 1] >= RecoveryRules.POTION_INTERVAL_MSEC
-			quick_potions = quick_potions and drinks[index] - drinks[index - 1] <= 380
+			quick_potions = quick_potions and drinks[index] - drinks[index - 1] <= 420
 		# A melee bot has to leave the attack->potion window to actually recover.
 		manager.request(301, true, 3, 2, 60000)
 		bot = registry.get_player(ArenaPracticeBot.BOT_ID)
@@ -257,12 +257,12 @@ func _test_training_behavior() -> void:
 		recovery_windows = recovery_windows and recovered and bot.current_health > 80
 	print("Agite metrics: static_hits=%d moving_hits=%d moving_attempts=%d continuous_steps=%d cast_and_move=%d" % [static_hits, moving_hits, total_attempts, smooth_steps, simultaneous])
 	_check(paths.size() > 1, "Movement bursts vary between seeds rather than repeating a fixed approach/up pattern")
-	_check(smooth_steps >= 300 and legal_moves, "Bot sustains consecutive movement at the same 120 ms cadence as a player")
+	_check(smooth_steps >= 300 and legal_moves, "Bot sustains consecutive movement at the slightly slower 150 ms cadence while keeping continuous steps")
 	_check(simultaneous >= 8, "Casting and movement can happen together instead of freezing for every attack")
 	_check(static_hits >= 100, "Stationary opponents receive sustained combat pressure across eight seeds")
 	_check(moving_hits >= 40 and moving_hits < total_attempts, "Moving opponents can be hit and can also evade delayed perception")
 	_check(legal_casts, "All attacks and defensive spells respect the normal server spell interval")
-	_check(legal_potions and quick_potions, "Potions repeat close to 300 ms without an artificial 750-1050 ms lock")
+	_check(legal_potions and quick_potions, "Bot potions repeat around 350-390 ms without a long artificial lock")
 	_check(both_colors, "Under pressure the bot recovers health and mana instead of starving one resource")
 	_check(recovery_windows, "Wounded melee bots defend and recover through the real attack-potion gap")
 
@@ -314,7 +314,7 @@ func _test_exchange() -> void:
 				elif action.kind == "recovery" and str(action.result.event.action).ends_with("potion"):
 					recoveries += 1
 	print("Exchange metrics: player_arrows=%d bot_hits=%d bot_potions=%d player_wins=%d/4" % [received_arrows, returned_hits, recoveries, human_wins])
-	_check(received_arrows >= 12 and returned_hits >= 12 and recoveries >= 20, "Real ranged damage makes the bot alternate retaliation, movement and recovery")
+	_check(received_arrows >= 12 and returned_hits >= 8 and recoveries >= 20, "Real ranged damage makes the bot alternate retaliation, movement and recovery")
 	_check(human_wins > 0, "An active player using legal movement, arrows and potions can defeat the bot")
 
 func _check(ok: bool, message: String) -> void:

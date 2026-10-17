@@ -11,6 +11,7 @@ var _last_spell_time: Dictionary[int, int] = {}
 var _last_spell_request: Dictionary[int, int] = {}
 var _last_recovery_request: Dictionary[int, int] = {}
 var _last_potion_time: Dictionary[int, int] = {}
+var _last_potion_channel_time: Dictionary[int, Dictionary] = {}
 var _next_meditation_tick: Dictionary[int, int] = {}
 var _spell_cooldowns: Dictionary = {}
 var _last_inventory_request: Dictionary[int, int] = {}
@@ -80,6 +81,7 @@ func add_player(
 	_last_spell_request[peer_id] = 0
 	_last_recovery_request[peer_id] = 0
 	_last_potion_time[peer_id] = -RecoveryRules.POTION_INTERVAL_MSEC
+	_last_potion_channel_time[peer_id] = {}
 	_spell_cooldowns[peer_id] = {}
 
 	print(
@@ -112,6 +114,7 @@ func remove_player(
 	_players.erase(peer_id)
 	_last_recovery_request.erase(peer_id)
 	_last_potion_time.erase(peer_id)
+	_last_potion_channel_time.erase(peer_id)
 	_next_meditation_tick.erase(peer_id)
 	_spell_cooldowns.erase(peer_id)
 	_last_move_time.erase(peer_id)
@@ -447,7 +450,7 @@ func try_cast_spell(caster_id: int, spell_id: int, target_position: Vector2i, re
 	}
 
 
-func try_recovery_action(peer_id: int, action: String, request_id: int, now: int = -1) -> Dictionary:
+func try_recovery_action(peer_id: int, action: String, request_id: int, now: int = -1, source: String = "direct") -> Dictionary:
 	if now < 0:
 		now = Time.get_ticks_msec()
 	var player: PlayerState = _players.get(peer_id)
@@ -455,6 +458,9 @@ func try_recovery_action(peer_id: int, action: String, request_id: int, now: int
 		return _spell_error("No hay un personaje conectado.")
 	if not action in ["meditate", "health_potion", "mana_potion", "respawn"] and not action.begins_with("class:"):
 		return _spell_error("Acción desconocida.")
+	if source not in ["direct", "use", "click"]:
+		return _spell_error("Forma de uso de poción desconocida.")
+	var channel := "click" if source == "click" else "use"
 	if request_id <= _last_recovery_request.get(peer_id, 0):
 		return _spell_error("La acción ya fue procesada.")
 	_last_recovery_request[peer_id] = request_id
@@ -475,6 +481,7 @@ func try_recovery_action(peer_id: int, action: String, request_id: int, now: int
 		_last_attack_time[peer_id] = now
 		_spell_cooldowns[peer_id].clear()
 		_last_potion_time[peer_id] = -RecoveryRules.POTION_INTERVAL_MSEC
+		_last_potion_channel_time[peer_id] = {}
 		message = "Reapareció en la arena."
 	elif not player.is_alive:
 		return _spell_error("No podés meditar ni usar pociones mientras sos un fantasma. Usá Reaparecer.")
@@ -487,10 +494,11 @@ func try_recovery_action(peer_id: int, action: String, request_id: int, now: int
 		_next_meditation_tick[peer_id] = now + RecoveryRules.MEDITATION_WARMUP_MSEC
 		message = "Comenzó a meditar." if player.is_meditating else "Dejó de meditar."
 	else:
-		if now - _last_potion_time.get(peer_id, -RecoveryRules.POTION_INTERVAL_MSEC) < RecoveryRules.POTION_INTERVAL_MSEC:
-			return _spell_error("Esperá el intervalo de pociones.")
-		if now - _last_attack_time.get(peer_id, -RecoveryRules.ATTACK_POTION_GAP_MSEC) < RecoveryRules.ATTACK_POTION_GAP_MSEC:
-			return _spell_error("Esperá el intervalo entre golpe y poción.")
+		var remaining := maxi(RecoveryRules.POTION_COMBINED_MIN_MSEC - (now - _last_potion_time.get(peer_id, -RecoveryRules.POTION_INTERVAL_MSEC)),
+			RecoveryRules.POTION_INTERVAL_MSEC - (now - int(_last_potion_channel_time.get(peer_id, {}).get(channel, -RecoveryRules.POTION_INTERVAL_MSEC))))
+		remaining = maxi(remaining, RecoveryRules.ATTACK_POTION_GAP_MSEC - (now - _last_attack_time.get(peer_id, -RecoveryRules.ATTACK_POTION_GAP_MSEC)))
+		if remaining > 0:
+			return _spell_error("Esperá el intervalo de pociones.", remaining)
 		var potion := RecoveryRules.get_potion(action)
 		if potion.is_empty():
 			return _spell_error("Faltan los datos de la poción.")
@@ -511,9 +519,10 @@ func try_recovery_action(peer_id: int, action: String, request_id: int, now: int
 		if player.current_mana >= player.max_mana:
 			player.is_meditating = false
 		_last_potion_time[peer_id] = now
+		_last_potion_channel_time[peer_id][channel] = now
 		message = "Usó %s (+%d)." % [potion.name, amount]
 	return {"ok": true, "state": player.to_dictionary(), "event": {
-		"peer_id": peer_id, "player_name": player.display_name, "action": action,
+		"peer_id": peer_id, "player_name": player.display_name, "action": action, "source": channel, "request_id": request_id,
 		"amount": amount, "message": message, "is_meditating": player.is_meditating}}
 
 
@@ -538,6 +547,7 @@ func try_select_class(peer_id: int, class_id: int, now: int = -1) -> Dictionary:
 	_last_spell_time[peer_id] = -SpellCatalog.CAST_INTERVAL_MSEC
 	_last_attack_time[peer_id] = -SpellCatalog.SPELL_ATTACK_GAP_MSEC
 	_last_potion_time[peer_id] = -RecoveryRules.POTION_INTERVAL_MSEC
+	_last_potion_channel_time[peer_id] = {}
 	_spell_cooldowns[peer_id] = {}
 	return {"ok": true, "state": player.to_dictionary(), "event": {
 		"peer_id": peer_id, "player_name": player.display_name, "action": "class",
