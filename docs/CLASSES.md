@@ -5,7 +5,7 @@ El PR8 contiene nueve clases: **Mago, Clérigo, Guerrero, Asesino, Bardo, Druida
 ## Probar en Windows
 
 1. En GitHub Desktop: Fetch origin, seleccionar `work/arena-class-presets` y Pull si corresponde.
-2. Reiniciar el dedicado con `tools/Start-PrivateWebTest.cmd`. Cliente y servidor necesitan la misma revisión; protocolo 5.
+2. Reiniciar el dedicado con `tools/Start-PrivateWebTest.cmd`. Cliente y servidor necesitan la misma revisión; protocolo 6.
 3. Recargar la web privada con Ctrl+F5. El WSS local sigue precargado.
 4. Abrir **Clases**, elegir un preset y **Usar este preset**. También se puede reiniciar el preset actual.
 
@@ -84,7 +84,7 @@ Referencia de los nueve presets: **humano, nivel 50, constitución 20, inteligen
 
 La consola muestra hechizos lanzados por vos o dirigidos a vos, golpes en los que participás, muerte propia y recuperación propia. No registra curaciones, pociones, cambio de preset o gasto de maná de terceros. El resultado confirmado del hechizo/golpe reemplaza los mensajes repetidos por cada cambio de barra. Los controles están en Menú y tooltips; no ocupan permanentemente el HUD.
 
-El servidor omite **current_mana** del rival en snapshots, movimiento y estadísticas, y omite **mana_cost** de los eventos enviados a otros jugadores. El rival no dibuja barra de maná. Las confirmaciones de recuperación se envían sólo al dueño; la meditación visible sigue sincronizada mediante estado público. Vida, clase y equipo visible siguen siendo públicos para las pruebas. Se requiere protocolo **5** y reinicio del dedicado.
+El servidor omite **current_mana** del rival en snapshots, movimiento y estadísticas, y omite **mana_cost** de los eventos enviados a otros jugadores. El rival no dibuja barra de maná. Las confirmaciones de recuperación se envían sólo al dueño; la meditación visible sigue sincronizada mediante estado público. Vida, clase y equipo visible siguen siendo públicos para las pruebas. Se requiere protocolo **6** y reinicio del dedicado.
 
 El Mago permite explorar las 38 magias concedibles; otros presets restringen sus listas y costes al maná de la clase. La entrada 247 Disparo de NPC no se concede como magia: el arco tiene su propia acción física.
 

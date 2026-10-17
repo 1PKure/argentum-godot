@@ -22,7 +22,7 @@ func clear_session() -> void:
 
 
 func broadcast_result(event: Dictionary) -> void:
-	if multiplayer.is_server():
+	if multiplayer.is_server() and multiplayer.get_peers().has(int(event.peer_id)):
 		_receive_result.rpc_id(int(event.peer_id), event)
 
 

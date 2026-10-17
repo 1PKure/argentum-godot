@@ -20,6 +20,6 @@ La cadencia y cantidad de meditación son parámetros del prototipo: falta porta
 
 ## Red y comprobación
 
-RecoveryNetwork usa solicitudes separadas de PlayerNetwork y determina al actor por el emisor real. El dueño recibe estado completo y resultado del servidor; otros jugadores reciben estado público sin maná actual, sin otorgarse recursos localmente. La versión 5 del protocolo de hechizos también exige el servidor actualizado para habilitar recuperación.
+RecoveryNetwork usa solicitudes separadas de PlayerNetwork y determina al actor por el emisor real. El dueño recibe estado completo y resultado del servidor; otros jugadores reciben estado público sin maná actual, sin otorgarse recursos localmente. La versión 6 del protocolo de hechizos también exige el servidor actualizado para habilitar recuperación.
 
 `tests/arena_recovery_smoke.gd` verifica datos, límites, intervalos, solicitudes repetidas, calentamiento, cadencia, interrupciones, muerte, reaparición y efectos de estado. `tests/arena_network_client.gd` usa botones y teclas con dos clientes reales para comprobar pociones, meditación/FX, remo, daño, cámara, catálogo, muerte y reaparición. La misma prueba se ejecuta con el PCK exportado.

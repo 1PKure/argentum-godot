@@ -58,6 +58,9 @@ var _inventory_slots: Array[InventorySlotButton] = []
 var _inventory_layout := ArenaInventoryLayout.new()
 var _bottom_back: Panel
 var _class_panel: ClassPresetPanel
+var _bot_panel: BotPracticePanel
+var _last_bot_phase := "idle"
+var _last_bot_owner := 0
 var _equipped_label: Label
 var _book_class_id := -1
 var _inventory_revision := -1
@@ -79,6 +82,7 @@ func _ready() -> void:
 	PlayerNetwork.player_stats_updated.connect(_on_player_stats_updated)
 	SpellNetwork.spell_resolved.connect(_on_spell_event)
 	RecoveryNetwork.action_resolved.connect(_on_recovery_event)
+	BotNetwork.changed.connect(_on_bot_status)
 	InventoryNetwork.rejected.connect(func(message: String) -> void: console.append_message(message))
 	RecoveryNetwork.action_rejected.connect(func(message: String) -> void: console.append_message(message))
 	show_inventory()
@@ -195,6 +199,7 @@ func start_session(peer_id: int) -> void:
 func end_session(message: String) -> void:
 	set_menu_opened(false)
 	_class_panel.close_panel()
+	_bot_panel.close_panel()
 	_players.clear()
 	_local_peer_id = 0
 	_connection_label.text = "Sin conexión"
@@ -369,6 +374,9 @@ func _build_interface() -> void:
 	_class_panel = ClassPresetPanel.new()
 	add_child(_class_panel)
 	_class_panel.opened_changed.connect(func(_opened: bool) -> void: _notify_modal_state())
+	_bot_panel = BotPracticePanel.new()
+	add_child(_bot_panel)
+	_bot_panel.opened_changed.connect(func(_opened: bool) -> void: _notify_modal_state())
 	_reserved_buttons[0].text = "Clases"
 	_reserved_buttons[0].tooltip_text = "Ver y elegir clases, equipo y estadísticas."
 	for style_name: String in ["normal", "hover", "pressed", "disabled"]:
@@ -378,6 +386,11 @@ func _build_interface() -> void:
 		class_style.set_border_width_all(1)
 		_reserved_buttons[0].add_theme_stylebox_override(style_name, class_style)
 	_reserved_buttons[0].pressed.connect(_open_classes)
+	_reserved_buttons[2].text = "Bot"
+	_reserved_buttons[2].tooltip_text = "Práctica con bot"
+	_reserved_buttons[2].pressed.connect(_open_bot)
+	for style_name: String in ["normal", "hover", "pressed", "disabled"]:
+		_reserved_buttons[2].add_theme_stylebox_override(style_name, _reserved_buttons[0].get_theme_stylebox(style_name))
 	_reserved_buttons[1].text = "Zoom 1×"
 	_reserved_buttons[1].tooltip_text = "Acercar / alejar el mundo"
 	for style_name: String in ["normal", "hover", "pressed"]:
@@ -470,7 +483,7 @@ func _build_menu() -> void:
 
 
 func is_modal_open() -> bool:
-	return _menu_panel.visible or _class_panel.visible
+	return _menu_panel.visible or _class_panel.visible or _bot_panel.visible
 
 
 func set_menu_opened(opened: bool) -> void:
@@ -496,6 +509,8 @@ func _input(event: InputEvent) -> void:
 	if event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
 		if _menu_panel.visible:
 			set_menu_opened(false)
+		elif _bot_panel.visible:
+			_bot_panel.close_panel()
 		else:
 			_class_panel.close_panel()
 	get_viewport().set_input_as_handled()
@@ -544,6 +559,7 @@ func _open_classes() -> void:
 	var state: PlayerState = _players.get(_local_peer_id)
 	if state != null and _spell_controller != null and _spell_controller.server_ready:
 		set_menu_opened(false)
+		_bot_panel.close_panel()
 		_spell_controller.cancel_targeting()
 		_class_panel.open_panel(state.class_id)
 
@@ -582,6 +598,7 @@ func _update_recovery_controls() -> void:
 	_health_potion_button.disabled = not ready or (state != null and not state.is_alive)
 	_mana_potion_button.disabled = not ready or (state != null and not state.is_alive)
 	_reserved_buttons[0].disabled = not ready
+	_reserved_buttons[2].disabled = not ready
 	_meditate_button.disabled = _meditate_button.disabled or (state != null and state.max_mana == 0)
 	_mana_potion_button.disabled = _mana_potion_button.disabled or (state != null and state.max_mana == 0)
 	if state == null:
@@ -666,8 +683,8 @@ func _on_snapshot_received(players: Array) -> void:
 		var state := PlayerState.from_dictionary(data)
 		_players[state.peer_id] = state
 		if state.peer_id == _local_peer_id and _spell_controller != null:
-			_spell_controller.apply_class(state.class_id, state.preset_revision)
-	console.append_message("Arena lista · %d jugador(es) conectados." % _players.size())
+			_spell_controller.apply_state(data)
+	console.append_message("Arena lista · %d jugador(es) conectados." % _players.values().filter(func(player: PlayerState) -> bool: return not player.is_bot).size())
 	_update_local_stats()
 
 
@@ -847,3 +864,24 @@ func _resource_bar(filename: String, at: Vector2) -> TextureProgressBar:
 	bar.position = at
 	bar.size = Vector2(216, 16)
 	return bar
+
+
+func _open_bot() -> void:
+	if _spell_controller != null and _spell_controller.server_ready and _players.has(_local_peer_id):
+		set_menu_opened(false)
+		_class_panel.close_panel()
+		_spell_controller.cancel_targeting()
+		_bot_panel.open_panel()
+
+
+func _on_bot_status() -> void:
+	var state: Dictionary = BotNetwork.state
+	var phase := str(state.get("phase", "idle"))
+	var owner := int(state.get("owner_id", 0))
+	if phase != _last_bot_phase and _local_peer_id != 0:
+		if owner == _local_peer_id and phase in ["won", "lost"]:
+			console.append_message("Ganaste la práctica." if phase == "won" else "Perdiste la práctica. Podés reiniciar desde Bot.")
+		elif phase == "idle" and _last_bot_owner == _local_peer_id and int(state.get("human_count", 0)) > 0:
+			console.append_message("Bot desactivado.")
+	_last_bot_phase = phase
+	_last_bot_owner = owner

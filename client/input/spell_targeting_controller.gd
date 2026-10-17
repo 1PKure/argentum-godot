@@ -54,6 +54,7 @@ func end_session() -> void:
 	cancel_targeting()
 	SpellNetwork.clear_session()
 	RecoveryNetwork.clear_session()
+	BotNetwork.clear_session()
 
 
 func select_spell(id: int) -> void:
@@ -205,12 +206,16 @@ func _on_spell_rejected(request_id: int, message: String, _remaining: int) -> vo
 
 func _on_stats_updated(data: Dictionary) -> void:
 	if int(data.get("peer_id", 0)) == _local_id:
-		apply_class(int(data.get("class_id", ClassCatalog.DEFAULT_CLASS)), int(data.get("preset_revision", 0)))
-		_alive = bool(data.get("is_alive", true))
-		if not _alive:
-			cancel_targeting()
-		else:
-			changed.emit()
+		apply_state(data)
+
+
+func apply_state(data: Dictionary) -> void:
+	apply_class(int(data.get("class_id", ClassCatalog.DEFAULT_CLASS)), int(data.get("preset_revision", 0)))
+	_alive = bool(data.get("is_alive", true))
+	if not _alive:
+		cancel_targeting()
+	else:
+		changed.emit()
 
 
 func aim_basic_attack() -> void:
