@@ -1,11 +1,11 @@
 # Clases, presets e inventario de la arena
 
-El PR8 contiene nueve clases: **Mago, Clérigo, Guerrero, Asesino, Bardo, Druida, Paladín, Cazador y Bandido**. Trabajador, Pirata y Ladrón quedan fuera del catálogo seleccionable y el servidor rechaza sus IDs. Son perfiles de prueba; el balance y las especialidades avanzadas siguen pendientes.
+El PR8 contiene nueve clases: **Mago, Clérigo, Guerrero, Asesino, Bardo, Druida, Paladín, Cazador y Bandido**. Trabajador, Pirata y Ladrón quedan fuera del catálogo seleccionable y el servidor rechaza sus IDs. Son perfiles de duelo con una primera referencia de balance; las especialidades avanzadas siguen pendientes.
 
 ## Probar en Windows
 
 1. En GitHub Desktop: Fetch origin, seleccionar `work/arena-class-presets` y Pull si corresponde.
-2. Reiniciar el dedicado con `tools/Start-PrivateWebTest.cmd`. Cliente y servidor necesitan la misma revisión; protocolo 4.
+2. Reiniciar el dedicado con `tools/Start-PrivateWebTest.cmd`. Cliente y servidor necesitan la misma revisión; protocolo 5.
 3. Recargar la web privada con Ctrl+F5. El WSS local sigue precargado.
 4. Abrir **Clases**, elegir un preset y **Usar este preset**. También se puede reiniciar el preset actual.
 
@@ -44,9 +44,9 @@ Inventario, equipamiento y posición de objetos duran esta sesión del dedicado.
 
 ## Renderizado
 
-Los PNG originales están importados sin reducción de tamaño y sin compresión con pérdida; las texturas de juego usan filtro nearest. Se retiró el filtrado lineal heredado de la interfaz. El control **Píxel 2× / 1×** ajusta el zoom del mundo para que cada píxel fuente ocupe un número entero de píxeles de pantalla, incluso cuando el HUD o la ventana tienen escala fraccionaria. La cámara y el apuntado convierten las coordenadas usando ese zoom; no cambian los tiempos de movimiento ni las distancias del servidor.
+Los PNG originales están importados sin reducción de tamaño y sin compresión con pérdida; las texturas de juego usan filtro nearest. Se retiró el filtrado lineal heredado de la interfaz. El control **Zoom 1× / 2×** ajusta el zoom del mundo para que cada píxel fuente ocupe un número entero de píxeles de pantalla, incluso cuando el HUD o la ventana tienen escala fraccionaria. La cámara y el apuntado convierten las coordenadas usando ese zoom; no cambian los tiempos de movimiento ni las distancias del servidor.
 
-La escala entera evita parte del suavizado y el tamaño desigual de píxeles de la escala anterior de 1.5×. No convierte el arte original en HD ni agrega detalle que no existe. La revisión visual se realizó con Godot nativo; queda comprobar el resultado en el navegador/Windows y su escala de pantalla.
+La vista inicial es **1×**, con personajes y casillas a tamaño fuente y el doble de campo visible por eje respecto del 2× anterior. El acercamiento 2× sigue siendo opcional. La escala entera evita parte del suavizado y el tamaño desigual de píxeles de la escala anterior de 1.5×. No convierte el arte original en HD ni agrega detalle que no existe. La revisión visual se realizó con Godot nativo; queda comprobar el resultado en el navegador/Windows y su escala de pantalla.
 
 ## Fuentes y fórmulas de prueba
 
@@ -54,12 +54,37 @@ Recursos AO20: [ao-org/Recursos](https://github.com/ao-org/Recursos/tree/89615f3
 
 `arena_equipment.ini` conserva las 32 secciones de objetos importadas y sus exclusiones CP. `armas.dat`, `escudos.dat` y `cascos.ini` permiten dibujar cuatro direcciones. Para la Espada Zafiro (icono GRH86206 ausente) y la Rodela (GRH9633 que apunta a un gráfico incorrecto en la tabla pública), se usa un fotograma de la propia arma/escudo. No se alteran los PNG originales ni los valores de los objetos. Se mantienen las atribuciones y licencias AO20 del proyecto.
 
-Las fórmulas son adaptaciones de arena, no el cálculo completo de progresión de AO20:
+La vida, el maná y el daño por nivel se basan en [UserMod.GetMaxHp / GetMaxMana / GetHitModifier](https://github.com/ao-org/argentum-online-server/blob/9d381f280c10b680cf1f84be5372f8c1dce42840/Codigo/Modulo_UsUaRiOs.bas); el daño de arma en [SistemaCombate.GetUserDamageWithItem / UserDamageToUser](https://github.com/ao-org/argentum-online-server/blob/9d381f280c10b680cf1f84be5372f8c1dce42840/Codigo/SistemaCombate.bas). Se fija la revisión de AO20 anterior; no se atribuyen fórmulas al servidor privado de United.
 
-- Vida = redondear `500 × MODVIDA / 7.5`; maná = redondear `3000 × MULT_MANA / 2.65`.
-- Golpe = redondear `(30 + 2 × daño medio del arma y munición equipadas) × modificador de daño de la clase`. Para Cazador se usa el modificador de proyectiles; para otros, armas.
-- Defensa = suma de defensa media del equipo actual, interpretada como porcentaje con tope 60%. Resistencia mágica = 4% base más los valores del equipo, con tope 60%.
-- Daño físico = golpe × `(1 − defensa / 100)`; daño mágico = tirada original × `(1 + bonificación / 100)` × `(1 − resistencia / 100)`. Se redondea con mínimo 1. Curaciones y costes conservan sus reglas. El daño periódico fija estos modificadores al aplicarse.
+Referencia de los nueve presets: **humano, nivel 50, constitución 20, inteligencia 18**. La **fuerza preparada 28 es un ajuste explícito de la arena**, no la fuerza racial base de AO20 ni una poción implementada. Se aplica igual a todas las clases. No hay progresión, elección de raza ni variación aleatoria de vida al subir nivel: se usa la vida promedio y redondeo de Godot.
+
+| Clase | Vida | Maná |
+| --- | ---: | ---: |
+| Mago | 363 | 2487 |
+| Clérigo | 412 | 1809 |
+| Guerrero | 510 | 0 |
+| Asesino | 437 | 927 |
+| Bardo | 412 | 1809 |
+| Druida | 412 | 1809 |
+| Paladín | 486 | 927 |
+| Cazador | 486 | 0 |
+| Bandido | 437 | 698 |
+
+- Vida promedio = `(MODVIDA − (21 − constitución) × 0.5) × (nivel − 1) + constitución`.
+- Maná = `inteligencia × MANA_INICIAL + MULT_MANA × inteligencia × (nivel − 1)`.
+- Golpe por nivel = `35 × GOLPE_PRE_36 + (nivel − 36) × GOLPE_POST_36`, más el intervalo original 1–2.
+- Daño de arma = `(3 × daño del arma y munición + máximo del arma y munición × 0.2 × max(0, fuerza − 15) + golpe por nivel) × modificador de clase`. Sin arma y con nudillos se usa `MODDANOWRESTLING`; Cazador con arco usa `MODDANOPROYECTILES`.
+- Defensa corporal = defensa media de **armadura + escudo**, restada en puntos; el casco no se suma al torso. La arena usa torso y defensa media, sin sorteo de zona/absorción por impacto todavía. Se sortea uniformemente el daño final entre los extremos calculados, con mínimo 1. Es una simplificación de las tiradas independientes de AO20.
+- Cazador con Arco de Cazador y Flecha Élfica contra Mago con Túnica Legendaria: **181–200** por disparo normal; contra el mismo Mago sin túnica: **211–230**. Estos rangos corresponden a ese equipo y fuerza. No se aplica un multiplicador oculto contra Mago.
+- Magia directa sigue [modHechizos.HechizoPropUsuario](https://github.com/ao-org/argentum-online-server/blob/9d381f280c10b680cf1f84be5372f8c1dce42840/Codigo/modHechizos.bas): tirada original × `(1 + 0.03 × nivel)` × `(1 + bonificación de equipo / 100)` × `(1 − resistencia / 100)`. Se respeta AntiRm. Apocalipsis de Mago contra Mago equipado: **223–238**, con su coste original de 1000 maná. Antes faltaba la bonificación por nivel.
+- Resistencia del preset: skill 100, protección por skill habilitada (100 × 0.04 = 4%), modificador de clase y equipo según `UserMod.GetUserMR`; tope de arena 60%. Redondeo final y mínimo 1 son decisiones de esta implementación; no se simulan talentos, facciones, cartas, penetración ni modificadores que estos presets no tienen.
+- Las curaciones conservan sus valores del DAT sin bonificación de daño por nivel. Los efectos periódicos usan su propio TickPower, ajustan equipo/resistencia al aplicarse y no reciben el bono de impacto directo. Los costes se conservan.
+
+## Consola y datos de combate
+
+La consola muestra hechizos lanzados por vos o dirigidos a vos, golpes en los que participás, muerte propia y recuperación propia. No registra curaciones, pociones, cambio de preset o gasto de maná de terceros. El resultado confirmado del hechizo/golpe reemplaza los mensajes repetidos por cada cambio de barra. Los controles están en Menú y tooltips; no ocupan permanentemente el HUD.
+
+El servidor omite **current_mana** del rival en snapshots, movimiento y estadísticas, y omite **mana_cost** de los eventos enviados a otros jugadores. El rival no dibuja barra de maná. Las confirmaciones de recuperación se envían sólo al dueño; la meditación visible sigue sincronizada mediante estado público. Vida, clase y equipo visible siguen siendo públicos para las pruebas. Se requiere protocolo **5** y reinicio del dedicado.
 
 El Mago permite explorar las 38 magias concedibles; otros presets restringen sus listas y costes al maná de la clase. La entrada 247 Disparo de NPC no se concede como magia: el arco tiene su propia acción física.
 
@@ -67,4 +92,4 @@ La identidad de clases se trabaja después: **Asesino con apuñalada por la espa
 
 ## Validación
 
-`class_presets_smoke.gd`: nueve perfiles, gráficos, macros, serialización, cambio libre desde estados agotados/muertos, arco dirigido, paredes, alcance, cooldown, deduplicación, inventario, equipo y daño real. `preset_interactions_client.gd`: eventos reales de UI en dos clientes para cursor/cancelación/clic del arco, arrastre, equipar/desequipar, cambio libre, sincronización remota y escalas 1×/2× tras redimensionar. Las pruebas anteriores de combate, recuperación, movimiento, cámara y WSS se mantienen como regresión.
+`arena_balance_privacy_smoke.gd`: recursos de las nueve clases, daño con/sin túnica, serialización por destinatario y consola local. `class_presets_smoke.gd`: nueve perfiles, gráficos, macros, serialización, cambio libre desde estados agotados/muertos, arco dirigido, paredes, alcance, cooldown, deduplicación, inventario, equipo y daño real. `preset_interactions_client.gd`: eventos reales de UI en dos clientes para cursor/cancelación/clic del arco, arrastre, equipar/desequipar, cambio libre, sincronización remota y escalas 1×/2× tras redimensionar. Las pruebas anteriores de combate, recuperación, movimiento, cámara y WSS se mantienen como regresión.

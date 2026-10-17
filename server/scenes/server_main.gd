@@ -7,6 +7,7 @@ extends Node
 
 func _ready() -> void:
 	print("Starting Argentum server...")
+	player_registry.basic_attack_resolved.connect(PlayerNetwork.send_basic_attack_result)
 
 	NetworkManager.peer_connected.connect(
 		_on_peer_connected

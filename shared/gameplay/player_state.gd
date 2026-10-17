@@ -17,6 +17,7 @@ var current_health: int
 
 var max_mana: int
 var current_mana: int
+var mana_is_private := false
 
 var is_alive: bool
 var is_meditating := false
@@ -148,6 +149,7 @@ func to_dictionary() -> Dictionary:
 		"current_health": current_health,
 		"max_mana": max_mana,
 		"current_mana": current_mana,
+		"mana_is_private": mana_is_private,
 		"is_alive": is_alive,
 		"is_ghost": is_ghost,
 		"is_meditating": is_meditating,
@@ -222,6 +224,9 @@ static func from_dictionary(
 			)
 		),
 	)
+	state.mana_is_private = bool(data.get("mana_is_private", false))
+	if state.mana_is_private:
+		state.current_mana = 0
 	state.is_meditating = bool(data.get("is_meditating", false))
 	state.class_id = int(data.get("class_id", ClassCatalog.DEFAULT_CLASS))
 	if data.has("inventory"):

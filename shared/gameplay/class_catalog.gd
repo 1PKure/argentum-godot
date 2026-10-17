@@ -7,6 +7,10 @@ const RANGED_RANGE := 8
 const EQUIPMENT_SLOTS := ["armor", "weapon", "helmet", "shield", "accessory", "ammunition"]
 const ATTACK_BINDING := -1
 const MACRO_VERSION := 2
+const PRESET_LEVEL := 50
+const PRESET_STRENGTH := 28 # Arena-ready attribute; explicit PvP tuning, not a racial base.
+const PRESET_CONSTITUTION := 20 # Human: 18 + 2.
+const PRESET_INTELLIGENCE := 18
 static var _classes: Dictionary = {}
 static var _equipment: Dictionary = {}
 
@@ -54,13 +58,28 @@ static func physical_damage(attacker_class: int, target_class: int, attacker_equ
 	var defense := get_profile(target_class) if target_equipment == null else get_equipped_profile(target_class, target_equipment)
 	if attack.is_empty() or defense.is_empty():
 		return CombatRules.BASIC_ATTACK_DAMAGE
-	return maxi(1, roundi(float(attack.physical_power) * (1.0 - float(defense.armor_percent) / 100.0)))
+	return maxi(1, roundi(float(attack.physical_power) - float(defense.armor_points)))
 
 
-static func magic_damage(amount: int, caster_class: int, target_class: int, caster_equipment: Variant = null, target_equipment: Variant = null) -> int:
+static func physical_damage_range(attacker_class: int, target_class: int, attacker_equipment: Variant = null, target_equipment: Variant = null) -> Vector2i:
+	var attack := get_profile(attacker_class) if attacker_equipment == null else get_equipped_profile(attacker_class, attacker_equipment)
+	var defense := get_profile(target_class) if target_equipment == null else get_equipped_profile(target_class, target_equipment)
+	return Vector2i(maxi(1, roundi(float(attack.physical_min) - float(defense.armor_points))), maxi(1, roundi(float(attack.physical_max) - float(defense.armor_points))))
+
+
+static func roll_physical_damage(attacker_class: int, target_class: int, attacker_equipment: Dictionary, target_equipment: Dictionary) -> int:
+	var damage_range := physical_damage_range(attacker_class, target_class, attacker_equipment, target_equipment)
+	return randi_range(damage_range.x, damage_range.y)
+
+
+static func magic_damage(amount: int, caster_class: int, target_class: int, caster_equipment: Variant = null, target_equipment: Variant = null, scale_by_level: bool = true, ignore_resistance: bool = false) -> int:
 	var caster := get_profile(caster_class) if caster_equipment == null else get_equipped_profile(caster_class, caster_equipment)
 	var target := get_profile(target_class) if target_equipment == null else get_equipped_profile(target_class, target_equipment)
-	return maxi(1, roundi(amount * (1.0 + float(caster.get("magic_bonus", 0)) / 100.0) * (1.0 - float(target.get("resistance_percent", 0)) / 100.0)))
+	# AO20 modHechizos.HechizoPropUsuario: +3% per level before equipment.
+	# EOT tick powers use their own DAT values, without this direct-hit bonus.
+	var level_bonus := 1.0 + 0.03 * float(caster.level) if scale_by_level else 1.0
+	var resistance := 0.0 if ignore_resistance else float(target.get("resistance_percent", 0))
+	return maxi(1, roundi(amount * level_bonus * (1.0 + float(caster.get("magic_bonus", 0)) / 100.0) * (1.0 - resistance / 100.0)))
 
 
 static func equipment_slot(class_id: int, item_id: int) -> String:
@@ -86,10 +105,18 @@ static func _ensure_loaded() -> void:
 		var id := int(entry.id)
 		var key := str(entry.key)
 		var mana_factor := float(balance.MULT_MANA[key])
-		# Normalize the existing arena mage (500 HP / 3000 MP) using the original
-		# class ratios. These are fixed test profiles, not AO20 level progression.
-		entry.max_health = roundi(500.0 * float(balance.MODVIDA[key]) / 7.5)
-		entry.max_mana = roundi(3000.0 * mana_factor / 2.65)
+		# AO20 UserMod.GetMaxHp / GetMaxMana: fixed human level-50 mean profile.
+		entry.level = PRESET_LEVEL
+		entry.race = "Humano"
+		entry.strength = PRESET_STRENGTH
+		entry.constitution = PRESET_CONSTITUTION
+		entry.intelligence = PRESET_INTELLIGENCE
+		entry.max_health = roundi((float(balance.MODVIDA[key]) - (21.0 - PRESET_CONSTITUTION) * 0.5) * (PRESET_LEVEL - 1) + PRESET_CONSTITUTION)
+		entry.max_mana = roundi(PRESET_INTELLIGENCE * float(balance.MANA_INICIAL[key]) + mana_factor * PRESET_INTELLIGENCE * (PRESET_LEVEL - 1))
+		entry.base_hit = 35.0 * float(balance.GOLPE_PRE_36[key]) + (PRESET_LEVEL - 36) * float(balance.GOLPE_POST_36[key])
+		entry.wrestling_modifier = float(balance.MODDANOWRESTLING[key])
+		entry.resistance_skill = 100
+		entry.base_resistance = 100.0 * float(balance.MODRESISTENCIAMAGICA[key]) + float(entry.resistance_skill) * float(balance.EXTRA.MagicResistanceSkillProtectionModifier)
 		entry.range = RANGED_RANGE if id == 8 else 1
 		var spells: Array = []
 		if mana_factor > 0:
@@ -124,18 +151,29 @@ static func _ensure_loaded() -> void:
 static func _calculate_equipment(profile: Dictionary, equipped: Dictionary) -> Dictionary:
 	var weapon: Dictionary = _equipment.get(int(equipped.get("weapon", 0)), {})
 	var ammo: Dictionary = _equipment.get(int(equipped.get("ammunition", 0)), {})
-	var weapon_damage := (float(weapon.get("MinHit", 0)) + float(weapon.get("MaxHit", 0))) * 0.5
-	weapon_damage += (float(ammo.get("MinHit", 0)) + float(ammo.get("MaxHit", 0))) * 0.5
-	profile.physical_power = roundi((30.0 + weapon_damage * 2.0) * float(profile.damage_modifier))
-	profile.armor_percent = 0.0
-	profile.resistance_percent = 4.0
+	var minimum := float(weapon.get("MinHit", 0))
+	var maximum := float(weapon.get("MaxHit", 0))
+	if int(profile.id) == 8 and not weapon.is_empty():
+		minimum += float(ammo.get("MinHit", 0))
+		maximum += float(ammo.get("MaxHit", 0))
+	var modifier := float(profile.damage_modifier)
+	if weapon.is_empty() or int(weapon.get("WeaponType", 0)) == 8:
+		modifier = float(profile.wrestling_modifier)
+	# AO20 SistemaCombate.GetUserDamageWithItem; neutral torso hit, no crits.
+	var strength_bonus := maximum * 0.2 * maxf(0.0, float(profile.strength) - 15.0)
+	profile.physical_min = roundi((3.0 * minimum + strength_bonus + float(profile.base_hit) + 1.0) * modifier)
+	profile.physical_max = roundi((3.0 * maximum + strength_bonus + float(profile.base_hit) + 2.0) * modifier)
+	profile.physical_power = roundi((float(profile.physical_min) + float(profile.physical_max)) * 0.5)
+	profile.armor_points = 0.0
+	profile.resistance_percent = float(profile.base_resistance)
 	profile.magic_bonus = 0.0
 	for slot: String in EQUIPMENT_SLOTS:
 		var item: Dictionary = _equipment.get(int(equipped.get(slot, 0)), {})
-		profile.armor_percent += (float(item.get("MinDef", 0)) + float(item.get("MaxDef", 0))) * 0.5
+		# Armor and shield absorb torso damage. Helmet is for future head hits.
+		if slot in ["armor", "shield"]:
+			profile.armor_points += (float(item.get("MinDef", 0)) + float(item.get("MaxDef", 0))) * 0.5
 		profile.resistance_percent += float(item.get("ResistenciaMagica", 0))
 		profile.magic_bonus += float(item.get("MagicDamageBonus", 0))
-	profile.armor_percent = minf(60, profile.armor_percent)
 	profile.resistance_percent = minf(60, profile.resistance_percent)
 	profile.body_id = int(_equipment.get(int(equipped.get("armor", 0)), {}).get("RopajeHumano", 21))
 	profile.weapon_animation = int(weapon.get("Anim", 0))

@@ -57,7 +57,7 @@ var _equipped_label: Label
 var _book_class_id := -1
 var _inventory_revision := -1
 var _inventory_peer := 0
-var _pixel_scale := 2
+var _pixel_scale := 1
 
 
 func _ready() -> void:
@@ -66,6 +66,7 @@ func _ready() -> void:
 	_build_interface()
 	get_viewport().size_changed.connect(_fit_interface)
 	_fit_interface()
+	PlayerNetwork.basic_attack_resolved.connect(_on_basic_attack_event)
 	PlayerNetwork.snapshot_received.connect(_on_snapshot_received)
 	PlayerNetwork.player_spawned.connect(_on_player_spawned)
 	PlayerNetwork.player_despawned.connect(_on_player_despawned)
@@ -106,16 +107,16 @@ func _update_spell_ui() -> void:
 		_hotkey_buttons[index].button_pressed = id != 0 and id == _spell_controller.aimed_spell_id
 	_launch_button.disabled = not _spell_controller.can_launch()
 	_launch_button.modulate = Color.WHITE if not _launch_button.disabled else Color(0.55, 0.55, 0.55)
-	_controls_hint.text = "WASD · CTRL golpe · 1–0 hechizos · M meditar · Q vida · E maná"
-	_spell_status.text = "Seleccioná un hechizo y pulsá Lanzar."
+	_controls_hint.text = ""
+	_spell_status.text = ""
 	if _spell_controller.aimed_attack:
-		_controls_hint.text = "Disparo de arco · Clic en un rival · Esc o clic derecho para cancelar"
-		_spell_status.text = "Elegí el objetivo del arco con un clic."
+		_controls_hint.text = "Arco · Elegí un objetivo"
+		_spell_status.text = ""
 	elif _spell_controller.aimed_spell_id != 0:
 		show_spells()
 		var spell := SpellCatalog.get_spell(_spell_controller.aimed_spell_id)
-		_controls_hint.text = "%s · Elegí un objetivo · Esc o clic derecho para cancelar" % spell.name
-		_spell_status.text = "Elegí el objetivo con un clic."
+		_controls_hint.text = "%s · Elegí un objetivo" % spell.name
+		_spell_status.text = ""
 	elif _spell_controller.pending_request != 0:
 		_spell_status.text = "Esperando el resultado…"
 	elif not _spell_controller.server_ready:
@@ -152,19 +153,35 @@ func _on_launch_pressed() -> void:
 
 
 func _on_spell_event(event: Dictionary) -> void:
-	var caster := "Tu personaje" if int(event.caster_id) == _local_peer_id else str(event.caster_name)
-	var target := "tu personaje" if int(event.target_id) == _local_peer_id else str(event.target_name)
-	var detail := str(event.get("status_message", ""))
+	if _local_peer_id == 0 or (_local_peer_id != int(event.caster_id) and _local_peer_id != int(event.target_id)):
+		return
+	var own_cast := int(event.caster_id) == _local_peer_id
+	var own_target := int(event.target_id) == _local_peer_id
+	var target := "vos" if own_target else str(event.target_name)
+	var text_value := ""
+	if event.get("action", "") == "shot":
+		text_value = "Le disparaste a %s" % target if own_cast else "%s te disparó" % event.caster_name
+	elif own_cast:
+		text_value = "Te lanzaste %s" % event.spell_name if own_target else "Lanzaste %s a %s" % [event.spell_name, target]
+	else:
+		text_value = "%s te lanzó %s" % [event.caster_name, event.spell_name]
 	if int(event.amount) > 0:
-		detail = "%d" % int(event.amount)
-	console.append_message("%s %s %s sobre %s (%s)." % [caster, "usó" if event.get("action", "") == "shot" else "lanzó", event.spell_name, target, detail], "healing" if str(event.effect) == "healing" else "damage")
+		text_value += " · %d" % int(event.amount)
+	console.append_message(text_value + ".", "healing" if str(event.effect) == "healing" else "damage")
+
+
+func _on_basic_attack_event(event: Dictionary) -> void:
+	if _local_peer_id == int(event.caster_id):
+		console.append_message("Golpeaste a %s · %d." % [event.target_name, event.amount], "damage")
+	elif _local_peer_id == int(event.target_id):
+		console.append_message("%s te golpeó · %d." % [event.caster_name, event.amount], "damage")
 
 
 func start_session(peer_id: int) -> void:
 	_local_peer_id = peer_id
 	_players.clear()
 	console.clear_session()
-	console.append_message("Conectado. Movimiento: WASD · Ataque físico: CTRL.")
+	console.append_message("Conectado a la arena.")
 	_connection_label.text = "Conectado · PvP"
 	_update_local_stats()
 
@@ -217,8 +234,8 @@ func _build_interface() -> void:
 		button.button_pressed = index == 0
 		button.pressed.connect(console.set_channel_filter.bind(["all", "combat", "system"][index]))
 		_filter_buttons.append(button)
-	_session_title = _label(_frame, "Arena PvP · Prueba privada", Rect2(385, 5, 245, 22), 13)
-	_controls_hint = _label(_frame, "WASD · CTRL golpe · 1–0 hechizos · M meditar · Q vida · E maná", Rect2(20, 123, 700, 22), 13)
+	_session_title = _label(_frame, "Arena PvP", Rect2(385, 5, 245, 22), 13)
+	_controls_hint = _label(_frame, "", Rect2(20, 123, 700, 22), 13)
 	_minimap = ArenaMinimap.new()
 	_frame.add_child(_minimap)
 	_minimap.size = Vector2(91, 91)
@@ -293,7 +310,7 @@ func _build_interface() -> void:
 		entry.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		entry.pressed.connect(_on_spell_selected.bind(id))
 		_spell_buttons[id] = entry
-	_spell_status = _label(_spell_panel, "Seleccioná un hechizo y pulsá Lanzar.", Rect2(10, 308, 220, 46), 11)
+	_spell_status = _label(_spell_panel, "", Rect2(10, 308, 220, 46), 11)
 	_spell_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_launch_button = _art_button(_spell_panel, "lanzar", Rect2(0, 360, 161, 39))
 	_launch_button.name = "LaunchButton"
@@ -314,11 +331,11 @@ func _build_interface() -> void:
 	_mana_label = _label(_frame, "—", Rect2(0, 0, 216, 22), 14)
 	_health_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_mana_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_meditate_button = _text_button(_frame, "M · Meditar", Rect2(0, 0, 232, 27))
+	_meditate_button = _text_button(_frame, "Meditar", Rect2(0, 0, 232, 27))
 	_meditate_button.pressed.connect(_on_meditate_pressed)
-	_health_potion_button = _text_button(_frame, "Q · Vida +27", Rect2(0, 0, 113, 27))
+	_health_potion_button = _text_button(_frame, "Vida", Rect2(0, 0, 113, 27))
 	_health_potion_button.pressed.connect(_request_recovery.bind("health_potion"))
-	_mana_potion_button = _text_button(_frame, "E · Maná +5%", Rect2(0, 0, 113, 27))
+	_mana_potion_button = _text_button(_frame, "Maná", Rect2(0, 0, 113, 27))
 	_mana_potion_button.pressed.connect(_request_recovery.bind("mana_potion"))
 	_menu_panel = _control(_frame, "MenuPanel", Rect2(0, 0, 250, 250))
 	var menu_background := ColorRect.new()
@@ -353,13 +370,13 @@ func _build_interface() -> void:
 		class_style.set_border_width_all(1)
 		_reserved_buttons[0].add_theme_stylebox_override(style_name, class_style)
 	_reserved_buttons[0].pressed.connect(_open_classes)
-	_reserved_buttons[1].text = "Píxel 2×"
-	_reserved_buttons[1].tooltip_text = "Alternar escala nítida 1× / 2× del mundo. No cambia la velocidad ni las reglas."
+	_reserved_buttons[1].text = "Zoom 1×"
+	_reserved_buttons[1].tooltip_text = "Acercar / alejar el mundo"
 	for style_name: String in ["normal", "hover", "pressed"]:
 		_reserved_buttons[1].add_theme_stylebox_override(style_name, _reserved_buttons[0].get_theme_stylebox(style_name))
 	_reserved_buttons[1].pressed.connect(func() -> void:
 		_pixel_scale = 1 if _pixel_scale == 2 else 2
-		_reserved_buttons[1].text = "Píxel %d×" % _pixel_scale
+		_reserved_buttons[1].text = "Zoom %d×" % _pixel_scale
 		_update_pixel_scale()
 	)
 	for index in range(10):
@@ -420,8 +437,9 @@ func _on_meditate_pressed() -> void:
 
 
 func _on_recovery_event(event: Dictionary) -> void:
-	var name := "Tu personaje" if int(event.peer_id) == _local_peer_id else str(event.player_name)
-	console.append_message("%s: %s" % [name, event.message], "system" if event.action in ["meditate", "respawn"] else "healing")
+	if int(event.peer_id) != _local_peer_id:
+		return
+	console.append_message(str(event.message), "system" if event.action in ["meditate", "respawn"] else "healing")
 	if event.action in ["health_potion", "mana_potion"] and int(event.peer_id) == _local_peer_id:
 		var audio := AudioStreamPlayer.new()
 		audio.stream = load("res://assets/argentum/source/audio/135.wav")
@@ -445,12 +463,12 @@ func _update_recovery_controls() -> void:
 	_mana_potion_button.disabled = _mana_potion_button.disabled or (state != null and state.max_mana == 0)
 	if state == null:
 		_status_label.text = ""
-		_meditate_button.text = "M · Meditar"
+		_meditate_button.text = "Meditar"
 	elif not state.is_alive:
-		_meditate_button.text = "M · Meditar"
+		_meditate_button.text = "Meditar"
 		_status_label.text = "Fantasma · Podés reaparecer"
 	else:
-		_meditate_button.text = "M · Dejar de meditar" if state.is_meditating else "M · Meditar"
+		_meditate_button.text = "Dejar de meditar" if state.is_meditating else "Meditar"
 		var labels := state.active_effects.duplicate()
 		if state.is_meditating:
 			labels.append("Meditando")
@@ -547,20 +565,9 @@ func _on_player_moved(data: Dictionary) -> void:
 func _on_player_stats_updated(data: Dictionary) -> void:
 	var state := PlayerState.from_dictionary(data)
 	var previous: PlayerState = _players.get(state.peer_id)
-	if previous != null and previous.class_id == state.class_id and previous.preset_revision == state.preset_revision:
-		var health_change := state.current_health - previous.current_health
-		var mana_change := state.current_mana - previous.current_mana
-		var player_name := _player_name(state)
-		if health_change < 0:
-			console.append_message("%s recibió %d de daño." % [player_name, -health_change], "damage")
-		elif health_change > 0:
-			console.append_message("%s recuperó %d de vida." % [player_name, health_change], "healing")
-		if mana_change < 0:
-			console.append_message("%s consumió %d de maná." % [player_name, -mana_change], "mana")
-		elif mana_change > 0:
-			console.append_message("%s recuperó %d de maná." % [player_name, mana_change], "mana")
+	if previous != null and state.peer_id == _local_peer_id and previous.class_id == state.class_id and previous.preset_revision == state.preset_revision:
 		if previous.is_alive and not state.is_alive:
-			console.append_message("%s murió." % player_name, "death")
+			console.append_message("Moriste.", "death")
 	_players[state.peer_id] = state
 	_update_local_stats()
 
@@ -580,7 +587,7 @@ func _update_local_stats() -> void:
 			var item := ClassCatalog.get_item(int(state.equipped_items.get(slot, 0)))
 			if not item.is_empty():
 				equipped.append(str(item.Name))
-		_equipped_label.text = "EQUIPADO · %s\n%s\nE: equipado · Clic: equipar / usar · Arrastrar: mover" % [profile.name, " · ".join(equipped)]
+		_equipped_label.text = "%s\n%s" % [profile.name, " · ".join(equipped)]
 	else:
 		_equipped_label.text = "Sin personaje conectado."
 	if state != null and state.is_ghost:

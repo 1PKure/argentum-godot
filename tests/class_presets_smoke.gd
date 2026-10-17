@@ -81,6 +81,7 @@ func _run() -> void:
 	_check(result.ok and not player.equipped_items.has("weapon") and player.inventory[41] == weapon_id, "Clicking equipped bow unequips it without removing the item")
 	_check(not registry.try_ranged_attack(801, target.grid_position, 6, 12000).ok, "Unequipped hunter bow cannot fire")
 	_check(registry.try_inventory_use(801, 41, weapon_id, player.inventory_revision, 4).ok and player.equipped_items.weapon == weapon_id, "Clicking moved bow equips it again")
+	registry.try_select_class(802, 1, 12000) # Two full arrows can now kill a mage.
 	var armor_id := int(target.equipped_items.armor)
 	var armor_index := target.inventory.find(armor_id)
 	var armored_damage := ClassCatalog.physical_damage(8, 1, player.equipped_items, target.equipped_items)

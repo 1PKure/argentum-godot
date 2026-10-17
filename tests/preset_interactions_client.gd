@@ -8,6 +8,9 @@ var network: Node
 var manager: Node
 var world: Node2D
 var local_id := 0
+var received_states: Array[Dictionary] = []
+var received_spells: Array[Dictionary] = []
+var received_recovery: Array[Dictionary] = []
 
 func _initialize() -> void:
 	call_deferred("_run")
@@ -15,13 +18,16 @@ func _initialize() -> void:
 func _run() -> void:
 	manager = root.get_node("NetworkManager")
 	network = root.get_node("SpellNetwork")
+	root.get_node("PlayerNetwork").player_stats_updated.connect(func(data: Dictionary) -> void: received_states.append(data))
+	network.spell_resolved.connect(func(data: Dictionary) -> void: received_spells.append(data))
+	root.get_node("RecoveryNetwork").action_resolved.connect(func(data: Dictionary) -> void: received_recovery.append(data))
 	main = load("res://client/scenes/client_main.tscn").instantiate()
 	root.add_child(main)
 	hud = main._hud
 	controller = main._spell_controller
 	world = main._world
 	await _wait_for(func() -> bool: return hud._players.size() == 2 and controller.server_ready)
-	_check(hud._players.size() == 2 and controller.server_ready, "Two clients negotiate protocol 4")
+	_check(hud._players.size() == 2 and controller.server_ready, "Two clients negotiate protocol 5")
 	if hud._players.size() != 2 or not controller.server_ready:
 		await _finish()
 		return
@@ -30,6 +36,7 @@ func _run() -> void:
 	for id: int in hud._players:
 		if id != local_id:
 			opponent = id
+	_check(hud._players[opponent].mana_is_private and hud._players[opponent].current_mana == 0 and hud._players[local_id].current_mana == hud._players[local_id].max_mana, "Snapshot preserves own mana and hides rival mana")
 	if "--spell-target" in OS.get_cmdline_user_args():
 		root.get_node("PlayerNetwork").request_move(MovementRules.Direction.SOUTH)
 		await _wait_for(func() -> bool: return hud._players[opponent].class_id == 8)
@@ -38,6 +45,11 @@ func _run() -> void:
 		_check(not world._avatars[opponent]._player_visual._equipped_items.has("weapon"), "Remote client removes an unequipped bow")
 		await _wait_for(func() -> bool: return hud._players[opponent].equipped_items.has("weapon"))
 		_check(world._avatars[opponent]._player_visual._equipped_items.has("weapon"), "Remote client restores a reequipped bow")
+		_check(received_spells.any(func(event: Dictionary) -> bool: return int(event.spell_id) == 25 and not event.has("mana_cost")) and hud.console.get_parsed_text().contains("te lanzó Paralizar"), "Target receives named Paralizar feedback without the opponent's mana cost")
+		_check(received_recovery.is_empty(), "Rival class and recovery confirmations are never sent to this client")
+		_check(not received_spells.is_empty() and not received_spells[0].has("mana_cost"), "Rival shot event exposes no mana cost")
+		_check(hud.console.entries.all(func(entry: Dictionary) -> bool: return not str(entry.text).contains("Preset") and not str(entry.text).contains("Usó")), "Other player's preset and recovery notices never enter the console")
+		_check(received_states.all(func(data: Dictionary) -> bool: return int(data.peer_id) == local_id or not data.has("current_mana")), "All remote stat payloads omit current mana")
 		await _wait_for(func() -> bool: return hud._players[opponent].class_id == 4)
 		_check(hud._players[opponent].inventory.has(1108) and world._avatars[opponent]._player_visual._class_id == 4, "Remote client receives assassin inventory and visual")
 		await _wait_for(func() -> bool: return hud._players.size() == 1, 20)
@@ -45,12 +57,18 @@ func _run() -> void:
 		return
 	_check(controller.bindings[0] == 25 and controller.bindings[1] == 27 and controller.bindings[2] == 51 and controller.bindings[3] == 31, "Fresh mage macro bar follows control, remover, damage, healing")
 	_check(hud._inventory_layout.actions.count("item:519") == 1 and hud._inventory_layout.equipped_ids.has(519), "Equipped mage armor is an inventory item")
-	_check(_sharp_scale(2), "World displays each source pixel at exactly two screen pixels")
+	_check(_sharp_scale(1), "Default 1x gives the wider AO reference field of view")
 	var player_network = root.get_node("PlayerNetwork")
 	for step in range(6):
 		player_network.request_move(MovementRules.Direction.EAST)
 		await create_timer(0.14).timeout
 	await _wait_for(func() -> bool: return hud._players[opponent].grid_position.y == 6)
+	var mana_before: int = hud._players[local_id].current_mana
+	_key(KEY_1, true)
+	_key(KEY_1, false)
+	await _click_world(opponent)
+	await _wait_for(func() -> bool: return controller.pending_request == 0 and hud._players[local_id].current_mana < mana_before)
+	_check(hud._players[local_id].current_mana == mana_before - 375 and received_spells[-1].mana_cost == 375, "Only the casting player receives their spell cost and actual remaining mana")
 	await _choose_class(8)
 	_check(hud._players[local_id].class_id == 8 and not hud._class_panel.visible, "Choosing hunter applies immediately without resource or timer restrictions")
 	_check(controller.bindings[2] == -1 and hud._hotkey_buttons[2].icon != null, "Hunter macro 3 contains its physical bow action")
@@ -79,6 +97,7 @@ func _run() -> void:
 	await _wait_for(func() -> bool: return controller.pending_request == 0 and hud._players[opponent].current_health < health)
 	_check(hud._players[opponent].current_health < health and not controller.aimed_attack and hud._players[local_id].current_mana == 0, "Clicking a diagonal rival confirms physical damage with zero mana")
 	_check(world._spell_effects.size() > 0, "Confirmed arrow creates visible projectile feedback")
+	_check(health - hud._players[opponent].current_health >= 181 and health - hud._players[opponent].current_health <= 200, "Equipped hunter deals 181-200 damage to the equipped mage")
 	await _capture("refined-bow-shot.png")
 	await _click(hud._inventory_button)
 	var weapon_id: int = hud._players[local_id].equipped_items.weapon
@@ -112,14 +131,14 @@ func _run() -> void:
 	await _capture("refined-class-preview.png")
 	hud._class_panel.close_panel()
 	await _click(hud._reserved_buttons[1])
-	_check(_sharp_scale(1), "Pixel control switches the world to exact 1x")
+	_check(_sharp_scale(2), "Zoom control switches the world to exact 2x")
 	await _click(hud._reserved_buttons[1])
-	_check(_sharp_scale(2), "Pixel control restores exact 2x")
+	_check(_sharp_scale(1), "Zoom control restores exact 1x")
 	root.size = Vector2i(1280, 720)
 	hud._fit_interface()
 	await process_frame
 	await process_frame
-	_check(_sharp_scale(2), "Fractional window resize still preserves an integer source-pixel scale")
+	_check(_sharp_scale(1), "Fractional window resize still preserves an integer source-pixel scale")
 	await _capture("refined-pixel-resized.png")
 	main._disconnect_from_arena()
 	await _finish()

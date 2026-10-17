@@ -1,6 +1,8 @@
 class_name PlayerRegistry
 extends Node
 
+signal basic_attack_resolved(event: Dictionary)
+
 var _players: Dictionary[int, PlayerState] = {}
 
 var _last_move_time: Dictionary[int, int] = {}
@@ -263,7 +265,7 @@ func try_basic_attack(
 	if target == null:
 		return null
 
-	var damage := ClassCatalog.physical_damage(attacker.class_id, target.class_id, attacker.equipped_items, target.equipped_items)
+	var damage := ClassCatalog.roll_physical_damage(attacker.class_id, target.class_id, attacker.equipped_items, target.equipped_items)
 	if not target.apply_damage(damage):
 		return null
 
@@ -284,6 +286,7 @@ func try_basic_attack(
 			% target.display_name
 		)
 
+	basic_attack_resolved.emit({"caster_id": attacker.peer_id, "caster_name": attacker.display_name, "target_id": target.peer_id, "target_name": target.display_name, "amount": damage})
 	return target
 
 
@@ -312,7 +315,7 @@ func try_ranged_attack(peer_id: int, position: Vector2i, request_id: int, now: i
 	remaining = SpellCatalog.SPELL_ATTACK_GAP_MSEC - (now - _last_spell_time.get(peer_id, -SpellCatalog.SPELL_ATTACK_GAP_MSEC))
 	if remaining > 0:
 		return _spell_error("Esperá el intervalo entre magia y golpe.", remaining)
-	var damage := ClassCatalog.physical_damage(attacker.class_id, target.class_id, attacker.equipped_items, target.equipped_items)
+	var damage := ClassCatalog.roll_physical_damage(attacker.class_id, target.class_id, attacker.equipped_items, target.equipped_items)
 	var previous := target.current_health
 	target.apply_damage(damage)
 	attacker.is_meditating = false
@@ -425,7 +428,7 @@ func try_cast_spell(caster_id: int, spell_id: int, target_position: Vector2i, re
 		if spell.effect == "healing":
 			target.restore_health(rolled)
 		else:
-			target.apply_damage(ClassCatalog.magic_damage(rolled, caster.class_id, target.class_id, caster.equipped_items, target.equipped_items))
+			target.apply_damage(ClassCatalog.magic_damage(rolled, caster.class_id, target.class_id, caster.equipped_items, target.equipped_items, true, int(spell.raw.get("AntiRm", "0")) == 1))
 	caster.spend_mana(int(spell.mana))
 	caster.is_meditating = false
 	_last_spell_time[caster_id] = now

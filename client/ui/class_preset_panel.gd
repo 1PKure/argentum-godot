@@ -65,7 +65,7 @@ func _ready() -> void:
 	_gear.custom_minimum_size.y = 150
 	content.add_child(_gear)
 	var note := Label.new()
-	note.text = "Presets de prueba con datos de AO20; balance provisional.\nEspecialidades avanzadas y profesiones: pendientes.\nCTRL: golpe · Cazador: CTRL → apuntar → clic.\nPociones y flechas ilimitadas durante las pruebas.\n\nCambio libre: prepara el personaje al instante.\nLa ronda y su cuenta regresiva se implementan después."
+	note.text = "Humano · Nivel 50 · Fuerza preparada 28\nCambio libre de preset · Pociones y flechas ilimitadas"
 	note.add_theme_font_size_override("font_size", 13)
 	content.add_child(note)
 	message = Label.new()
@@ -117,7 +117,7 @@ func _show_selected() -> void:
 	var profile := ClassCatalog.get_profile(selector.get_selected_id())
 	_preview.set_class_id(int(profile.id))
 	_preview.set_movement(Vector2.DOWN, true)
-	details.text = "Vida: %d · Maná: %d\nGolpe base: %d · Alcance: %d\nDefensa física: %.0f%%\nResistencia mágica: %.0f%% · Daño mágico: +%.0f%%\n%d hechizos disponibles" % [profile.max_health, profile.max_mana, profile.physical_power, profile.range, profile.armor_percent, profile.resistance_percent, profile.magic_bonus, profile.spells.size()]
+	details.text = "Vida: %d · Maná: %d\nGolpe medio: %d · Alcance: %d\nDefensa corporal: %.0f\nResistencia mágica: %.0f%% · Daño mágico: +%.0f%%\n%d hechizos disponibles" % [profile.max_health, profile.max_mana, profile.physical_power, profile.range, profile.armor_points, profile.resistance_percent, profile.magic_bonus, profile.spells.size()]
 	for child in _gear.get_children():
 		_gear.remove_child(child)
 		child.queue_free()

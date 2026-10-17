@@ -41,6 +41,7 @@ var _max_health := 1
 
 var _current_mana := 0
 var _max_mana := 1
+var _mana_is_private := false
 
 
 func apply_state(
@@ -49,6 +50,7 @@ func apply_state(
 	_current_health = player_state.current_health
 	_max_health = player_state.max_health
 
+	_mana_is_private = player_state.mana_is_private
 	_current_mana = player_state.current_mana
 	_max_mana = player_state.max_mana
 
@@ -96,11 +98,8 @@ func _draw() -> void:
 		HEALTH_COLOR
 	)
 
-	_draw_bar(
-		mana_rect,
-		mana_ratio,
-		MANA_COLOR
-	)
+	if not _mana_is_private and _max_mana > 0:
+		_draw_bar(mana_rect, mana_ratio, MANA_COLOR)
 
 
 func _draw_bar(

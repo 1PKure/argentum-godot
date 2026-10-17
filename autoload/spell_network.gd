@@ -6,7 +6,7 @@ signal spell_resolved(event: Dictionary)
 signal spell_rejected(request_id: int, message: String, remaining_msec: int)
 signal server_capabilities_received(available: bool)
 
-const PROTOCOL_VERSION := 4
+const PROTOCOL_VERSION := 5
 var server_available := false
 var _query_generation := 0
 
@@ -42,7 +42,11 @@ func send_rejection(peer_id: int, request_id: int, message: String, remaining_ms
 
 func broadcast_result(event: Dictionary) -> void:
 	if multiplayer.is_server():
-		_receive_result.rpc(event)
+		for recipient: int in multiplayer.get_peers():
+			var visible := event.duplicate(true)
+			if recipient != int(event.get("caster_id", 0)):
+				visible.erase("mana_cost")
+			_receive_result.rpc_id(recipient, visible)
 
 
 func _can_send() -> bool:
