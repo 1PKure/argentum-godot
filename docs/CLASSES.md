@@ -1,6 +1,6 @@
 # Clases, presets e inventario de la arena
 
-El PR8 contiene nueve clases: **Mago, Clérigo, Guerrero, Asesino, Bardo, Druida, Paladín, Cazador y Bandido**. Trabajador, Pirata y Ladrón quedan fuera del catálogo seleccionable y el servidor rechaza sus IDs. Son perfiles de duelo con una primera referencia de balance; las especialidades avanzadas siguen pendientes.
+El PR8 contiene nueve clases: **Mago, Clérigo, Guerrero, Asesino, Bardo, Druida, Paladín, Cazador y Bandido**. Trabajador, Pirata y Ladrón quedan fuera del catálogo seleccionable y el servidor rechaza sus IDs. El balance base fue aceptado el 17/10/2026 para esta etapa. Las especialidades avanzadas siguen pendientes.
 
 ## Probar en Windows
 
@@ -93,3 +93,11 @@ La identidad de clases se trabaja después: **Asesino con apuñalada por la espa
 ## Validación
 
 `arena_balance_privacy_smoke.gd`: recursos de las nueve clases, daño con/sin túnica, serialización por destinatario y consola local. `class_presets_smoke.gd`: nueve perfiles, gráficos, macros, serialización, cambio libre desde estados agotados/muertos, arco dirigido, paredes, alcance, cooldown, deduplicación, inventario, equipo y daño real. `preset_interactions_client.gd`: eventos reales de UI en dos clientes para cursor/cancelación/clic del arco, arrastre, equipar/desequipar, cambio libre, sincronización remota y escalas 1×/2× tras redimensionar. Las pruebas anteriores de combate, recuperación, movimiento, cámara y WSS se mantienen como regresión.
+
+## Limpieza final del HUD
+
+El menú se abre como modal centrado, por encima del HUD tanto al dibujar como al recibir clics. Controles, créditos y acciones se distribuyen con contenedores; Volver, Esc o clic en el fondo lo cierran. Mientras está abierto cancela el apuntado, bloquea atajos de combate/recuperación y pausa el envío de movimiento. Al cerrar se recuperan los controles; Desconectarse cierra el modal y limpia la sesión. El panel de clases comparte el bloqueo de entrada.
+
+El nombre ocupa su propia línea; clase y ubicación van debajo. Los estados están en una fila reservada junto a los recursos; Fantasma aparece una vez y Reaparecer sólo aparece al morir. Los avisos largos de hechizos tienen dos líneas y tooltip completo, separados de Lanzar. El contenido de inventario/hechizos queda recortado a su panel.
+
+`hud_layout_client.gd` comprueba clics y teclas contra un dedicado real con PCK exportado, estado de fantasma, bloqueo de clics detrás del menú y layout a 1280×800, 1280×720, 1920×1080 y 800×600. Se revisan capturas nativas; la comprobación en navegador Windows corresponde a la revisión del usuario. Esta limpieza conserva el balance y el zoom aceptados.

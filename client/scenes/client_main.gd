@@ -21,8 +21,8 @@ func _ready() -> void:
 	add_child(_spell_controller)
 	_spell_controller.setup(_world, _hud.game_area)
 	_hud.configure_spells(_spell_controller)
-	_hud._class_panel.opened_changed.connect(func(opened: bool) -> void:
-		_local_input.set_process(not opened and _spell_controller.session_active)
+	_hud.modal_changed.connect(func(blocked: bool) -> void:
+		_local_input.set_process(not blocked and _spell_controller.session_active)
 	)
 
 	NetworkManager.connected_to_server.connect(_on_connected_to_server)

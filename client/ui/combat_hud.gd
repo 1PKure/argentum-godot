@@ -2,6 +2,7 @@ class_name CombatHUD
 extends Control
 
 signal disconnect_requested
+signal modal_changed(blocked: bool)
 
 const ART := "res://assets/argentum/interface/ao20/"
 const DESIGN_SIZE := Vector2(1280, 800)
@@ -24,6 +25,10 @@ var _minimap: ArenaMinimap
 var _inventory_panel: Control
 var _spell_panel: Control
 var _menu_panel: Control
+var _menu_card: PanelContainer
+var _menu_close_button: Button
+var _menu_disconnect_button: Button
+var _menu_credits: Label
 var _inventory_button: TextureButton
 var _spell_button: TextureButton
 var _spell_controller: SpellTargetingController
@@ -129,6 +134,7 @@ func _update_spell_ui() -> void:
 	if _book_class_id != _spell_controller.class_id:
 		_book_class_id = _spell_controller.class_id
 		_filter_spellbook()
+	_spell_status.tooltip_text = _spell_status.text
 	_update_recovery_controls()
 
 
@@ -187,6 +193,7 @@ func start_session(peer_id: int) -> void:
 
 
 func end_session(message: String) -> void:
+	set_menu_opened(false)
 	_class_panel.close_panel()
 	_players.clear()
 	_local_peer_id = 0
@@ -244,13 +251,19 @@ func _build_interface() -> void:
 	_connection_label = _label(_frame, "Sin conexión", Rect2(0, 96, 235, 22), 13)
 	_status_label = _label(_frame, "", Rect2(0, 124, 235, 30), 12)
 	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_status_label.max_lines_visible = 2
+	_status_label.z_index = 1
+	_status_label.clip_text = true
+	_status_label.mouse_filter = Control.MOUSE_FILTER_PASS
 	_inventory_panel = _control(_frame, "InventoryPanel", Rect2(0, 192, 240, 400))
 	var inventory_art := _picture(_inventory_panel, "es_centroinventario.png", Rect2(0, 0, 240, 400))
 	var inventory_atlas := AtlasTexture.new()
 	inventory_atlas.atlas = inventory_art.texture
 	inventory_atlas.region = Rect2(0, 32, 247, 293)
 	inventory_art.texture = inventory_atlas
+	_inventory_panel.clip_contents = true
 	_spell_panel = _control(_frame, "SpellPanel", Rect2(0, 192, 240, 400))
+	_spell_panel.clip_contents = true
 	var spell_background := ColorRect.new()
 	spell_background.color = Color("171612")
 	spell_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -278,14 +291,14 @@ func _build_interface() -> void:
 	_equipped_label = _label(_inventory_panel, "", Rect2(12, 268, 216, 126), 12)
 	_equipped_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_spell_search = LineEdit.new()
-	_spell_search.placeholder_text = "Buscar nombre o ID…"
+	_spell_search.placeholder_text = "Buscar hechizo…"
 	_spell_panel.add_child(_spell_search)
 	_spell_search.position = Vector2(10, 8)
 	_spell_search.size = Vector2(220, 28)
 	_spell_search.text_changed.connect(func(_value: String) -> void: _filter_spellbook())
 	_spell_search.text_submitted.connect(func(_value: String) -> void: _spell_search.release_focus())
 	_show_catalog = CheckButton.new()
-	_show_catalog.text = "Ver catálogo completo"
+	_show_catalog.text = "Catálogo completo"
 	_show_catalog.focus_mode = Control.FOCUS_NONE
 	_show_catalog.add_theme_font_size_override("font_size", 12)
 	_spell_panel.add_child(_show_catalog)
@@ -312,6 +325,9 @@ func _build_interface() -> void:
 		_spell_buttons[id] = entry
 	_spell_status = _label(_spell_panel, "", Rect2(10, 308, 220, 46), 11)
 	_spell_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_spell_status.max_lines_visible = 2
+	_spell_status.clip_text = true
+	_spell_status.mouse_filter = Control.MOUSE_FILTER_PASS
 	_launch_button = _art_button(_spell_panel, "lanzar", Rect2(0, 360, 161, 39))
 	_launch_button.name = "LaunchButton"
 	_launch_button.disabled = true
@@ -337,22 +353,13 @@ func _build_interface() -> void:
 	_health_potion_button.pressed.connect(_request_recovery.bind("health_potion"))
 	_mana_potion_button = _text_button(_frame, "Maná", Rect2(0, 0, 113, 27))
 	_mana_potion_button.pressed.connect(_request_recovery.bind("mana_potion"))
-	_menu_panel = _control(_frame, "MenuPanel", Rect2(0, 0, 250, 250))
-	var menu_background := ColorRect.new()
-	menu_background.color = Color("171511")
-	menu_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_menu_panel.add_child(menu_background)
-	menu_background.size = _menu_panel.size
-	_label(_menu_panel, "CONTROLES", Rect2(14, 8, 220, 24), 14)
-	_label(_menu_panel, "WASD · Movimiento\nCTRL · Ataque físico\n1–0 · Hechizos asignados\nM · Meditar / dejar de meditar\nQ · Poción de vida · E · Maná\nEsc / clic derecho · Cancelar\n\nAO20 · © Noland Studios\nCC BY-NC-ND 4.0\ngithub.com/ao-org/Recursos", Rect2(14, 38, 225, 175), 12)
-	_text_button(_menu_panel, "Desconectarse", Rect2(16, 219, 218, 26)).pressed.connect(disconnect_requested.emit)
-	_menu_panel.hide()
+	_build_menu()
 	_stats_button = _text_button(_frame, "", Rect2(0, 0, 129, 27))
 	_stats_button.text = "Reaparecer"
 	_stats_button.pressed.connect(_request_recovery.bind("respawn"))
 	_menu_button = _text_button(_frame, "", Rect2(0, 0, 126, 27))
 	_menu_button.text = "Menú"
-	_menu_button.pressed.connect(func() -> void: _menu_panel.visible = not _menu_panel.visible)
+	_menu_button.pressed.connect(func() -> void: set_menu_opened(not _menu_panel.visible))
 	_close_button = _text_button(_frame, "", Rect2(0, 2, 24, 25))
 	_close_button.pressed.connect(disconnect_requested.emit)
 	for index in range(4):
@@ -361,6 +368,7 @@ func _build_interface() -> void:
 		_reserved_buttons.append(reserved)
 	_class_panel = ClassPresetPanel.new()
 	add_child(_class_panel)
+	_class_panel.opened_changed.connect(func(_opened: bool) -> void: _notify_modal_state())
 	_reserved_buttons[0].text = "Clases"
 	_reserved_buttons[0].tooltip_text = "Ver y elegir clases, equipo y estadísticas."
 	for style_name: String in ["normal", "hover", "pressed", "disabled"]:
@@ -387,7 +395,121 @@ func _build_interface() -> void:
 		macro.pressed.connect(_on_hotkey_pressed.bind(index))
 		macro.spell_dropped.connect(_on_hotkey_assigned)
 		_hotkey_buttons.append(macro)
+	# GUI hit testing follows sibling order, independently of drawing z_index.
+	_frame.move_child(_menu_panel, _frame.get_child_count() - 1)
 	_filter_spellbook()
+
+
+func _build_menu() -> void:
+	_menu_panel = _control(_frame, "MenuPanel", Rect2(Vector2.ZERO, DESIGN_SIZE))
+	_menu_panel.z_index = 100
+	_menu_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	_menu_panel.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			set_menu_opened(false)
+			get_viewport().set_input_as_handled()
+	)
+	var backdrop := ColorRect.new()
+	backdrop.color = Color(0.01, 0.01, 0.01, 0.75)
+	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_menu_panel.add_child(backdrop)
+	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var center := CenterContainer.new()
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_menu_panel.add_child(center)
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_menu_card = PanelContainer.new()
+	_menu_card.name = "MenuCard"
+	_menu_card.custom_minimum_size.x = 440
+	_menu_card.mouse_filter = Control.MOUSE_FILTER_STOP
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("171511")
+	style.border_color = Color("756441")
+	style.set_border_width_all(1)
+	style.set_content_margin_all(22)
+	_menu_card.add_theme_stylebox_override("panel", style)
+	center.add_child(_menu_card)
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 14)
+	_menu_card.add_child(content)
+	var title := Label.new()
+	title.text = "Controles"
+	title.add_theme_font_size_override("font_size", 20)
+	content.add_child(title)
+	var controls := GridContainer.new()
+	controls.columns = 2
+	controls.add_theme_constant_override("h_separation", 20)
+	controls.add_theme_constant_override("v_separation", 8)
+	content.add_child(controls)
+	for row: Array in [["WASD", "Movimiento"], ["CTRL", "Ataque físico"], ["1–0", "Accesos rápidos"], ["M", "Meditar"], ["Q / E", "Poción de vida / maná"], ["Esc / clic derecho", "Cancelar apuntado"]]:
+		for text_value: String in row:
+			var label := Label.new()
+			label.text = text_value
+			label.add_theme_font_size_override("font_size", 14)
+			controls.add_child(label)
+	content.add_child(HSeparator.new())
+	_menu_credits = Label.new()
+	_menu_credits.text = "AO20 · © Noland Studios\nCC BY-NC-ND 4.0\ngithub.com/ao-org/Recursos"
+	_menu_credits.add_theme_font_size_override("font_size", 12)
+	_menu_credits.modulate = Color("c3b99f")
+	content.add_child(_menu_credits)
+	var actions := HBoxContainer.new()
+	actions.add_theme_constant_override("separation", 12)
+	content.add_child(actions)
+	_menu_disconnect_button = _text_button(actions, "Desconectarse", Rect2())
+	_menu_close_button = _text_button(actions, "Volver", Rect2())
+	for button: Button in [_menu_disconnect_button, _menu_close_button]:
+		button.custom_minimum_size.y = 34
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_menu_close_button.pressed.connect(set_menu_opened.bind(false))
+	_menu_disconnect_button.pressed.connect(func() -> void:
+		set_menu_opened(false)
+		disconnect_requested.emit()
+	)
+	_menu_panel.hide()
+
+
+func is_modal_open() -> bool:
+	return _menu_panel.visible or _class_panel.visible
+
+
+func set_menu_opened(opened: bool) -> void:
+	if _menu_panel.visible == opened:
+		return
+	_menu_panel.visible = opened
+	if opened:
+		var focused := get_viewport().gui_get_focus_owner()
+		if focused != null:
+			focused.release_focus()
+	_notify_modal_state()
+
+
+func _notify_modal_state() -> void:
+	if is_modal_open() and _spell_controller != null:
+		_spell_controller.cancel_targeting()
+	modal_changed.emit(is_modal_open())
+
+
+func _input(event: InputEvent) -> void:
+	if not is_modal_open() or not event is InputEventKey:
+		return
+	if event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+		if _menu_panel.visible:
+			set_menu_opened(false)
+		else:
+			_class_panel.close_panel()
+	get_viewport().set_input_as_handled()
+
+
+func _layout_footer_actions() -> void:
+	if _frame == null or _menu_button == null:
+		return
+	var side_x := _frame.size.x - 272.0
+	var y := _frame.size.y - 187
+	_stats_button.position = Vector2(side_x + 20, y)
+	_stats_button.size = Vector2(113, 27)
+	_menu_button.position = Vector2(side_x + (139 if _stats_button.visible else 20), y)
+	_menu_button.size = Vector2(113 if _stats_button.visible else 232, 27)
 
 
 func _frame_patch(region: Rect2, left: int, right: int, top: int, bottom: int) -> NinePatchRect:
@@ -421,6 +543,7 @@ func _filter_spellbook() -> void:
 func _open_classes() -> void:
 	var state: PlayerState = _players.get(_local_peer_id)
 	if state != null and _spell_controller != null and _spell_controller.server_ready:
+		set_menu_opened(false)
 		_spell_controller.cancel_targeting()
 		_class_panel.open_panel(state.class_id)
 
@@ -466,13 +589,16 @@ func _update_recovery_controls() -> void:
 		_meditate_button.text = "Meditar"
 	elif not state.is_alive:
 		_meditate_button.text = "Meditar"
-		_status_label.text = "Fantasma · Podés reaparecer"
+		_status_label.text = "Fantasma"
 	else:
 		_meditate_button.text = "Dejar de meditar" if state.is_meditating else "Meditar"
 		var labels := state.active_effects.duplicate()
 		if state.is_meditating:
 			labels.append("Meditando")
 		_status_label.text = " · ".join(labels)
+	_status_label.tooltip_text = _status_label.text
+	_stats_button.visible = state != null and not state.is_alive
+	_layout_footer_actions()
 
 
 func _fit_interface() -> void:
@@ -498,14 +624,16 @@ func _fit_interface() -> void:
 	_name_label.position = Vector2(side_x + 20, 40)
 	_position_label.position = Vector2(side_x + 20, 68)
 	_connection_label.position = Vector2(side_x + 20, 96)
-	_status_label.position = Vector2(side_x + 20, 124)
+	_status_label.position = Vector2(side_x + 20, height - 98)
+	_status_label.size = Vector2(232, 28)
 	_inventory_button.position = Vector2(side_x + 16, 162)
 	_spell_button.position = Vector2(side_x + 138, 162)
 	for panel: Control in [_inventory_panel, _spell_panel]:
 		panel.position = Vector2(side_x + 16, 192)
 		panel.size = Vector2(240, height - 374)
 	_spell_scroll.size.y = _spell_panel.size.y - 166
-	_spell_status.position.y = _spell_panel.size.y - 85
+	_spell_status.position.y = _spell_panel.size.y - 83
+	_spell_status.size = Vector2(220, 34)
 	_launch_button.position.y = _spell_panel.size.y - 41
 	_health_bar.position = Vector2(side_x + 32, height - 152)
 	_mana_bar.position = Vector2(side_x + 32, height - 124)
@@ -516,7 +644,9 @@ func _fit_interface() -> void:
 	_mana_potion_button.position = Vector2(side_x + 139, height - 34)
 	_stats_button.position = Vector2(side_x + 6, height - 187)
 	_menu_button.position = Vector2(side_x + 139, height - 187)
-	_menu_panel.position = Vector2(side_x + 10, height - 280)
+	_menu_panel.position = Vector2.ZERO
+	_menu_panel.size = _frame.size
+	_layout_footer_actions()
 	_bottom_back.position = Vector2(side_x + 8, height - 188)
 	_bottom_back.size = Vector2(256, 188)
 	_close_button.position.x = _frame.size.x - 26
@@ -581,7 +711,7 @@ func _update_local_stats() -> void:
 	_name_label.text = state.display_name if state != null else "Sin personaje"
 	if state != null:
 		var profile := ClassCatalog.get_equipped_profile(state.class_id, state.equipped_items)
-		_name_label.text = "%s · %s" % [state.display_name, profile.name]
+		_name_label.tooltip_text = state.display_name
 		var equipped := PackedStringArray()
 		for slot: String in ["armor", "weapon", "helmet", "shield", "accessory", "ammunition"]:
 			var item := ClassCatalog.get_item(int(state.equipped_items.get(slot, 0)))
@@ -590,15 +720,13 @@ func _update_local_stats() -> void:
 		_equipped_label.text = "%s\n%s" % [profile.name, " · ".join(equipped)]
 	else:
 		_equipped_label.text = "Sin personaje conectado."
-	if state != null and state.is_ghost:
-		_name_label.text += " · Fantasma"
 	_health_bar.max_value = state.max_health if state != null else 100
 	_mana_bar.max_value = state.max_mana if state != null else 100
 	_health_bar.value = state.current_health if state != null else 0
 	_mana_bar.value = state.current_mana if state != null else 0
 	_health_label.text = "%d / %d" % [state.current_health, state.max_health] if state != null else "—"
 	_mana_label.text = "%d / %d" % [state.current_mana, state.max_mana] if state != null else "—"
-	_position_label.text = "Bosque · %d, %d" % [state.grid_position.x, state.grid_position.y] if state != null else "Bosque"
+	_position_label.text = "%s · Bosque %d, %d" % [ClassCatalog.get_profile(state.class_id).name, state.grid_position.x, state.grid_position.y] if state != null else "Bosque"
 	if state != null and (state.inventory_revision != _inventory_revision or state.peer_id != _inventory_peer):
 		_inventory_revision = state.inventory_revision
 		_inventory_peer = state.peer_id
