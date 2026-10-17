@@ -1,12 +1,15 @@
 class_name ArenaInventoryLayout
 extends RefCounted
 
-# Client-only arrangement of unlimited arena supplies. Resource gains are
-# still decided by RecoveryNetwork/server; this is not an ownership inventory.
+# View of the last confirmed server inventory. Legacy local layout helpers
+# remain for isolated UI fixtures; live changes are sent through InventoryNetwork.
 const SLOT_COUNT := 42
 const ACTIONS := ["health_potion", "mana_potion"]
 var storage_path := "user://arena_inventory.cfg"
 var actions: Array[String] = []
+var revision := 0
+var equipped_ids: Array[int] = []
+var authoritative := false
 
 
 func _init() -> void:
@@ -17,7 +20,7 @@ func _init() -> void:
 
 
 func can_move(source: int, destination: int, expected_action: String) -> bool:
-	return source >= 0 and source < SLOT_COUNT and destination >= 0 and destination < SLOT_COUNT and source != destination and expected_action in ACTIONS and actions[source] == expected_action
+	return source >= 0 and source < SLOT_COUNT and destination >= 0 and destination < SLOT_COUNT and source != destination and not expected_action.is_empty() and actions[source] == expected_action
 
 
 func move_item(source: int, destination: int, expected_action: String) -> bool:
@@ -53,3 +56,19 @@ func save() -> Error:
 	var config := ConfigFile.new()
 	config.set_value("arena", "slots", actions)
 	return config.save(storage_path)
+
+
+func apply_state(state: PlayerState) -> void:
+	authoritative = true
+	revision = state.inventory_revision
+	actions.clear()
+	for item_id: int in state.inventory:
+		actions.append("health_potion" if item_id == 38 else ("mana_potion" if item_id == 37 else ("item:%d" % item_id if item_id > 0 else "")))
+	equipped_ids.clear()
+	for item_id in state.equipped_items.values():
+		equipped_ids.append(int(item_id))
+
+
+func item_id(index: int) -> int:
+	var token := actions[index]
+	return 38 if token == "health_potion" else (37 if token == "mana_potion" else int(token.trim_prefix("item:")))

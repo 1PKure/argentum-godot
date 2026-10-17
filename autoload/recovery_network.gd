@@ -23,7 +23,7 @@ func clear_session() -> void:
 
 func broadcast_result(event: Dictionary) -> void:
 	if multiplayer.is_server():
-		_receive_result.rpc(event)
+		_receive_result.rpc_id(int(event.peer_id), event)
 
 
 func send_rejection(peer_id: int, message: String) -> void:

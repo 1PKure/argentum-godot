@@ -2,7 +2,7 @@ class_name ArenaGround
 extends Node2D
 
 const SHOW_DEBUG_GRID := false
-const VISUAL_PADDING_TILES := 12
+const VISUAL_PADDING_TILES := 32
 
 var _ground_grh_ids: Array[int] = []
 

@@ -27,7 +27,7 @@ func _run() -> void:
 	target.current_health = 100
 	var result: Dictionary = registry.try_cast_spell(101, 1, target.grid_position, 1)
 	_check(result.ok, "A valid spell resolves on the server")
-	_check(target.current_health >= 90 and target.current_health <= 95, "Server applies the original random damage range")
+	_check(target.current_health >= 76 and target.current_health <= 88, "Server applies DAT damage with AO20 level and equipped modifiers")
 	_check(caster.current_mana == 90, "A successful cast consumes mana exactly once")
 	_check(result.event.spell_id == 1 and result.event.caster_id == 101, "Confirmed event identifies spell and actual caster")
 	var remaining_health := target.current_health

@@ -6,7 +6,7 @@ La cámara sigue al avatar interpolado dentro de game_area. No mueve el HUD. El 
 
 Los FX de hechizos se anclan por su base visible a los pies, descontando el margen transparente de cada cuadro y se dibujan por delante del cuerpo. El impacto y el resultado flotante siguen al objetivo interpolado; las palabras siguen al lanzador. Son referencias a esos avatares concretos: desconectar o reutilizar un ID no deja un efecto atado a otro personaje. El nombre y las barras se mantienen encima de la meditación, reducida un 30% y con opacidad 72% para dejar visible el avatar.
 
-El inventario permite arrastrar las dos provisiones de arena a casilleros vacíos o intercambiarlas. El orden se guarda por dispositivo en `user://arena_inventory.cfg`; un clic usa la poción que ocupa ese casillero y un arrastre nunca la consume. No representa todavía un inventario autoritativo con cantidades o equipo. Q/E conservan sus acciones al reordenar.
+El inventario muestra provisiones y todas las piezas del preset. Arrastrar mueve/intercambia; clic equipa/desequipa o usa una poción. El servidor valida objetos y revisiones; la marca E identifica el equipo actual. El orden dura la sesión y se reconstruye al cambiar de preset. Q/E mantienen sus acciones. Ver [CLASSES.md](CLASSES.md).
 
 El libro incorpora búsqueda, catálogo completo y accesos por arrastre. Ver [SPELLS.md](SPELLS.md) y [SPELL_CATALOG.md](SPELL_CATALOG.md) para los 39 habilitados y los motivos de las entradas pendientes. Las pociones y la meditación se explican en [RECOVERY.md](RECOVERY.md). Los botones y scrollbars no toman foco de teclado. El campo de búsqueda sí captura texto mientras se escribe; Enter libera ese foco.
 

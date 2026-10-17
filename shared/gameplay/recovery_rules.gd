@@ -1,9 +1,7 @@
 class_name RecoveryRules
 extends RefCounted
 
-# Explicit arena testing profile, not a representation of an AO20 class/level.
-const ARENA_MAX_HEALTH := 500
-const ARENA_MAX_MANA := 3000
+# Class resources come from ClassCatalog.
 const MEDITATION_WARMUP_MSEC := 2000
 const MEDITATION_INTERVAL_MSEC := 1000
 const MEDITATION_PERCENT := 5

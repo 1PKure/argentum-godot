@@ -3,6 +3,11 @@ extends RefCounted
 
 var peer_id: int
 var display_name: String
+var class_id := ClassCatalog.DEFAULT_CLASS
+var inventory: Array[int] = []
+var equipped_items: Dictionary = {}
+var inventory_revision := 0
+var preset_revision := 0
 var grid_position: Vector2i
 
 var facing_direction: int
@@ -12,6 +17,7 @@ var current_health: int
 
 var max_mana: int
 var current_mana: int
+var mana_is_private := false
 
 var is_alive: bool
 var is_meditating := false
@@ -45,6 +51,21 @@ func _init(
 	current_mana = p_current_mana
 
 	is_alive = p_is_alive
+	reset_preset_inventory()
+
+
+func reset_preset_inventory() -> void:
+	inventory.resize(42)
+	inventory.fill(0)
+	inventory[0] = 38
+	inventory[1] = 37
+	equipped_items = ClassCatalog.default_equipment(class_id)
+	var index := 2
+	for slot: String in ClassCatalog.EQUIPMENT_SLOTS:
+		if equipped_items.has(slot):
+			inventory[index] = int(equipped_items[slot])
+			index += 1
+	inventory_revision += 1
 
 
 func apply_damage(amount: int) -> bool:
@@ -116,6 +137,11 @@ func to_dictionary() -> Dictionary:
 	return {
 		"peer_id": peer_id,
 		"display_name": display_name,
+		"class_id": class_id,
+		"inventory": inventory.duplicate(),
+		"equipped_items": equipped_items.duplicate(),
+		"inventory_revision": inventory_revision,
+		"preset_revision": preset_revision,
 		"grid_x": grid_position.x,
 		"grid_y": grid_position.y,
 		"facing_direction": facing_direction,
@@ -123,6 +149,7 @@ func to_dictionary() -> Dictionary:
 		"current_health": current_health,
 		"max_mana": max_mana,
 		"current_mana": current_mana,
+		"mana_is_private": mana_is_private,
 		"is_alive": is_alive,
 		"is_ghost": is_ghost,
 		"is_meditating": is_meditating,
@@ -197,6 +224,17 @@ static func from_dictionary(
 			)
 		),
 	)
+	state.mana_is_private = bool(data.get("mana_is_private", false))
+	if state.mana_is_private:
+		state.current_mana = 0
 	state.is_meditating = bool(data.get("is_meditating", false))
+	state.class_id = int(data.get("class_id", ClassCatalog.DEFAULT_CLASS))
+	if data.has("inventory"):
+		state.inventory.assign(data.inventory)
+		state.equipped_items = Dictionary(data.get("equipped_items", {})).duplicate()
+	else:
+		state.reset_preset_inventory()
+	state.inventory_revision = int(data.get("inventory_revision", state.inventory_revision))
+	state.preset_revision = int(data.get("preset_revision", 0))
 	state.active_effects.assign(data.get("active_effects", []))
 	return state

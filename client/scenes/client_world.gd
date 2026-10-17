@@ -95,7 +95,7 @@ func _update_camera() -> void:
 	var avatar: PlayerAvatar = _avatars.get(_local_avatar_peer_id)
 	if is_instance_valid(avatar):
 		focus = avatar.position
-	position = _viewport_size * 0.5 - focus
+	position = _viewport_size * 0.5 - focus * scale
 
 
 func _unhandled_key_input(
@@ -108,10 +108,6 @@ func _unhandled_key_input(
 		return
 
 	if event.echo:
-		return
-
-	if event.keycode == KEY_CTRL:
-		_request_basic_attack()
 		return
 
 	if not OS.is_debug_build():
@@ -419,4 +415,9 @@ func _clear_players() -> void:
 
 	_avatars.clear()
 	_local_avatar_peer_id = 0
+	_update_camera()
+
+
+func set_pixel_scale(source_pixel_scale: float) -> void:
+	scale = Vector2.ONE * source_pixel_scale / VISUAL_SCALE
 	_update_camera()

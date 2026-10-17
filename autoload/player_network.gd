@@ -1,5 +1,6 @@
 extends Node
 
+signal basic_attack_resolved(event: Dictionary)
 signal snapshot_received(players: Array)
 signal player_spawned(player_data: Dictionary)
 signal player_despawned(peer_id: int)
@@ -83,10 +84,10 @@ func send_snapshot_to(
 		)
 		return
 
-	_receive_snapshot.rpc_id(
-		peer_id,
-		players
-	)
+	var visible: Array = []
+	for data: Dictionary in players:
+		visible.append(for_recipient(data, peer_id))
+	_receive_snapshot.rpc_id(peer_id, visible)
 
 
 func send_player_spawned_to(
@@ -99,10 +100,7 @@ func send_player_spawned_to(
 		)
 		return
 
-	_receive_player_spawned.rpc_id(
-		peer_id,
-		player_data
-	)
+	_receive_player_spawned.rpc_id(peer_id, for_recipient(player_data, peer_id))
 
 
 func send_player_despawned_to(
@@ -130,9 +128,8 @@ func broadcast_player_moved(
 		)
 		return
 
-	_receive_player_moved.rpc(
-		player_data
-	)
+	for recipient: int in multiplayer.get_peers():
+		_receive_player_moved.rpc_id(recipient, for_recipient(player_data, recipient))
 
 
 func broadcast_player_stats_updated(
@@ -144,9 +141,8 @@ func broadcast_player_stats_updated(
 		)
 		return
 
-	_receive_player_stats_updated.rpc(
-		player_data
-	)
+	for recipient: int in multiplayer.get_peers():
+		_receive_player_stats_updated.rpc_id(recipient, for_recipient(player_data, recipient))
 
 
 func _can_send_to_server() -> bool:
@@ -263,3 +259,23 @@ func _receive_player_stats_updated(
 	player_stats_updated.emit(
 		player_data
 	)
+
+
+# Actual enemy mana is absent in snapshots, movement and stat RPCs.
+func for_recipient(data: Dictionary, recipient: int) -> Dictionary:
+	var visible := data.duplicate(true)
+	if int(data.get("peer_id", 0)) != recipient:
+		visible.erase("current_mana")
+		visible["mana_is_private"] = true
+	return visible
+
+
+func send_basic_attack_result(event: Dictionary) -> void:
+	if multiplayer.is_server():
+		for recipient: int in [int(event.caster_id), int(event.target_id)]:
+			_receive_basic_attack_result.rpc_id(recipient, event)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _receive_basic_attack_result(event: Dictionary) -> void:
+	basic_attack_resolved.emit(event)
