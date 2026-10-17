@@ -12,7 +12,7 @@ La arena continúa la interfaz validada de AO20, sin incorporar la prueba retira
 
 ## Resolución y recursos
 
-El servidor identifica al lanzador por su conexión y valida personaje vivo, libro disponible, objetivo, maná, intervalo global 1100 ms, cruce golpe/magia 700 ms y cooldown individual. Rechazos y solicitudes repetidas no gastan recursos. Daño requiere rival; curación y remover admiten al propio jugador. Una cura directa sobre vida completa puede gastar maná con efecto cero. Las raíces bloquean caminar; permiten lanzar remover o beber. Los efectos periódicos usan valores y tiempos de EffectsOverTime.dat.
+El servidor identifica al lanzador por su conexión y valida personaje vivo, libro disponible, objetivo, maná, intervalo global 1000 ms, cruce golpe/magia 650 ms y cooldown individual. Rechazos y solicitudes repetidas no gastan recursos. Daño requiere rival; curación y remover admiten al propio jugador. Una cura directa sobre vida completa puede gastar maná con efecto cero. Las raíces bloquean caminar; permiten lanzar remover o beber. Los efectos periódicos usan valores y tiempos de EffectsOverTime.dat.
 
 Los objetivos se admiten dentro de toda la arena 20×12. Falta portar visión, línea de visión y las reglas completas de mapas de AO. Las nueve clases aplican sus permisos y modificadores del equipo actual; Mago usa 363 vida/2487 maná como humano de nivel 50. No representa el balance final ni progresión de nivel. Skills, estamina y especialidades completas siguen pendientes. Los hechizos cuyo efecto depende de esos sistemas quedan pendientes. Invocaciones, bot y lobbies siguen pendientes; PvE está fuera del alcance acordado.
 
@@ -33,3 +33,5 @@ Pruebas de datos y servidor: ao_spell_smoke.gd y arena_recovery_smoke.gd. Recurs
 La cadencia global fue ajustada expresamente para esta arena; las recargas individuales de Hechizos.dat se conservan. Comparación y combinaciones: [ACTION_INTERVALS.md](ACTION_INTERVALS.md).
 
 El Cazador usa un cursor de ataque físico separado de la magia: CTRL/3 y clic, con alcance y obstáculos validados en servidor. Los macros iniciales y el inventario equipado se describen en [CLASSES.md](CLASSES.md).
+
+Los macros 1–0 y los botones de la barra preparan el cursor sin cambiar la pestaña elegida. El inventario puede permanecer abierto para beber; roja/azul por clic o Q/E conservan el hechizo apuntado. Meditar, cambiar equipo, Esc y clic derecho cancelan el cursor como antes. Lanzar sigue disponible desde el libro para el flujo manual.

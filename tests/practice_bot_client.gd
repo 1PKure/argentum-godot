@@ -38,10 +38,10 @@ func _run() -> void:
 	var spawn: Vector2i = hud._players[ArenaPracticeBot.BOT_ID].grid_position
 	await _wait_for(func() -> bool: return hud._players[ArenaPracticeBot.BOT_ID].grid_position != spawn)
 	_check(hud._players[ArenaPracticeBot.BOT_ID].grid_position != spawn, "Bot movement is synchronized from server decisions")
-	await _wait_for(func() -> bool: return hud._players[local_id].current_health < hud._players[local_id].max_health)
+	await _wait_for(func() -> bool: return hud._players[local_id].current_health < hud._players[local_id].max_health, 15)
 	_check(events.any(func(event: Dictionary) -> bool: return int(event.caster_id) == ArenaPracticeBot.BOT_ID and not event.has("mana_cost")) and hud.console.get_parsed_text().contains("te lanzó"), "Bot casts actual spells with local combat feedback and no leaked mana cost")
 	await _capture("bot-mage-combat.png")
-	await _wait_for(func() -> bool: return str(network.state.phase) == "lost")
+	await _wait_for(func() -> bool: return str(network.state.phase) == "lost", 24)
 	_check(not hud._players[local_id].is_alive and str(network.state.phase) == "lost", "Player defeat stops practice with an authoritative outcome")
 	var stopped: Vector2i = hud._players[ArenaPracticeBot.BOT_ID].grid_position
 	await create_timer(0.4).timeout

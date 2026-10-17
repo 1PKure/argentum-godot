@@ -27,7 +27,7 @@ func _run() -> void:
 	controller = main._spell_controller
 	world = main._world
 	await _wait_for(func() -> bool: return hud._players.size() == 2 and controller.server_ready)
-	_check(hud._players.size() == 2 and controller.server_ready, "Two clients negotiate protocol 6")
+	_check(hud._players.size() == 2 and controller.server_ready, "Two clients negotiate protocol 7")
 	if hud._players.size() != 2 or not controller.server_ready:
 		await _finish()
 		return

@@ -122,7 +122,6 @@ func _update_spell_ui() -> void:
 		_controls_hint.text = "Arco · Elegí un objetivo"
 		_spell_status.text = ""
 	elif _spell_controller.aimed_spell_id != 0:
-		show_spells()
 		var spell := SpellCatalog.get_spell(_spell_controller.aimed_spell_id)
 		_controls_hint.text = "%s · Elegí un objetivo" % spell.name
 		_spell_status.text = ""
@@ -565,7 +564,7 @@ func _open_classes() -> void:
 
 
 func _request_recovery(action: String) -> void:
-	if _spell_controller != null:
+	if _spell_controller != null and action not in ["health_potion", "mana_potion"]:
 		_spell_controller.cancel_targeting()
 	RecoveryNetwork.request_action(action)
 

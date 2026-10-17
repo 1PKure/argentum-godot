@@ -136,7 +136,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	elif not event.ctrl_pressed and not event.alt_pressed and not event.meta_pressed:
 		var recovery_action := {KEY_M: "meditate", KEY_Q: "health_potion", KEY_E: "mana_potion"}
 		if recovery_action.has(event.keycode):
-			cancel_targeting()
+			if recovery_action[event.keycode] == "meditate":
+				cancel_targeting()
 			RecoveryNetwork.request_action(recovery_action[event.keycode])
 			get_viewport().set_input_as_handled()
 			return

@@ -9,7 +9,7 @@ const DEBUG_MANA_COST := 10
 
 const BASIC_ATTACK_DAMAGE := 10
 const BASIC_ATTACK_RANGE_TILES := 1
-const BASIC_ATTACK_COOLDOWN_MSEC := 650 # Arena tuning; previous profile: 750 ms.
+const BASIC_ATTACK_COOLDOWN_MSEC := 600 # Arena tuning; previous: 650 ms, initial: 750 ms.
 
 
 static func is_in_basic_attack_range(
