@@ -18,7 +18,7 @@ func _run() -> void:
 	controller = main._spell_controller
 	await _wait_for(func() -> bool: return controller.server_ready and hud._players.size() == 2, 20)
 	local_id = root.multiplayer.get_unique_id()
-	_check(controller.server_ready and hud._players.size() == 2, "Two clients negotiate class-aware cosmetic protocol 14")
+	_check(controller.server_ready and hud._players.size() == 2, "Two clients negotiate class-aware cosmetic protocol 15")
 	if not controller.server_ready or hud._players.size() != 2:
 		await _finish()
 		return
@@ -29,9 +29,6 @@ func _run() -> void:
 	skins.progress.storage_path = "user://class-skin-network-test.cfg"
 	DirAccess.remove_absolute(skins.progress.storage_path)
 	skins.progress.restore()
-	for index in range(5):
-		skins.progress.award("class-cosmetic-fixture-%d" % index)
-	skins.changed.emit()
 	var opponent: int = hud._players.keys().filter(func(id: int) -> bool: return id != local_id)[0]
 	for id: int in ClassCatalog.all_ids():
 		var ack_cell: Vector2i = hud._players[opponent].grid_position
@@ -40,16 +37,19 @@ func _run() -> void:
 		await _click(hud._reserved_buttons[3])
 		var panel = hud._skins_panel
 		_check(panel.visible and panel._title.text.contains(str(ClassCatalog.get_profile(id).name)) and not main._local_input.is_processing(), "Class %d opens its own cosmetic collection and blocks movement" % id)
+		_check(panel.buttons.light.disabled and skins.progress.wins == 0 and hud._players[local_id].skin_id == "preset", "A new class starts locked with its own zero wins and base outfit")
+		for index in range(5):
+			skins.progress.award("class-%d-fixture-%d" % [id,index], id)
+		skins.changed.emit()
 		var bodies: Array[int] = [int(ClassCatalog.get_profile(id).body_id)]
 		var previews_match := true
 		for skin: Dictionary in SkinCatalog.for_class(id).slice(1):
 			previews_match = previews_match and panel._names[skin.id].text == str(skin.name) and panel.previews[skin.id]._body_definition == root.get_node("AOResources").get_body_definition(int(skin.body_id)) and not bodies.has(int(skin.body_id))
 			bodies.append(int(skin.body_id))
 		_check(previews_match, "Class %d shows three correct previews distinct from its starter" % id)
-		if id == 1:
-			await _click(panel.buttons.light)
+		await _click(panel.buttons.light)
 		await _wait_for(func() -> bool: return hud._players[local_id].skin_id == "light" and hud._players[opponent].grid_position != ack_cell)
-		_check(panel.buttons.light.text == "Equipada" and world._avatars[local_id]._player_visual._body_definition == root.get_node("AOResources").get_body_definition(int(SkinCatalog.get_skin("light", id).body_id)), "Class %d keeps the saved tier while rendering its own outfit" % id)
+		_check(panel.buttons.light.text == "Equipada" and world._avatars[local_id]._player_visual._body_definition == root.get_node("AOResources").get_body_definition(int(SkinCatalog.get_skin("light", id).body_id)), "Class %d equips its independently unlocked outfit" % id)
 		if id in [1, 7, 8]:
 			await _capture("class-skins-%d.png" % id)
 		_key(KEY_ESCAPE, true)
@@ -58,7 +58,10 @@ func _run() -> void:
 	var restored := SkinProgress.new()
 	restored.storage_path = skins.progress.storage_path
 	restored.restore()
-	_check(restored.wins == 5 and restored.selected == "light", "Changing among all nine classes preserves victory progress and selection")
+	_check(ClassCatalog.all_ids().all(func(id: int) -> bool: return restored.wins_for_class(id) == 5 and restored.selection_for_class(id) == "light"), "All nine class counters and equipped selections survive disk reload")
+	await _choose_class(1)
+	await _wait_for(func() -> bool: return hud._players[local_id].skin_id == "light")
+	_check(skins.progress.class_id == 1 and skins.progress.wins == 5 and hud._players[local_id].skin_id == "light", "Returning to Mage restores only its own saved selection")
 	main._disconnect_from_arena()
 	await _finish()
 

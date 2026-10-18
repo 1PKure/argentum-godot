@@ -66,7 +66,7 @@ func _send_command(enabled: bool, class_id: int, request_id: int) -> void:
 func _receive_status(value: Dictionary) -> void:
 	state = value.duplicate(true)
 	if str(state.get("phase", "")) == "won" and int(state.get("owner_id", 0)) == multiplayer.get_unique_id():
-		Skins.accept_victory(str(state.get("round_id", "")))
+		Skins.accept_victory(str(state.get("round_id", "")), int(state.get("owner_class_id", 0)))
 	changed.emit()
 
 @rpc("authority", "call_remote", "reliable")

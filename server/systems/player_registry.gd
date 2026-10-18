@@ -28,9 +28,9 @@ func set_round_locked(peer_id: int, locked: bool) -> void:
 func is_round_locked(peer_id: int) -> bool:
 	return _round_locks.has(peer_id)
 
-func try_select_skin(peer_id: int, id: String, local_wins: int) -> Dictionary:
+func try_select_skin(peer_id: int, id: String, local_wins: int, expected_class_id: int = -1) -> Dictionary:
 	var player: PlayerState = _players.get(peer_id)
-	if player == null or not SkinCatalog.is_unlocked(id, local_wins, player.class_id):
+	if player == null or (expected_class_id != -1 and expected_class_id != player.class_id) or not SkinCatalog.is_unlocked(id, local_wins, player.class_id):
 		return _spell_error("Atuendo no disponible.")
 	player.skin_id = id
 	return {"ok": true, "state": player.to_dictionary()}
@@ -563,6 +563,8 @@ func try_select_class(peer_id: int, class_id: int, now: int = -1) -> Dictionary:
 		return _spell_error("Clase desconocida o personaje desconectado.")
 	if now < 0:
 		now = Time.get_ticks_msec()
+	if player.class_id != class_id:
+		player.skin_id = "preset"
 	player.class_id = class_id
 	player.max_health = int(profile.max_health)
 	player.max_mana = int(profile.max_mana)

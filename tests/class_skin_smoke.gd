@@ -11,6 +11,8 @@ func _run() -> void:
 	var registry = load("res://server/systems/player_registry.gd").new()
 	root.add_child(registry)
 	var player: PlayerState = registry.add_player(701)
+	var all_bodies: Array[int] = []
+	var all_fingerprints: Array[String] = []
 	for id: int in ClassCatalog.all_ids():
 		registry.try_select_class(701, id)
 		var original := ClassCatalog.get_equipped_profile(id, player.equipped_items)
@@ -23,15 +25,19 @@ func _run() -> void:
 			var body_id := int(skin.body_id)
 			_check(not bodies.has(body_id), "Class %d reward %s differs from preset and earlier body IDs" % [id, skin.name])
 			bodies.append(body_id)
+			_check(not all_bodies.has(body_id), "Reward body is not repeated in another class collection")
+			all_bodies.append(body_id)
 			visual.set_loadout(id, player.equipped_items, str(skin.id))
 			var fingerprint := _fingerprint(visual.body.sprite_frames)
 			_check(not fingerprint.is_empty() and not fingerprints.has(fingerprint), "Class %d reward %s has distinct visible animation pixels" % [id, skin.name])
 			fingerprints.append(fingerprint)
+			_check(not all_fingerprints.has(fingerprint), "Reward animation pixels are distinct across all nine collections")
+			all_fingerprints.append(fingerprint)
 			var before := player.to_dictionary()
 			_check(registry.try_select_skin(701, str(skin.id), int(skin.wins)).ok and player.equipped_items == before.equipped_items and player.current_health == int(before.current_health) and ClassCatalog.get_equipped_profile(id, player.equipped_items) == original, "Class %d cosmetic selection preserves equipment and combat statistics" % id)
 			_check(visual._body_definition == root.get_node("AOResources").get_body_definition(body_id), "Class %d renderer resolves its own reward body" % id)
 			if id == 1 or id == 6:
-				_check(str(skin.style) == "robe" and str(skin.reference_family) == "blue" and str(skin.source_name).to_lower().contains("túnica"), "Caster class %d reward uses a blue-reference robe" % id)
+				_check(str(skin.style) == "robe" and str(skin.reference_family) == "blue" and (str(skin.source_name).to_lower().contains("túnica") or str(skin.source_name).to_lower().contains("tunica")), "Caster class %d reward uses a blue-reference robe" % id)
 	_check(SkinCatalog.get_skin("explorer", 8).body_id != ClassCatalog.get_profile(8).body_id, "Hunter's first win cannot repeat its starter armor")
 	_check(SkinCatalog.for_class(9).is_empty(), "Discarded classes have no cosmetic catalog")
 	# v1 IDs and the same storage file retain previously earned wins/selection.
@@ -45,7 +51,7 @@ func _run() -> void:
 	progress.restore()
 	_check(progress.wins == 3 and progress.selected == "scarlet" and progress.award("earned-before-class-skins").is_empty(), "Existing saves retain wins, equipped tier and claimed rewards")
 	for id: int in ClassCatalog.all_ids():
-		_check(SkinCatalog.is_unlocked(progress.selected, progress.wins, id), "Saved tier resolves to a valid unlocked outfit for class %d" % id)
+		_check(progress.wins_for_class(id) == (3 if id == 1 else 0) and progress.selection_for_class(id) == ("scarlet" if id == 1 else "preset"), "Legacy progress migrates only to Mage; other class %d stays independent" % id)
 	DirAccess.remove_absolute(progress.storage_path)
 	visual.queue_free()
 	registry.queue_free()

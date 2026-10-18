@@ -1,7 +1,7 @@
 class_name SkinCatalog
 extends RefCounted
 
-# Stable reward IDs preserve v1 saves. A tier resolves to the current class's
+# Stable reward IDs support save migration. A tier resolves to its class's
 # outfit; it never enters ClassCatalog's equipment or stat calculations.
 const ENTRIES := [
 	{"id": "preset", "name": "Atuendo de clase", "wins": 0, "body_id": 0},

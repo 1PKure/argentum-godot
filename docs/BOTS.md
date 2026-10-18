@@ -5,12 +5,12 @@ Primera IA de práctica, ejecutada por el dedicado. Usa los nueve presets y el b
 ## Probar
 
 1. GitHub Desktop: Fetch origin, elegir `work/arena-practice-bot` y Pull origin.
-2. Cerrar el dedicado anterior y abrir `tools/Start-PrivateWebTest.cmd`. Cliente y servidor requieren la misma revisión: protocolo **14**.
+2. Cerrar el dedicado anterior y abrir `tools/Start-PrivateWebTest.cmd`. Cliente y servidor requieren la misma revisión: protocolo **15**.
 3. Recargar la web privada con Ctrl+F5; WSS sigue precargado.
 4. Con un único jugador humano conectado: **Bot**, elegir clase y **Activar bot**.
 5. Esperar **3 → 2 → 1 → ¡YA!**, con tonos y tween visual. Durante esos tres segundos el servidor bloquea movimiento, ataques, magia y recuperación para ambos personajes. Luego jugar con Lanzar/macros, CTRL, pociones y meditación habituales. El rival se mueve, ataca y se recupera con las mismas funciones autoritativas.
 6. **Bot → Reiniciar práctica** prepara ambos personajes con sus presets, recursos/estados limpios y posiciones iniciales. También permite cambiar la clase del bot. Reconstruye inventario/equipo del preset; los macros personalizados de cada clase se conservan.
-7. **Quitar bot** lo retira. Si cualquiera muere, la IA se detiene y la consola comunica el resultado; reiniciar es explícito. Reaparecer o cambiar tu clase sigue siendo libre y prepara de nuevo ambos presets, con otra cuenta de tres segundos. Una ronda interrumpida no da recompensas; la skin equipada se conserva.
+7. **Quitar bot** lo retira. Si cualquiera muere, la IA se detiene y la consola comunica el resultado; reiniciar es explícito. Reaparecer o cambiar tu clase sigue siendo libre y prepara de nuevo ambos presets, con otra cuenta de tres segundos. Una ronda interrumpida no da recompensas; cada clase recupera su propia skin equipada.
 
 El menú Bot bloquea entradas locales mientras está abierto, igual que Clases. El servidor y el rival siguen funcionando: no es una pausa global del combate online.
 
@@ -58,9 +58,15 @@ La regresión de combos prueba los primeros impactos confirmados en ocho semilla
 
 Las victorias confirmadas por el dedicado suman **1 victoria por ronda**. Un ID aleatorio de ronda evita contar dos veces estados terminales repetidos. Perder, quitar el bot, cambiar de preset, desconectar o la entrada de otro humano no premian una ronda sin terminar.
 
-**Skins**, en la cabecera, muestra cuatro vistas previas de la clase actual: atuendo del preset y recompensas a **1, 3 y 5 victorias**. Las victorias y los IDs de los tres hitos se conservan del guardado anterior; al cambiar de clase cada hito resuelve al atuendo correspondiente. No se reinicia el progreso ni se exige volver a desbloquearlo por clase. Cada clase tiene tres cuerpos distintos del preset y entre sí, verificados con píxeles de todos los fotogramas/direcciones. Se usan animaciones AO20 de las familias visuales marcadas en `112.png`: túnicas oscuras/largas para Mago y Druida y armaduras ornamentadas para las otras clases. Los objetos de origen sirven como referencia de apariencia; no se conceden ni se alteran sus restricciones de equipamiento. Catálogo y procedencia en `arena_skins.json` y `skin_sources.json`. No se altera el inventario/equipo, HP/maná, defensas, daño, intervalos ni balance.
+**Skins**, en la cabecera, muestra el atuendo del preset y recompensas a **1, 3 y 5 victorias de la clase actual**. Cada clase guarda su contador y atuendo equipado; ganar con Mago no desbloquea Cazador. Cambiar de clase recupera su propia selección y una clase nueva empieza con el preset y las tres recompensas bloqueadas. El servidor reinicia la apariencia al cambiar de clase y sólo acepta solicitudes cosméticas dirigidas a la clase actual; una solicitud antigua no se aplica a la clase nueva.
 
-El prototipo sin cuentas guarda victorias, selección e IDs cobrados en `user://arena_skins_v1.cfg` (almacenamiento del navegador en Web). El progreso corresponde a ese navegador/dispositivo/origen; borrar sus datos lo elimina. No se comparte entre dispositivos ni se presenta como inventario protegido contra manipulación: es persistencia local gratuita; el servidor valida el catálogo y el requisito declarado, y confirma las victorias de la sesión. No hay DB, cuenta ni servicio pago. Si falla el guardado se avisa en la ventana Skins.
+Las **27 recompensas usan cuerpos y píxeles de animación distintos entre sí**, además de diferir del preset de su clase. Mago usa variantes del corte de la Legendaria; Druida conserva temática natural, y cada colección de armaduras/atuendos tiene opciones propias. Son apariencias AO20 de las familias visuales de referencia en `112.png`; no se conceden los objetos originales ni se cambian equipo, restricciones, HP/maná, defensas, daño, intervalos o balance.
+
+Después de completar las tres skins, **la siguiente victoria** abre una invitación a probar una clase con la colección pendiente. **Probar otra clase** abre el selector con esa sugerencia; cambiar exige aplicar el preset. Se puede volver o seguir con la clase actual. Al completar las nueve colecciones se muestra la felicitación correspondiente, sin sugerir una clase ya completa.
+
+El guardado local mantiene `user://arena_skins_v1.cfg` y usa formato interno **v2**, con secciones por clase y una lista común de rondas cobradas. El formato global anterior no registraba la clase ganadora: se migra **una sola vez al Mago**, conservando victorias, selección e IDs cobrados; las demás clases comienzan su progreso independiente. Una victoria recibida con retraso se acredita a la clase ganadora confirmada por el dedicado, sin cambiar la clase activa. No se premian rondas sin terminar ni se duplica una ronda al cambiar de clase.
+
+El progreso corresponde al mismo navegador/dispositivo/origen; borrar sus datos lo elimina. No se comparte entre dispositivos ni es un inventario protegido contra manipulación: sigue siendo persistencia local gratuita. No hay DB, cuentas ni servicio pago. Un fallo de guardado se avisa en Skins. Catálogo y procedencia: `arena_skins.json` y `skin_sources.json`.
 
 La flecha usa el archivo adjunto **Arrow hit 2.wav**, copiado sin conversión a `assets/argentum/custom/audio/arrow_hit.wav`, a los 180 ms del impacto visual confirmado. Conserva el volumen existente y sólo suena al acertar. Procedencia y hash en `assets/argentum/custom/audio/sources.json`.
 
@@ -71,18 +77,18 @@ La flecha usa el archivo adjunto **Arrow hit 2.wav**, copiado sin conversión a 
 
 | Clase | 1 victoria | 3 victorias | 5 victorias |
 | --- | --- | --- | --- |
-| Mago | Valar | Larga oscura | De la Cruz |
-| Clérigo | Dorada | Iluminación | Dragón rojo |
-| Guerrero | Dragón verde | Dragón legendario | Dragón rojo |
-| Asesino | Escarlata | Dragón verde | Dragón rojo |
-| Bardo | Dragón dorado | Dorada | Dragón verde |
-| Druida | Valar | Oscura | Larga oscura |
-| Paladín | Legendaria | Dragón rojo | Dragón dorado |
-| Cazador | Dragón verde | Dragón legendario | Dragón rojo |
-| Bandido | Dorada | Dragón verde | Dragón rojo |
+| Mago | Legendaria gris | Roja especial | Superior gris |
+| Clérigo | Iluminación | De la Luz | Clérigo imperial |
+| Guerrero | Legendaria | Placas completas | Dragón rojo |
+| Asesino | Escarlata | De las Sombras | Asesino imperial |
+| Bardo | Aventurera | Theramore | Bardo imperial |
+| Druida | Verde | Druida superior | Enraigada |
+| Paladín | Dorada | Bruñida | Dragón dorado |
+| Cazador | Cuero azul | Dragón verde | Cazador imperial |
+| Bandido | Combinada | Del Desfalco | Bandido imperial |
 
 La flecha confirmada con daño añade doce gotas de sangre y una salpicadura inicial durante **500 ms**, al mismo instante visual que su sonido (180 ms de recorrido). Siguen al objetivo interpolado, incluso en el impacto letal, y se eliminan al terminar/desconectar; no generan daño, sonido adicional ni manchas permanentes. Preparar, cancelar o rechazar un disparo no crea sangre.
 
-`class_skin_smoke.gd`: valida los 27 atuendos, restricciones del catálogo, cuerpos y píxeles distintos por clase, estadísticas intactas y compatibilidad del guardado anterior. `class_skin_client.gd`: recorre las nueve colecciones con el PCK, selecciona un hito desbloqueado y comprueba su réplica a otro cliente tras cambiar de clase. La prueba de efectos cubre comienzo, seguimiento y fin de la sangre sin repetir audio. Las rondas aprobadas se conservan.
+`class_skin_smoke.gd`: valida los 27 atuendos, restricciones del catálogo, cuerpos y píxeles distintos por clase, estadísticas intactas y migración única del guardado global anterior al Mago. `class_progress_smoke.gd`: valida contadores/selecciones por clase, hitos, sexto triunfo, deduplicación, resultados retrasados y guardado/migración. `class_skin_client.gd`: recorre las nueve colecciones con el PCK, comprueba que empiezan bloqueadas, equipa sus premios y verifica réplica a otro cliente. `arena_rewards_client.gd`: gana duelos reales, muestra la invitación y abre/aplica la clase sugerida, sin compartir sus desbloqueos. La prueba de efectos cubre comienzo, seguimiento y fin de la sangre sin repetir audio. Las rondas aprobadas se conservan.
 
 La revisión visual del impacto compara capturas idénticas con/sin sangre a escala real **1x** sobre túnicas oscuras y una armadura roja: exige contraste y una extensión mínima en píxeles, además del seguimiento del objetivo. Se conserva el sonido aprobado.

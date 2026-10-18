@@ -1,39 +1,31 @@
 {
   "1": [
     {
-      "name": "Valar",
-      "body_id": 224,
-      "source_object_id": 1973,
-      "source_name": "Túnica Valar",
+      "name": "Legendaria gris",
+      "body_id": 142,
+      "source_object_id": 1091,
+      "source_name": "Tunica Legendaria Gris",
       "reference_family": "blue",
       "style": "robe"
     },
     {
-      "name": "Larga oscura",
-      "body_id": 293,
-      "source_object_id": 2909,
-      "source_name": "Túnica Larga Oscura",
+      "name": "Roja especial",
+      "body_id": 113,
+      "source_object_id": 4346,
+      "source_name": "Túnica Roja Especial",
       "reference_family": "blue",
       "style": "robe"
     },
     {
-      "name": "De la Cruz",
-      "body_id": 159,
-      "source_object_id": 5995,
-      "source_name": "Túnica de la Cruz",
+      "name": "Superior gris",
+      "body_id": 152,
+      "source_object_id": 4347,
+      "source_name": "Túnica Superior Gris",
       "reference_family": "blue",
       "style": "robe"
     }
   ],
   "2": [
-    {
-      "name": "Dorada",
-      "body_id": 178,
-      "source_object_id": 1112,
-      "source_name": "Armadura Dorada",
-      "reference_family": "red",
-      "style": "armor"
-    },
     {
       "name": "Iluminación",
       "body_id": 138,
@@ -43,28 +35,36 @@
       "style": "armor"
     },
     {
-      "name": "Dragón rojo",
-      "body_id": 247,
-      "source_object_id": 5264,
-      "source_name": "Armadura de Dragón Rojo",
-      "reference_family": "red",
-      "style": "armor"
-    }
-  ],
-  "3": [
-    {
-      "name": "Dragón verde",
-      "body_id": 58,
-      "source_object_id": 1937,
-      "source_name": "Armadura Dragón Verde",
+      "name": "De la Luz",
+      "body_id": 262,
+      "source_object_id": 496,
+      "source_name": "Armadura de la Luz",
       "reference_family": "red",
       "style": "armor"
     },
     {
-      "name": "Dragón legendario",
-      "body_id": 246,
-      "source_object_id": 1936,
-      "source_name": "Armadura Dragón Legendario +1",
+      "name": "Clérigo imperial",
+      "body_id": 127,
+      "source_object_id": 3008,
+      "source_name": "Túnica de Clérigo Imperial (3ª Jerarquía)",
+      "reference_family": "red",
+      "style": "robe"
+    }
+  ],
+  "3": [
+    {
+      "name": "Legendaria",
+      "body_id": 237,
+      "source_object_id": 1914,
+      "source_name": "Armadura Legendaria",
+      "reference_family": "red",
+      "style": "armor"
+    },
+    {
+      "name": "Placas completas",
+      "body_id": 254,
+      "source_object_id": 1987,
+      "source_name": "Armadura de Placas Completa",
       "reference_family": "red",
       "style": "armor"
     },
@@ -87,31 +87,75 @@
       "style": "armor"
     },
     {
-      "name": "Dragón verde",
-      "body_id": 58,
-      "source_object_id": 1937,
-      "source_name": "Armadura Dragón Verde",
+      "name": "De las Sombras",
+      "body_id": 49,
+      "source_object_id": 1929,
+      "source_name": "Armadura de las Sombras",
       "reference_family": "red",
       "style": "armor"
     },
     {
-      "name": "Dragón rojo",
-      "body_id": 247,
-      "source_object_id": 5264,
-      "source_name": "Armadura de Dragón Rojo",
+      "name": "Asesino imperial",
+      "body_id": 229,
+      "source_object_id": 3034,
+      "source_name": "Armadura de Asesino Imperial de 4ª Jerarquía",
       "reference_family": "red",
       "style": "armor"
     }
   ],
   "5": [
     {
-      "name": "Dragón dorado",
-      "body_id": 245,
-      "source_object_id": 5266,
-      "source_name": "Armadura de Dragón Dorado",
+      "name": "Aventurera",
+      "body_id": 155,
+      "source_object_id": 1226,
+      "source_name": "Túnica Aventurera",
+      "reference_family": "red",
+      "style": "robe"
+    },
+    {
+      "name": "Theramore",
+      "body_id": 188,
+      "source_object_id": 2898,
+      "source_name": "Armadura Theramore",
       "reference_family": "red",
       "style": "armor"
     },
+    {
+      "name": "Bardo imperial",
+      "body_id": 212,
+      "source_object_id": 3026,
+      "source_name": "Túnica de Bardo Imperial de 4ª Jerarquía",
+      "reference_family": "red",
+      "style": "robe"
+    }
+  ],
+  "6": [
+    {
+      "name": "Verde",
+      "body_id": 116,
+      "source_object_id": 522,
+      "source_name": "Túnica Verde",
+      "reference_family": "blue",
+      "style": "robe"
+    },
+    {
+      "name": "Druida superior",
+      "body_id": 221,
+      "source_object_id": 1954,
+      "source_name": "Túnica de Druida Superior",
+      "reference_family": "blue",
+      "style": "robe"
+    },
+    {
+      "name": "Enraigada",
+      "body_id": 219,
+      "source_object_id": 1960,
+      "source_name": "Túnica Enraigada",
+      "reference_family": "blue",
+      "style": "robe"
+    }
+  ],
+  "7": [
     {
       "name": "Dorada",
       "body_id": 178,
@@ -121,54 +165,10 @@
       "style": "armor"
     },
     {
-      "name": "Dragón verde",
-      "body_id": 58,
-      "source_object_id": 1937,
-      "source_name": "Armadura Dragón Verde",
-      "reference_family": "red",
-      "style": "armor"
-    }
-  ],
-  "6": [
-    {
-      "name": "Valar",
-      "body_id": 224,
-      "source_object_id": 1973,
-      "source_name": "Túnica Valar",
-      "reference_family": "blue",
-      "style": "robe"
-    },
-    {
-      "name": "Oscura",
-      "body_id": 240,
-      "source_object_id": 2892,
-      "source_name": "Túnica Oscura",
-      "reference_family": "blue",
-      "style": "robe"
-    },
-    {
-      "name": "Larga oscura",
-      "body_id": 293,
-      "source_object_id": 2909,
-      "source_name": "Túnica Larga Oscura",
-      "reference_family": "blue",
-      "style": "robe"
-    }
-  ],
-  "7": [
-    {
-      "name": "Legendaria",
-      "body_id": 237,
-      "source_object_id": 1914,
-      "source_name": "Armadura Legendaria",
-      "reference_family": "red",
-      "style": "armor"
-    },
-    {
-      "name": "Dragón rojo",
-      "body_id": 247,
-      "source_object_id": 5264,
-      "source_name": "Armadura de Dragón Rojo",
+      "name": "Bruñida",
+      "body_id": 258,
+      "source_object_id": 500,
+      "source_name": "Armadura Bruñida",
       "reference_family": "red",
       "style": "armor"
     },
@@ -183,6 +183,14 @@
   ],
   "8": [
     {
+      "name": "Cuero azul",
+      "body_id": 65,
+      "source_object_id": 998,
+      "source_name": "Armadura de Cuero Azul",
+      "reference_family": "red",
+      "style": "armor"
+    },
+    {
       "name": "Dragón verde",
       "body_id": 58,
       "source_object_id": 1937,
@@ -191,44 +199,36 @@
       "style": "armor"
     },
     {
-      "name": "Dragón legendario",
-      "body_id": 246,
-      "source_object_id": 1936,
-      "source_name": "Armadura Dragón Legendario +1",
-      "reference_family": "red",
-      "style": "armor"
-    },
-    {
-      "name": "Dragón rojo",
-      "body_id": 247,
-      "source_object_id": 5264,
-      "source_name": "Armadura de Dragón Rojo",
+      "name": "Cazador imperial",
+      "body_id": 250,
+      "source_object_id": 3028,
+      "source_name": "Armadura de Cazador Imperial (3ª Jerarquía)",
       "reference_family": "red",
       "style": "armor"
     }
   ],
   "12": [
     {
-      "name": "Dorada",
-      "body_id": 178,
-      "source_object_id": 1112,
-      "source_name": "Armadura Dorada",
+      "name": "Combinada",
+      "body_id": 66,
+      "source_object_id": 1981,
+      "source_name": "Vestimenta Combinada",
       "reference_family": "red",
       "style": "armor"
     },
     {
-      "name": "Dragón verde",
-      "body_id": 58,
-      "source_object_id": 1937,
-      "source_name": "Armadura Dragón Verde",
+      "name": "Del Desfalco",
+      "body_id": 265,
+      "source_object_id": 1945,
+      "source_name": "Armadura del Desfalco",
       "reference_family": "red",
       "style": "armor"
     },
     {
-      "name": "Dragón rojo",
-      "body_id": 247,
-      "source_object_id": 5264,
-      "source_name": "Armadura de Dragón Rojo",
+      "name": "Bandido imperial",
+      "body_id": 227,
+      "source_object_id": 3038,
+      "source_name": "Armadura de Bandido Imperial de 4ª Jerarquía",
       "reference_family": "red",
       "style": "armor"
     }

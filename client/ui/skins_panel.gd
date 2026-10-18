@@ -64,7 +64,7 @@ func _ready() -> void:
 		tile.add_child(button)
 		buttons[str(skin.id)] = button
 		button.pressed.connect(func() -> void: Skins.select_skin(str(skin.id)))
-	_label(content, "Sólo apariencia: conserva las estadísticas y el equipo de tu clase.", 13)
+	_label(content, "Desbloqueos por clase · Sólo apariencia: conserva estadísticas y equipo.", 13)
 	message = _label(content, "", 13)
 	var close := Button.new()
 	close.text = "Volver"
@@ -88,27 +88,29 @@ func close_panel() -> void:
 
 func _refresh() -> void:
 	var profile: SkinProgress = Skins.progress
+	var wins := profile.wins_for_class(_class_id)
+	var selected := profile.selection_for_class(_class_id)
 	_title.text = "Skins · %s" % ClassCatalog.get_profile(_class_id).name
 	var next: Dictionary = {}
 	for skin: Dictionary in SkinCatalog.for_class(_class_id):
 		var id := str(skin.id)
-		var unlocked := SkinCatalog.is_unlocked(id, profile.wins, _class_id)
+		var unlocked := SkinCatalog.is_unlocked(id, wins, _class_id)
 		_names[id].text = str(skin.name)
-		buttons[id].text = "Equipada" if profile.selected == id else "Equipar" if unlocked else "Bloqueada"
-		buttons[id].disabled = not unlocked or profile.selected == id
+		buttons[id].text = "Equipada" if selected == id else "Equipar" if unlocked else "Bloqueada"
+		buttons[id].disabled = not unlocked or selected == id
 		previews[id].set_loadout(_class_id, _equipped if id == "preset" else {}, id)
 		previews[id].modulate = Color.WHITE if unlocked else Color(0.45, 0.45, 0.45)
 		if not unlocked and next.is_empty():
 			next = skin
-	summary.text = "%d %s contra el bot" % [profile.wins, "victoria" if profile.wins == 1 else "victorias"]
+	summary.text = "%d %s con esta clase" % [wins, "victoria" if wins == 1 else "victorias"]
 	if next.is_empty():
 		summary.text += " · Colección completa"
 		progress_bar.max_value = 5
 		progress_bar.value = 5
 	else:
-		summary.text += " · %d para %s" % [int(next.wins) - profile.wins, next.name]
+		summary.text += " · %d para %s" % [int(next.wins) - wins, next.name]
 		progress_bar.max_value = int(next.wins)
-		progress_bar.value = profile.wins
+		progress_bar.value = wins
 	message.text = "Guardado en este navegador/dispositivo."
 	if profile.save_error != OK:
 		message.text = "No se pudo guardar. El progreso durará hasta cerrar esta sesión."

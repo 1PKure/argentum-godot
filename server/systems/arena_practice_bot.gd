@@ -64,7 +64,9 @@ func human_ids() -> Array[int]:
 
 func status() -> Dictionary:
 	var bot := registry.get_player(BOT_ID)
+	var owner := registry.get_player(owner_id)
 	return {"enabled": bot != null, "owner_id": owner_id, "bot_id": BOT_ID if bot != null else 0,
+		"owner_class_id": owner.class_id if owner != null else ClassCatalog.DEFAULT_CLASS,
 		"class_id": bot.class_id if bot != null else 3, "phase": phase, "human_count": human_ids().size(),
 		"round_id": round_id, "countdown": _countdown}
 

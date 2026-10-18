@@ -13,8 +13,8 @@ func _ready() -> void:
 	practice_bot.reset_world.connect(_on_practice_reset)
 	practice_bot.removed.connect(_on_bot_removed)
 	practice_bot.status_changed.connect(_broadcast_bot_status)
-	Skins.skin_requested.connect(func(peer_id: int, id: String, wins: int) -> void:
-		var result := player_registry.try_select_skin(peer_id, id, wins)
+	Skins.skin_requested.connect(func(peer_id: int, class_id: int, id: String, wins: int) -> void:
+		var result := player_registry.try_select_skin(peer_id, id, wins, class_id)
 		if result.ok:
 			PlayerNetwork.broadcast_player_stats_updated(result.state)
 	)

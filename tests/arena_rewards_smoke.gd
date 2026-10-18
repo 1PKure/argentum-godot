@@ -65,7 +65,7 @@ func _run() -> void:
 	_check(second != round_id and manager.phase == "countdown" and owner.skin_id == "light", "Restart creates a fresh countdown and preserves selected skin")
 	registry.try_select_class(501, 8, 15100)
 	manager.restart_after_preset(501, 15100)
-	_check(owner.class_id == 8 and owner.skin_id == "light" and manager.status().round_id != second and manager.phase == "countdown", "Free class selection restarts both presets and countdown without erasing cosmetics")
+	_check(owner.class_id == 8 and owner.skin_id == "preset" and manager.status().round_id != second and manager.phase == "countdown", "Free class selection restarts both presets and countdown without leaking the previous class cosmetic")
 	manager.remove_bot()
 	_check(not registry.is_round_locked(501) and manager.phase == "idle" and manager.status().round_id == "", "Removing a countdown bot releases movement and clears its reward identity")
 	manager.request(501, true, 1, 3, 16000)

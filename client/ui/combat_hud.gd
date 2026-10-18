@@ -99,10 +99,16 @@ func _ready() -> void:
 	RecoveryNetwork.selection_changed.connect(_refresh_potion_selection)
 	BotNetwork.changed.connect(_on_bot_status)
 	Skins.victory_awarded.connect(func(result: Dictionary) -> void:
-		var player: PlayerState = _players.get(_local_peer_id)
-		var class_id := player.class_id if player != null else ClassCatalog.DEFAULT_CLASS
+		var class_id := int(result.class_id)
 		for id: String in result.unlocked:
 			console.append_message("Skin desbloqueada: %s. Equipala desde Skins." % SkinCatalog.get_skin(id, class_id).name)
+		if bool(result.get("invite_other_class", false)) or bool(result.get("all_collections_complete", false)):
+			set_menu_opened(false)
+			_class_panel.close_panel()
+			_skins_panel.close_panel()
+			if _spell_controller != null:
+				_spell_controller.cancel_targeting()
+			_bot_panel.show_collection_result(result)
 	)
 	InventoryNetwork.rejected.connect(func(message: String) -> void: console.append_message(message))
 	RecoveryNetwork.action_rejected.connect(func(message: String) -> void: console.append_message(message))
@@ -407,6 +413,12 @@ func _build_interface() -> void:
 	_bot_panel = BotPracticePanel.new()
 	add_child(_bot_panel)
 	_bot_panel.opened_changed.connect(func(_opened: bool) -> void: _notify_modal_state())
+	_bot_panel.try_class_requested.connect(func(id: int) -> void:
+		_open_classes()
+		if id != 0 and _class_panel.visible:
+			_class_panel.selector.select(_class_panel.selector.get_item_index(id))
+			_class_panel.selector.item_selected.emit(_class_panel.selector.selected)
+	)
 	_skins_panel = SkinsPanel.new()
 	add_child(_skins_panel)
 	_skins_panel.opened_changed.connect(func(_opened: bool) -> void: _notify_modal_state())

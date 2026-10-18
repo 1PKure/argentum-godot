@@ -2,12 +2,15 @@ class_name BotPracticePanel
 extends CanvasLayer
 
 signal opened_changed(opened: bool)
+signal try_class_requested(class_id: int)
 const PRESENTATION := preload("res://client/ui/arena_presentation_theme.gd")
 var selector: OptionButton
 var start_button: Button
 var stop_button: Button
 var message: Label
 var _summary: Label
+var try_class_button: Button
+var _collection_result: Dictionary = {}
 
 func _ready() -> void:
 	layer = 15
@@ -50,6 +53,12 @@ func _ready() -> void:
 	message.custom_minimum_size = Vector2(420, 38)
 	message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(message)
+	try_class_button = _button(content, "Probar otra clase")
+	try_class_button.pressed.connect(func() -> void:
+		var id := int(_collection_result.get("suggested_class_id", 0))
+		close_panel()
+		try_class_requested.emit(id)
+	)
 	start_button = _button(content, "Activar bot")
 	start_button.name = "StartPracticeBot"
 	start_button.pressed.connect(func() -> void: BotNetwork.request_bot(true, selector.get_selected_id()))
@@ -66,6 +75,7 @@ func _ready() -> void:
 	hide()
 
 func open_panel() -> void:
+	_collection_result.clear()
 	if bool(BotNetwork.state.get("enabled", false)):
 		selector.select(selector.get_item_index(int(BotNetwork.state.class_id)))
 	message.text = ""
@@ -73,8 +83,15 @@ func open_panel() -> void:
 	show()
 	opened_changed.emit(true)
 
+func show_collection_result(result: Dictionary) -> void:
+	_collection_result = result.duplicate()
+	_refresh()
+	show()
+	opened_changed.emit(true)
+
 func close_panel() -> void:
 	hide()
+	_collection_result.clear()
 	opened_changed.emit(false)
 
 func _refresh() -> void:
@@ -97,6 +114,12 @@ func _refresh() -> void:
 	start_button.disabled = BotNetwork.pending or not available or not SpellNetwork.server_available
 	stop_button.disabled = BotNetwork.pending or not enabled
 	selector.disabled = BotNetwork.pending
+	try_class_button.visible = not _collection_result.is_empty() and bool(_collection_result.get("invite_other_class", false)) and str(state.get("phase", "")) == "won"
+	if try_class_button.visible:
+		_summary.text = "Colección de %s completa" % ClassCatalog.get_profile(int(_collection_result.class_id)).name
+		message.text = "Ya tenés sus tres skins. Probá %s para desbloquear otra colección." % ClassCatalog.get_profile(int(_collection_result.suggested_class_id)).name
+	elif not _collection_result.is_empty() and bool(_collection_result.get("all_collections_complete", false)):
+		message.text = "¡Completaste las colecciones de las nueve clases!"
 	if BotNetwork.pending:
 		message.text = "Esperando al servidor…"
 

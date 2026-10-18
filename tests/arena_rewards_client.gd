@@ -20,7 +20,7 @@ func _run() -> void:
 	controller = main._spell_controller
 	await _wait_for(func() -> bool: return controller.server_ready and hud._players.size() > 0, 20)
 	local_id = root.multiplayer.get_unique_id()
-	_check(controller.server_ready, "Exported client negotiates protocol 14 with dedicated server")
+	_check(controller.server_ready, "Exported client negotiates protocol 15 with dedicated server")
 	if not controller.server_ready:
 		await _finish()
 		return
@@ -62,28 +62,7 @@ func _run() -> void:
 	await _wait_for(func() -> bool: return str(network.state.phase) == "active")
 	_check(hud._round_countdown.title.text == "¡YA!" and not controller.input_blocked and main._local_input.is_processing(), "GO restores controls with a distinct visual and sound")
 	await _capture("round-go.png")
-	# Win using ordinary targeted spells and legally paced potions, without debug damage.
-	var next_cast := Time.get_ticks_msec()
-	var next_potion := 0
-	var casts := 0
-	var deadline := Time.get_ticks_msec() + 25000
-	while str(network.state.phase) == "active" and Time.get_ticks_msec() < deadline:
-		var now := Time.get_ticks_msec()
-		var human: PlayerState = hud._players[local_id]
-		var bot: PlayerState = hud._players[ArenaPracticeBot.BOT_ID]
-		if now >= next_cast and controller.pending_request == 0:
-			next_cast = now + 1000
-			var spell := 25 if casts == 0 else 53 if casts == 1 else 51
-			controller.aim_spell(spell)
-			await _click_world(ArenaPracticeBot.BOT_ID)
-			casts += 1
-		if now >= next_potion:
-			next_potion = now + 300
-			if human.current_health <= human.max_health - 27:
-				root.get_node("RecoveryNetwork").request_action("health_potion")
-			elif human.current_mana <= human.max_mana - 800:
-				root.get_node("RecoveryNetwork").request_action("mana_potion")
-		await create_timer(0.03).timeout
+	var casts: int = await _win_round()
 	_check(str(network.state.phase) == "won" and casts > 1 and skins.progress.wins == 1, "A real targeted spell victory grants exactly one saved reward")
 	if str(network.state.phase) != "won":
 		print("Fight diagnostic: phase=",network.state.phase," HP=",hud._players[local_id].current_health," botHP=",hud._players[ArenaPracticeBot.BOT_ID].current_health," mana=",hud._players[local_id].current_mana," console=",hud.console.get_parsed_text())
@@ -106,21 +85,72 @@ func _run() -> void:
 	restored.storage_path = skins.progress.storage_path
 	restored.restore()
 	_check(restored.wins == 1 and restored.selected == "explorer", "Disk reload preserves earned victory and equipped skin")
+	# Seed only this class's already-earned milestones, then win one real extra duel.
+	for number in range(2,6):
+		skins.progress.award("prior-mage-%d" % number,1)
+	skins.changed.emit()
+	await _click(hud._reserved_buttons[2])
+	await _click(hud._bot_panel.start_button)
+	await _wait_for(func() -> bool: return str(network.state.phase) == "countdown")
+	await _wait_for(func() -> bool: return str(network.state.phase) == "active")
+	await _win_round()
+	_check(str(network.state.phase) == "won" and skins.progress.wins == 6 and hud._bot_panel.visible and hud._bot_panel.try_class_button.visible and not main._local_input.is_processing(), "An extra real victory on a complete class opens the invitation and blocks gameplay")
+	await _capture("collection-complete-invitation.png")
+	await _click(hud._bot_panel.try_class_button)
+	_check(hud._class_panel.visible and hud._class_panel.selector.get_selected_id() == 2 and hud._players[local_id].class_id == 1, "Try another class opens an incomplete suggestion without applying it automatically")
+	await _click(hud._class_panel.apply_button)
+	await _wait_for(func() -> bool: return hud._players[local_id].class_id == 2 and not hud._class_panel.visible)
+	await _click(hud._reserved_buttons[3])
+	_check(skins.progress.wins == 0 and skins.progress.selected == "preset" and hud._skins_panel.buttons.explorer.disabled and hud._skins_panel.summary.text.contains("0 victorias"), "Suggested class has its own locked collection and zero wins")
+	_key(KEY_ESCAPE,true)
+	_key(KEY_ESCAPE,false)
+	await process_frame
+	await _click(hud._reserved_buttons[0])
+	hud._class_panel.selector.select(hud._class_panel.selector.get_item_index(1))
+	hud._class_panel.selector.item_selected.emit(hud._class_panel.selector.selected)
+	await process_frame
+	await _click(hud._class_panel.apply_button)
+	await _wait_for(func() -> bool: return hud._players[local_id].class_id == 1 and hud._players[local_id].skin_id == "explorer")
+	_check(skins.progress.wins == 6 and skins.progress.selected == "explorer", "Returning to the completed class restores its progress and equipped skin")
 	main._disconnect_from_arena()
 	await create_timer(0.25).timeout
 	main._connect_to_server(NetworkConstants.get_server_url())
 	await _wait_for(func() -> bool: return controller.server_ready and hud._players.size() == 1 and hud._players.values()[0].skin_id == "explorer")
 	local_id = root.multiplayer.get_unique_id()
-	_check(hud._players[local_id].skin_id == "explorer" and skins.progress.wins == 1, "Reconnect automatically reapplies the saved cosmetic")
+	_check(hud._players[local_id].skin_id == "explorer" and skins.progress.wins == 6, "Reconnect automatically reapplies the saved cosmetic")
 	await _click(hud._reserved_buttons[2])
 	await _click(hud._bot_panel.start_button)
 	await _wait_for(func() -> bool: return str(network.state.phase) == "countdown")
 	print("REWARDS_READY_FOR_PEER")
 	await _wait_for(func() -> bool: return int(network.state.human_count) == 2 and hud._players.size() == 2, 15)
-	_check(not bool(network.state.enabled) and not hud._round_countdown.visible and not controller.input_blocked and skins.progress.wins == 1, "Joining human cancels countdown and grants no unfinished-round reward")
+	_check(not bool(network.state.enabled) and not hud._round_countdown.visible and not controller.input_blocked and skins.progress.wins == 6, "Joining human cancels countdown and grants no unfinished-round reward")
 	await _wait_for(func() -> bool: return hud._players.values().any(func(p: PlayerState) -> bool: return p.peer_id != local_id and p.grid_position.y == 6), 20)
 	main._disconnect_from_arena()
 	await _finish()
+
+func _win_round() -> int:
+	var next_cast := Time.get_ticks_msec()
+	var next_potion := 0
+	var casts := 0
+	var deadline := Time.get_ticks_msec() + 25000
+	while str(network.state.phase) == "active" and Time.get_ticks_msec() < deadline:
+		var now := Time.get_ticks_msec()
+		var human: PlayerState = hud._players[local_id]
+		var bot: PlayerState = hud._players[ArenaPracticeBot.BOT_ID]
+		if now >= next_cast and controller.pending_request == 0:
+			next_cast = now + 1000
+			var spell := 25 if casts == 0 else 53 if casts == 1 else 51
+			controller.aim_spell(spell)
+			await _click_world(ArenaPracticeBot.BOT_ID)
+			casts += 1
+		if now >= next_potion:
+			next_potion = now + 300
+			if human.current_health <= human.max_health - 27:
+				root.get_node("RecoveryNetwork").request_action("health_potion")
+			elif human.current_mana <= human.max_mana - 800:
+				root.get_node("RecoveryNetwork").request_action("mana_potion")
+		await create_timer(0.03).timeout
+	return casts
 
 func _observer() -> void:
 	await _wait_for(func() -> bool: return hud._players.size() == 2)
