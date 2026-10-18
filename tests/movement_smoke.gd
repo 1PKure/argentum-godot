@@ -144,6 +144,16 @@ func _test_avatar() -> void:
 	_check(avatar.position.is_equal_approx(start + Vector2(48, 0)), "Visual movement finishes on the same 120 ms cadence as the server")
 	avatar._process(0.25)
 	_check(avatar.position.is_equal_approx(start + Vector2(48, 0)), "The avatar never moves beyond its last confirmed tile")
+	state.is_bot = true
+	avatar.setup(state, false, start)
+	avatar.apply_server_position(Vector2i(5, 5), start + Vector2(48, 0))
+	avatar._process(0.12)
+	_check(avatar.position.is_equal_approx(start + Vector2(32, 0)), "Bot presentation takes 180 ms per tile instead of using the faster human interpolation")
+	avatar._process(0.06)
+	_check(avatar.position.is_equal_approx(start + Vector2(48, 0)), "Bot reaches the exact confirmed tile at its slower authoritative cadence")
+	state.is_bot = false
+	avatar.apply_server_stats(state)
+	_check(is_equal_approx(avatar._move_speed, avatar.MOVE_SPEED), "A human state restores the unchanged 120 ms interpolation")
 	avatar.queue_free()
 	await process_frame
 

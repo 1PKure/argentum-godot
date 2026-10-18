@@ -8,6 +8,7 @@ var network: Node
 var local_id := 0
 var events: Array[Dictionary] = []
 var bot_steps: Array[int] = []
+var human_steps: Array[int] = []
 var completions: Array[Dictionary] = []
 
 func _initialize() -> void:
@@ -17,6 +18,8 @@ func _run() -> void:
 	root.get_node("PlayerNetwork").player_moved.connect(func(data: Dictionary) -> void:
 		if int(data.peer_id) == ArenaPracticeBot.BOT_ID:
 			bot_steps.append(Time.get_ticks_msec())
+		elif int(data.peer_id) == local_id:
+			human_steps.append(Time.get_ticks_msec())
 	)
 	network = root.get_node("BotNetwork")
 	network.completed.connect(func(ok: bool, message: String) -> void: completions.append({"ok": ok, "message": message}))
@@ -40,11 +43,13 @@ func _run() -> void:
 	await _start(1)
 	_check(hud._players.has(ArenaPracticeBot.BOT_ID) and hud._players[ArenaPracticeBot.BOT_ID].is_bot and hud._players[ArenaPracticeBot.BOT_ID].class_id == 1, "GUI activation spawns the selected bot as a real replicated entity")
 	_check(hud._players[ArenaPracticeBot.BOT_ID].mana_is_private and not hud._bot_panel.visible and main._local_input.is_processing(), "Bot mana stays private and starting returns controls to gameplay")
+	_check(is_equal_approx(main._world._avatars[ArenaPracticeBot.BOT_ID]._move_speed, 48.0 / 0.18) and is_equal_approx(main._world._avatars[local_id]._move_speed, 48.0 / 0.12), "Replicated bot interpolates more slowly than the human avatar")
 	var spawn: Vector2i = hud._players[ArenaPracticeBot.BOT_ID].grid_position
 	await _wait_for(func() -> bool: return hud._players[ArenaPracticeBot.BOT_ID].grid_position != spawn)
 	_check(hud._players[ArenaPracticeBot.BOT_ID].grid_position != spawn, "Bot movement is synchronized from server decisions")
 	# Keep the local player walking while the bot attacks and recovers.
 	bot_steps.clear()
+	human_steps.clear()
 	var last_potion := 0
 	for direction: Key in [KEY_S, KEY_D, KEY_W, KEY_A]:
 		_key(direction, true)
@@ -57,9 +62,21 @@ func _run() -> void:
 		_key(direction, false)
 	var flowing_pairs := 0
 	for index in range(1, bot_steps.size()):
-		if bot_steps[index] - bot_steps[index - 1] <= 180:
+		if bot_steps[index] - bot_steps[index - 1] <= 220:
 			flowing_pairs += 1
 	_check(bot_steps.size() >= 10 and flowing_pairs >= 5, "Replicated bot sustains continuous movement while its opponent walks and drinks")
+	var bot_gaps: Array[int] = []
+	var human_gaps: Array[int] = []
+	for times: Array[int] in [bot_steps, human_steps]:
+		var gaps: Array[int] = []
+		for index in range(1, times.size()):
+			gaps.append(times[index] - times[index - 1])
+		gaps.sort()
+		if times == bot_steps:
+			bot_gaps = gaps
+		else:
+			human_gaps = gaps
+	_check(not bot_gaps.is_empty() and not human_gaps.is_empty() and bot_gaps[bot_gaps.size() / 2] >= 160 and human_gaps[human_gaps.size() / 2] <= 140, "Real WebSocket movement samples confirm the bot steps more slowly than held human input")
 
 	await _wait_for(func() -> bool: return hud._players[local_id].current_health < hud._players[local_id].max_health, 15)
 	_check(events.any(func(event: Dictionary) -> bool: return int(event.caster_id) == ArenaPracticeBot.BOT_ID and not event.has("mana_cost")) and hud.console.get_parsed_text().contains("te lanzó"), "Bot casts actual spells with local combat feedback and no leaked mana cost")

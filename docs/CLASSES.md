@@ -4,8 +4,8 @@ El PR8 contiene nueve clases: **Mago, Clérigo, Guerrero, Asesino, Bardo, Druida
 
 ## Probar en Windows
 
-1. En GitHub Desktop: Fetch origin, seleccionar `work/arena-class-presets` y Pull si corresponde.
-2. Reiniciar el dedicado con `tools/Start-PrivateWebTest.cmd`. Cliente y servidor necesitan la misma revisión; protocolo 9.
+1. En GitHub Desktop: Fetch origin, seleccionar `work/arena-practice-bot` y Pull si corresponde.
+2. Reiniciar el dedicado con `tools/Start-PrivateWebTest.cmd`. Cliente y servidor necesitan la misma revisión; protocolo 10.
 3. Recargar la web privada con Ctrl+F5. El WSS local sigue precargado.
 4. Abrir **Clases**, elegir un preset y **Usar este preset**. También se puede reiniciar el preset actual.
 
@@ -30,9 +30,9 @@ Una categoría no disponible queda vacía. Guerrero y Cazador tienen ataque fís
 
 ## Arco y equipo
 
-**Cazador: CTRL o 3 → cursor → clic sobre un rival.** Preparar o cancelar no dispara ni consume recursos. Esc/clic derecho cancela; WASD permite moverse apuntando. El servidor comprueba rival vivo, arco y flechas equipados, alcance de ocho casillas en cualquier dirección, obstáculos y el intervalo físico de 550 ms. Un cliente no puede reutilizar el golpe frontal para disparar sin objetivo. Cada confirmación crea una flecha visual usando el recurso original de munición. Las flechas son ilimitadas durante estas pruebas. Guerrero y las otras clases conservan el golpe frontal con CTRL.
+**Cazador: CTRL o 3 → cursor → clic sobre un rival.** Preparar o cancelar no dispara ni consume recursos. Esc/clic derecho cancela; WASD permite moverse apuntando. El servidor comprueba rival vivo, arco y flechas equipados, alcance de ocho casillas en cualquier dirección, obstáculos y el intervalo propio de flechas de 1200 ms (AO20 `IntervaloFlechasCazadores`), separado del golpe de 550 ms. Un cliente no puede reutilizar el golpe frontal para disparar sin objetivo. Cada confirmación crea una flecha visual usando el recurso original de munición. Las flechas son ilimitadas durante estas pruebas. Guerrero y las otras clases conservan el golpe frontal con CTRL.
 
-El inventario de 42 casilleros contiene las dos provisiones y todos los objetos del preset: armadura, arma, casco, escudo, accesorio y munición cuando correspondan.
+El inventario de 42 casilleros contiene provisión roja, azul sólo para clases con maná y todos los objetos del preset: armadura, arma, casco, escudo, accesorio y munición cuando correspondan.
 
 - Arrastrar mueve o intercambia objetos. Mover una pieza equipada no la desequipa, no consume pociones ni duplica objetos.
 - Clic en una pieza equipa/desequipa. La marca **E** indica su estado. Las piezas permanecen en la grilla cuando están equipadas, como referencias al mismo objeto.
@@ -76,7 +76,7 @@ Referencia de los nueve presets: **humano, nivel 50, constitución 20, inteligen
 - Daño de arma = `(3 × daño del arma y munición + máximo del arma y munición × 0.2 × max(0, fuerza − 15) + golpe por nivel) × modificador de clase`. Sin arma y con nudillos se usa `MODDANOWRESTLING`; Cazador con arco usa `MODDANOPROYECTILES`.
 - Defensa corporal = defensa media de **armadura + escudo**, restada en puntos; el casco no se suma al torso. La arena usa torso y defensa media, sin sorteo de zona/absorción por impacto todavía. Se sortea uniformemente el daño final entre los extremos calculados, con mínimo 1. Es una simplificación de las tiradas independientes de AO20.
 - Cazador con Arco de Cazador y Flecha Élfica contra Mago con Túnica Legendaria: **181–200** por disparo normal; contra el mismo Mago sin túnica: **211–230**. Estos rangos corresponden a ese equipo y fuerza. No se aplica un multiplicador oculto contra Mago.
-- Magia directa sigue [modHechizos.HechizoPropUsuario](https://github.com/ao-org/argentum-online-server/blob/9d381f280c10b680cf1f84be5372f8c1dce42840/Codigo/modHechizos.bas): tirada original × `(1 + 0.03 × nivel)` × `(1 + bonificación de equipo / 100)` × `(1 − resistencia / 100)`. Se respeta AntiRm. Apocalipsis de Mago contra Mago equipado: **223–238**, con su coste original de 1000 maná. Antes faltaba la bonificación por nivel.
+- Magia directa sigue [modHechizos.HechizoPropUsuario](https://github.com/ao-org/argentum-online-server/blob/9d381f280c10b680cf1f84be5372f8c1dce42840/Codigo/modHechizos.bas): tirada original × `(1 + 0.03 × nivel)` × `(1 + bonificación de equipo / 100)` × `(1 − resistencia / 100)`. Se respeta AntiRm. Después de la fórmula se aplica un ajuste explícito de arena de **−8% a Apocalipsis (53) y Descarga Eléctrica (51)**. Mago contra Mago equipado: Apocalipsis **205–219** (antes 223–238), Descarga **156–169** (antes 170–184). Conservan sus costes de 1000 y 460 maná. El ajuste está en SpellCatalog y no modifica los DAT importados ni los demás hechizos.
 - Resistencia del preset: skill 100, protección por skill habilitada (100 × 0.04 = 4%), modificador de clase y equipo según `UserMod.GetUserMR`; tope de arena 60%. Redondeo final y mínimo 1 son decisiones de esta implementación; no se simulan talentos, facciones, cartas, penetración ni modificadores que estos presets no tienen.
 - Las curaciones conservan sus valores del DAT sin bonificación de daño por nivel. Los efectos periódicos usan su propio TickPower, ajustan equipo/resistencia al aplicarse y no reciben el bono de impacto directo. Los costes se conservan.
 
@@ -84,7 +84,7 @@ Referencia de los nueve presets: **humano, nivel 50, constitución 20, inteligen
 
 La consola muestra hechizos lanzados por vos o dirigidos a vos, golpes en los que participás, muerte propia y recuperación propia. No registra curaciones, pociones, cambio de preset o gasto de maná de terceros. El resultado confirmado del hechizo/golpe reemplaza los mensajes repetidos por cada cambio de barra. Los controles están en Menú y tooltips; no ocupan permanentemente el HUD.
 
-El servidor omite **current_mana** del rival en snapshots, movimiento y estadísticas, y omite **mana_cost** de los eventos enviados a otros jugadores. El rival no dibuja barra de maná. Las confirmaciones de recuperación se envían sólo al dueño; la meditación visible sigue sincronizada mediante estado público. Vida, clase y equipo visible siguen siendo públicos para las pruebas. Se requiere protocolo **9** y reinicio del dedicado.
+El servidor omite **current_mana** del rival en snapshots, movimiento y estadísticas, y omite **mana_cost** de los eventos enviados a otros jugadores. El rival no dibuja barra de maná. Las confirmaciones de recuperación se envían sólo al dueño; la meditación visible sigue sincronizada mediante estado público. Vida, clase y equipo visible siguen siendo públicos para las pruebas. Se requiere protocolo **10** y reinicio del dedicado.
 
 El Mago permite explorar las 38 magias concedibles; otros presets restringen sus listas y costes al maná de la clase. La entrada 247 Disparo de NPC no se concede como magia: el arco tiene su propia acción física.
 

@@ -110,8 +110,23 @@ func _run() -> void:
 	_check(root.gui_get_focus_owner() == null, "Choosing a spell releases text focus so gameplay keys resume")
 	hud.show_inventory()
 	await _capture()
+	await _choose_class(3)
+	_check(recovery.selected_potion == "health_potion" and not hud._players[local_id].inventory.has(37) and hud._inventory_slots[0].potion_selected, "Switching from a selected blue to a nonmagical preset selects its red supply")
+	_key(KEY_E, true)
+	_key(KEY_E, false)
+	await process_frame
+	_check(recovery.selected_potion == "health_potion", "The blue hotkey cannot select an absent potion on a nonmagical class")
+	var hp := int(hud._players[local_id].current_health)
+	root.get_node("PlayerNetwork").request_debug_damage()
+	await _wait_for(func() -> bool: return int(hud._players[local_id].current_health) < hp)
+	_key(KEY_SPACE, true)
+	await _wait_for(func() -> bool: return int(hud._players[local_id].current_health) == hp)
+	_key(KEY_SPACE, false)
+	_check(int(hud._players[local_id].current_health) == hp, "Space remains usable on the warrior red preset after changing classes")
 	main._disconnect_from_arena()
 	_check(not recovery.using_selected and recovery.selected_potion == "health_potion" and recovery._pending_potion == 0, "Disconnect clears selection, held input and pending recovery state")
+	# Let the last potion sound finish before destroying the test's audio player.
+	await create_timer(1.0).timeout
 	await _finish()
 
 func _spend(count: int) -> void:
@@ -163,6 +178,16 @@ func _drag(source: Control, target: Control) -> void:
 		await process_frame
 	await _mouse(b, false)
 	await create_timer(0.15).timeout
+
+func _choose_class(id: int) -> void:
+	await _click(hud._reserved_buttons[0])
+	var panel = hud._class_panel
+	panel.selector.select(panel.selector.get_item_index(id))
+	panel.selector.item_selected.emit(panel.selector.selected)
+	await process_frame
+	await _click(panel.apply_button)
+	await _wait_for(func() -> bool: return int(hud._players[local_id].class_id) == id)
+
 
 func _key(code: Key, pressed: bool, control: bool = false) -> void:
 	var event := InputEventKey.new()

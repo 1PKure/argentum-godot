@@ -12,6 +12,7 @@ func _initialize() -> void:
 func _run() -> void:
 	_test_potions()
 	_test_attacks()
+	_test_arrows()
 	_test_casts()
 	_test_combinations()
 	_test_click_use()
@@ -56,6 +57,39 @@ func _test_attacks() -> void:
 	_check(registry.try_basic_attack(901, 10549) == null and target.current_health == 362, "Physical attack rejects one millisecond before 550 ms")
 	_check(registry.try_basic_attack(901, 10550) == target and target.current_health == 361, "Physical attack is accepted exactly at the new 550 ms boundary")
 	_check(f.attacker.current_mana == 2000, "Faster physical attacks never consume mana")
+
+
+func _test_arrows() -> void:
+	# Both actors reach the same authority, with fresh nonces for every spammed RPC.
+	for actor: int in [901, ArenaPracticeBot.BOT_ID]:
+		var f := _fixture()
+		var registry: PlayerRegistry = f.registry
+		if actor != 901:
+			registry.remove_player(901)
+			registry.add_player(actor).is_bot = true
+		registry.try_select_class(actor, 8, 10000)
+		registry.get_player(actor).grid_position = Vector2i(4, 5)
+		var target: PlayerState = f.target
+		target.grid_position = Vector2i(6, 5)
+		target.max_health = 10000
+		target.current_health = 10000
+		_check(registry.try_ranged_attack(actor, target.grid_position, 1, 10000).ok, "Hunter %d fires its first authoritative arrow" % actor)
+		var health := target.current_health
+		var early := registry.try_ranged_attack(actor, target.grid_position, 2, 11199)
+		_check(not early.ok and early.remaining_msec == 1 and target.current_health == health, "Hunter %d rejects the 1199 ms boundary without damage" % actor)
+		_check(registry.try_ranged_attack(actor, target.grid_position, 3, 11200).ok, "Hunter %d fires exactly at 1200 ms" % actor)
+		health = target.current_health
+		var accepted: Array[int] = []
+		for index in range(2400):
+			if index % 2 == 0:
+				registry.try_basic_attack(actor, 11200 + index)
+			if registry.try_ranged_attack(actor, target.grid_position, 4 + index, 11200 + index).ok:
+				accepted.append(index)
+		_check(accepted == [1200] and health - target.current_health >= 181 and health - target.current_health <= 200, "2400 fresh arrow requests plus legacy CTRL allow only one additional hit for hunter %d" % actor)
+		_check(not registry.try_ranged_attack(actor, target.grid_position, 2403, 15000).ok, "Hunter %d cannot replay its latest arrow nonce after the interval" % actor)
+	var fresh := _fixture()
+	fresh.registry.try_select_class(901, 8, 0)
+	_check(fresh.registry.try_ranged_attack(901, fresh.target.grid_position, 1, 0).ok, "A fresh hunter preset can fire immediately even at server startup")
 
 
 func _test_casts() -> void:

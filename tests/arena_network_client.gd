@@ -261,7 +261,7 @@ func _run() -> void:
 	await _click_world(opponent)
 	await _wait_for(func() -> bool: return hud._players[local_id].current_mana == mana_before - 1000)
 	var apoc_damage: int = target_life - hud._players[opponent].current_health
-	_check(hud._players[local_id].current_mana == mana_before - 1000 and apoc_damage >= 223 and apoc_damage <= 238, "Search, Launch and camera-adjusted target resolve Apocalypse with equipment modifiers")
+	_check(hud._players[local_id].current_mana == mana_before - 1000 and apoc_damage >= 205 and apoc_damage <= 219, "Search, Launch and camera-adjusted target resolve tuned Apocalypse with equipment modifiers")
 	await _capture("arena-apocalypse.png")
 	await _click(hud._show_catalog)
 	await _search_spell(7)

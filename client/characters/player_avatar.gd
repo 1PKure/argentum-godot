@@ -59,6 +59,7 @@ var _effect_labels: Array[String] = []
 var _target_position: Vector2
 var _movement_waypoints: Array[Vector2] = []
 var _is_selected := false
+var _move_speed := MOVE_SPEED
 
 
 func _ready() -> void:
@@ -67,7 +68,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	var remaining_distance := MOVE_SPEED * maxf(delta, 0.0)
+	var remaining_distance := _move_speed * maxf(delta, 0.0)
 	var moved_this_frame := false
 	# Preserve each confirmed turn. Carry unused frame time to the next segment
 	# instead of cutting diagonally toward the newest received grid position.
@@ -128,6 +129,7 @@ func setup(
 	is_alive = player_state.is_alive
 	is_ghost = player_state.is_ghost
 	is_local_player = local_player
+	_apply_move_speed(player_state)
 	is_alive = player_state.is_alive
 	_apply_effect_presentation(player_state)
 	_player_visual.set_loadout(player_state.class_id, player_state.equipped_items)
@@ -167,6 +169,7 @@ func apply_server_position(
 func apply_server_stats(
 	player_state: PlayerState
 ) -> void:
+	_apply_move_speed(player_state)
 	is_alive = player_state.is_alive
 	is_ghost = player_state.is_ghost
 	_apply_effect_presentation(player_state)
@@ -189,6 +192,10 @@ func apply_server_stats(
 		)
 
 	_update_label()
+
+
+func _apply_move_speed(state: PlayerState) -> void:
+	_move_speed = TILE_SIZE * 1000.0 / MovementRules.PRACTICE_BOT_MOVE_INTERVAL_MSEC if state.is_bot else MOVE_SPEED
 
 
 func _apply_effect_presentation(state: PlayerState) -> void:

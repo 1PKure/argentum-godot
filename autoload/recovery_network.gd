@@ -33,6 +33,8 @@ func _ready() -> void:
 func select_potion(action: String) -> void:
 	if action not in ["health_potion", "mana_potion"] or action == selected_potion:
 		return
+	if action == "mana_potion" and not _resources.is_empty() and int(_resources.get("max_mana", 0)) == 0:
+		return
 	selected_potion = action
 	_use_once = ""
 	selection_changed.emit()
@@ -109,6 +111,8 @@ func _on_player_data(data: Dictionary) -> void:
 	if int(data.get("peer_id", 0)) != multiplayer.get_unique_id():
 		return
 	_resources = data.duplicate(true)
+	if int(data.get("max_mana", 0)) == 0 and selected_potion == "mana_potion":
+		select_potion("health_potion")
 	if not bool(data.get("is_alive", true)):
 		cancel_use()
 

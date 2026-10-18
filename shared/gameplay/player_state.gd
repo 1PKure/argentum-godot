@@ -59,7 +59,8 @@ func reset_preset_inventory() -> void:
 	inventory.resize(42)
 	inventory.fill(0)
 	inventory[0] = 38
-	inventory[1] = 37
+	if max_mana > 0:
+		inventory[1] = 37
 	equipped_items = ClassCatalog.default_equipment(class_id)
 	var index := 2
 	for slot: String in ClassCatalog.EQUIPMENT_SLOTS:

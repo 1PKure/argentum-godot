@@ -82,7 +82,7 @@ func _run() -> void:
 		var actions := manager.tick(141450 + step * 150)
 		for action: Dictionary in actions:
 			if action.kind == "cast" and int(action.result.event.spell_id) == 27:
-				removed_legally = step * 150 >= 350 and bot.current_mana == before - int(SpellCatalog.get_spell(27).mana)
+				removed_legally = step * 150 >= 800 and bot.current_mana == before - int(SpellCatalog.get_spell(27).mana)
 	_check(removed_legally and bot.active_effects.is_empty(), "Delayed Remove uses the permitted spell and real mana cost")
 	request_id += 1
 	manager.request(301, true, 1, request_id, 150000)
@@ -93,7 +93,7 @@ func _run() -> void:
 	_check(bot.is_meditating and bot.current_health == 100 and bot.current_mana == 0, "Depleted bot starts normal meditation and waits before its first potion")
 	manager.tick(151600)
 	_check(bot.is_meditating and bot.current_health == 127 and bot.current_mana == 0, "Delayed red potion preserves meditation and restores normal HP")
-	manager.tick(151899)
+	manager.tick(151879)
 	_check(bot.current_health == 127, "Bot cannot repeat a potion before its recovery interval")
 	manager.tick(152000)
 	_check(bot.is_meditating and bot.current_health == 154, "Bot repeats potion recovery close to the normal player cadence")
@@ -134,6 +134,7 @@ func _run() -> void:
 	manager.peer_joining()
 	_check(not registry.has_player(ArenaPracticeBot.BOT_ID), "Joining player cleanup happens before their snapshot")
 	_test_training_behavior()
+	_test_spell_rhythm()
 	_test_exchange()
 	for item: Node in registries:
 		item.queue_free()
@@ -202,7 +203,7 @@ func _test_training_behavior() -> void:
 						moved = true
 						if last_move > 0:
 							legal_moves = legal_moves and now - last_move >= ArenaPracticeBot.MOVE_INTERVAL_MSEC
-							if now - last_move <= 180:
+							if now - last_move <= 200:
 								smooth_steps += 1
 						last_move = now
 						if not mobile:
@@ -210,7 +211,7 @@ func _test_training_behavior() -> void:
 					elif action.kind == "cast":
 						cast = true
 						if last_cast > 0:
-							legal_casts = legal_casts and now - last_cast >= SpellCatalog.CAST_INTERVAL_MSEC
+							legal_casts = legal_casts and now - last_cast >= ArenaPracticeBot.CAST_INTERVAL_MSEC
 						last_cast = now
 						if int(action.result.event.target_id) == 301:
 							if mobile:
@@ -238,10 +239,10 @@ func _test_training_behavior() -> void:
 					drinks.append(now)
 					colors[str(action.result.event.action)] = true
 		both_colors = both_colors and colors.size() == 2
-		quick_potions = quick_potions and drinks.size() >= 10 and drinks[0] >= 51460 and drinks[0] <= 51560
+		quick_potions = quick_potions and drinks.size() >= 10 and drinks[0] >= 51420 and drinks[0] <= 51480
 		for index in range(1, drinks.size()):
 			legal_potions = legal_potions and drinks[index] - drinks[index - 1] >= RecoveryRules.POTION_INTERVAL_MSEC
-			quick_potions = quick_potions and drinks[index] - drinks[index - 1] <= 420
+			quick_potions = quick_potions and drinks[index] - drinks[index - 1] <= 320
 		# A melee bot has to leave the attack->potion window to actually recover.
 		manager.request(301, true, 3, 2, 60000)
 		bot = registry.get_player(ArenaPracticeBot.BOT_ID)
@@ -257,14 +258,61 @@ func _test_training_behavior() -> void:
 		recovery_windows = recovery_windows and recovered and bot.current_health > 80
 	print("Agite metrics: static_hits=%d moving_hits=%d moving_attempts=%d continuous_steps=%d cast_and_move=%d" % [static_hits, moving_hits, total_attempts, smooth_steps, simultaneous])
 	_check(paths.size() > 1, "Movement bursts vary between seeds rather than repeating a fixed approach/up pattern")
-	_check(smooth_steps >= 300 and legal_moves, "Bot sustains consecutive movement at the slightly slower 150 ms cadence while keeping continuous steps")
+	_check(smooth_steps >= 300 and legal_moves, "Bot sustains continuous 180 ms steps, slower than the player's 120 ms cadence")
 	_check(simultaneous >= 8, "Casting and movement can happen together instead of freezing for every attack")
 	_check(static_hits >= 100, "Stationary opponents receive sustained combat pressure across eight seeds")
 	_check(moving_hits >= 40 and moving_hits < total_attempts, "Moving opponents can be hit and can also evade delayed perception")
-	_check(legal_casts, "All attacks and defensive spells respect the normal server spell interval")
-	_check(legal_potions and quick_potions, "Bot potions repeat around 350-390 ms without a long artificial lock")
+	_check(legal_casts, "All attacks and defensive spells respect the same slower bot spell interval")
+	_check(legal_potions and quick_potions, "Bot potions repeat around 280-300 ms without the click+Use advantage")
 	_check(both_colors, "Under pressure the bot recovers health and mana instead of starving one resource")
 	_check(recovery_windows, "Wounded melee bots defend and recover through the real attack-potion gap")
+
+func _test_spell_rhythm() -> void:
+	var f := _fixture()
+	var registry: PlayerRegistry = f.registry
+	var manager: ArenaPracticeBot = f.manager
+	manager.request(301, true, 1, 1, 10000)
+	var bot := registry.get_player(ArenaPracticeBot.BOT_ID)
+	bot.grid_position = Vector2i(9, 5)
+	f.human.max_health = 10000
+	f.human.current_health = 10000
+	var last_cast := 0
+	var rooted_at := 0
+	var removed_at := 0
+	var legal := true
+	for step in range(450):
+		var now := 11000 + step * 20
+		if last_cast > 0 and rooted_at == 0:
+			if registry.try_cast_spell(301, 25, bot.grid_position, 1, now).ok:
+				rooted_at = now
+		for action: Dictionary in manager.tick(now):
+			if action.kind == "cast":
+				if last_cast > 0:
+					legal = legal and now - last_cast >= 1400
+				last_cast = now
+				if int(action.result.event.spell_id) == 27:
+					removed_at = now
+	_check(rooted_at > 0 and removed_at - rooted_at >= 800, "The first root remains for at least 800 ms before the bot can Remove")
+	_check(removed_at > 0 and legal, "Remove and offensive casts share the bot's 1400 ms floor instead of bypassing it")
+	# Recovery starts on the first useful red, without spending scarce turns on blue.
+	manager.request(301, true, 1, 2, 30000)
+	bot = registry.get_player(ArenaPracticeBot.BOT_ID)
+	bot.current_health = 140
+	bot.current_mana = 0
+	var colors: Array[String] = []
+	for step in range(45):
+		for action: Dictionary in manager.tick(31300 + step * 20):
+			if action.kind == "recovery" and str(action.result.event.action).ends_with("potion"):
+				colors.append(str(action.result.event.action))
+	_check(colors.size() >= 3 and colors.slice(0, 3) == ["health_potion", "health_potion", "health_potion"], "A wounded bot prioritizes consecutive reds over blues after a combo")
+	manager.request(301, true, 1, 3, 40000)
+	bot = registry.get_player(ArenaPracticeBot.BOT_ID)
+	bot.current_health -= 27
+	var before := bot.current_health
+	manager.tick(41300)
+	manager.tick(41480)
+	_check(bot.current_health == before + 27, "Bot starts a useful red after the first 27 missing HP instead of waiting for 78 percent health")
+
 
 func _test_exchange() -> void:
 	var returned_hits := 0

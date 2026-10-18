@@ -8,10 +8,10 @@ signal status_changed(status: Dictionary)
 const BOT_ID := -1000 # Entity ID only; never a network recipient or the -1 lookup sentinel.
 const THINK_MSEC := 120
 const COMMAND_INTERVAL_MSEC := 400
-const MOVE_INTERVAL_MSEC := 150
-const CAST_INTERVAL_MSEC := 1150
+const MOVE_INTERVAL_MSEC := MovementRules.PRACTICE_BOT_MOVE_INTERVAL_MSEC
+const CAST_INTERVAL_MSEC := 1400
 const ATTACK_INTERVAL_MSEC := 650
-const POTION_INTERVAL_MSEC := 350
+const POTION_INTERVAL_MSEC := 280
 var registry: PlayerRegistry
 var owner_id := 0
 var phase := "idle"
@@ -23,6 +23,7 @@ var _next_move := 0
 var _next_choice := 0
 var _move_goal := Vector2i(-1, -1)
 var _next_offense := 0
+var _next_spell := 0
 var _potion_due := 0
 var _last_potion := ""
 var _root_due := 0
@@ -102,10 +103,11 @@ func request(peer_id: int, enabled: bool, class_id: int, request_id: int, now: i
 	_observed_rooted = false
 	_next_move = _ready_at
 	_next_offense = _ready_at
+	_next_spell = _ready_at
 	_next_choice = 0
 	_move_goal = Vector2i(-1, -1)
 	_movement_mode = 1
-	_next_control = now + _rng.randi_range(6000, 9000)
+	_next_control = now + _rng.randi_range(10000, 14000)
 	reset_world.emit()
 	status_changed.emit(status())
 	return {"ok": true}
@@ -160,18 +162,18 @@ func tick(now: int = -1) -> Array[Dictionary]:
 	var caster := bot.class_id in [1, 2, 5, 6]
 	var ranged := caster or bot.class_id == 8
 	var distance := _distance(bot.grid_position, _observed_cell)
-	if not _defending and (bot.current_health < bot.max_health * 0.45 or (caster and bot.current_mana < bot.max_mana * 0.18)):
+	if not _defending and (bot.current_health < bot.max_health * 0.55 or (caster and bot.current_mana < bot.max_mana * 0.18)):
 		_defending = true
 		_next_choice = 0
-	elif _defending and bot.current_health >= bot.max_health * 0.65 and (not caster or bot.current_mana >= bot.max_mana * 0.35):
+	elif _defending and bot.current_health >= bot.max_health * 0.75 and (not caster or bot.current_mana >= bot.max_mana * 0.35):
 		_defending = false
 		_next_choice = 0
 	var rooted := bot.active_effects.has("Paralizado") or bot.active_effects.has("Inmovilizado")
 	if rooted and not _root_observed:
-		_root_due = now + _rng.randi_range(350, 550)
+		_root_due = now + _rng.randi_range(800, 1100)
 	_root_observed = rooted
 	var removing := rooted and ClassCatalog.can_cast(bot.class_id, 27) and bot.current_mana >= int(SpellCatalog.get_spell(27).mana)
-	if removing and now >= _root_due:
+	if removing and now >= _root_due and now >= _next_spell:
 		_root_due = now + 60
 		if _cast(27, bot.grid_position, now, actions):
 			_root_observed = false
@@ -187,7 +189,7 @@ func tick(now: int = -1) -> Array[Dictionary]:
 	# A defensive spell uses the same global cast interval as an attack.
 	if not removing and now >= _next_offense:
 		var healed := false
-		if now >= _next_heal and bot.current_health < bot.max_health * 0.45:
+		if now >= _next_heal and bot.current_health < bot.max_health * 0.55:
 			_next_heal = now + _rng.randi_range(1800, 2400)
 			if _rng.randf() < 0.65:
 				healed = _cast(31, bot.grid_position, now, actions)
@@ -197,7 +199,7 @@ func tick(now: int = -1) -> Array[Dictionary]:
 		phase = "lost"
 		status_changed.emit(status())
 		return actions
-	# Keep a movement burst running while casting or drinking, at player cadence.
+	# Use the slower bot cadence without freezing its trajectory to cast or drink.
 	if not bot.is_meditating and now >= _next_move:
 		var direction := _movement_step(bot, _observed_cell, ranged, now)
 		if direction != -1:
@@ -218,7 +220,7 @@ func _attack(bot: PlayerState, ranged: bool, caster: bool, now: int, actions: Ar
 			var choice := _rng.randf()
 			if now >= _next_control and not _observed_rooted and bot.current_mana > 700 and choice < 0.3:
 				spell = 25
-				_next_control = now + _rng.randi_range(8000, 12000)
+				_next_control = now + _rng.randi_range(14000, 18000)
 			elif choice < 0.1:
 				spell = 3
 			elif choice > 0.95 and ClassCatalog.can_cast(bot.class_id, 53) and bot.current_mana >= 1000:
@@ -229,8 +231,8 @@ func _attack(bot: PlayerState, ranged: bool, caster: bool, now: int, actions: Ar
 		if _rng.randf() < 0.06:
 			cell += MovementRules.get_offset(_rng.randi_range(0, 3))
 		# An inaccurate click costs the opportunity too; no free rapid retries.
-		var interval := maxi(SpellCatalog.CAST_INTERVAL_MSEC, CAST_INTERVAL_MSEC) if caster else maxi(CombatRules.BASIC_ATTACK_COOLDOWN_MSEC, ATTACK_INTERVAL_MSEC)
-		_next_offense = now + interval + _rng.randi_range(0, 100)
+		var interval := maxi(SpellCatalog.CAST_INTERVAL_MSEC, CAST_INTERVAL_MSEC) if caster else maxi(CombatRules.RANGED_ATTACK_COOLDOWN_MSEC, ATTACK_INTERVAL_MSEC)
+		_next_offense = now + interval + _rng.randi_range(0, 150)
 		if caster:
 			_cast(spell, cell, now, actions)
 		else:
@@ -251,23 +253,23 @@ func _attack(bot: PlayerState, ranged: bool, caster: bool, now: int, actions: Ar
 			actions.append({"kind": "melee", "attacker": bot.to_dictionary(), "target": target_state.to_dictionary()})
 
 func _tick_potions(bot: PlayerState, now: int, actions: Array[Dictionary]) -> void:
-	var red := bot.current_health < bot.max_health * 0.78 and bot.max_health - bot.current_health >= 27
+	var red := bot.max_health - bot.current_health >= 27
 	var blue := bot.max_mana > 0 and bot.current_mana < bot.max_mana * 0.65
 	if not red and not blue:
 		_potion_due = 0
 		return
 	if _potion_due == 0:
-		_potion_due = now + _rng.randi_range(160, 260)
+		_potion_due = now + _rng.randi_range(120, 180)
 		return
 	if now < _potion_due:
 		return
 	var action := "health_potion" if red else "mana_potion"
-	if red and blue and bot.current_health >= bot.max_health * 0.4:
+	if red and blue and bot.current_health >= bot.max_health * 0.65:
 		if bot.current_mana < bot.max_mana * 0.2 or _last_potion == "health_potion":
 			action = "mana_potion"
 	if _recover(action, now, actions):
 		_last_potion = action
-		_potion_due = now + maxi(RecoveryRules.POTION_INTERVAL_MSEC, POTION_INTERVAL_MSEC) + _rng.randi_range(0, 40)
+		_potion_due = now + maxi(RecoveryRules.POTION_INTERVAL_MSEC, POTION_INTERVAL_MSEC) + _rng.randi_range(0, 20)
 	else:
 		# A normal attack/potion gap can block this; retain the pending decision.
 		_potion_due = now + 40
@@ -331,12 +333,13 @@ func _directions() -> Array[int]:
 
 func _cast(spell_id: int, target: Vector2i, now: int, actions: Array[Dictionary]) -> bool:
 	var bot := registry.get_player(BOT_ID)
-	if spell_id <= 0 or not ClassCatalog.can_cast(bot.class_id, spell_id) or bot.current_mana < int(SpellCatalog.get_spell(spell_id).mana):
+	if now < _next_spell or spell_id <= 0 or not ClassCatalog.can_cast(bot.class_id, spell_id) or bot.current_mana < int(SpellCatalog.get_spell(spell_id).mana):
 		return false
 	_cast_request += 1
 	var result := registry.try_cast_spell(BOT_ID, spell_id, target, _cast_request, now)
 	if result.ok:
-		_next_offense = maxi(_next_offense, now + maxi(SpellCatalog.CAST_INTERVAL_MSEC, CAST_INTERVAL_MSEC) + _rng.randi_range(0, 100))
+		_next_spell = now + maxi(SpellCatalog.CAST_INTERVAL_MSEC, CAST_INTERVAL_MSEC) + _rng.randi_range(0, 150)
+		_next_offense = maxi(_next_offense, _next_spell)
 		actions.append({"kind": "cast", "result": result})
 	return bool(result.ok)
 

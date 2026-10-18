@@ -76,7 +76,7 @@ func add_player(
 	_players[peer_id] = player
 
 	_last_move_time[peer_id] = 0
-	_last_attack_time[peer_id] = -SpellCatalog.ATTACK_SPELL_GAP_MSEC
+	_last_attack_time[peer_id] = -maxi(CombatRules.RANGED_ATTACK_COOLDOWN_MSEC, SpellCatalog.ATTACK_SPELL_GAP_MSEC)
 	_last_spell_time[peer_id] = -SpellCatalog.CAST_INTERVAL_MSEC
 	_last_spell_request[peer_id] = 0
 	_last_recovery_request[peer_id] = 0
@@ -312,7 +312,7 @@ func try_ranged_attack(peer_id: int, position: Vector2i, request_id: int, now: i
 		return _spell_error("Hay un obstáculo entre el arco y el objetivo.")
 	if now < 0:
 		now = Time.get_ticks_msec()
-	var remaining: int = CombatRules.BASIC_ATTACK_COOLDOWN_MSEC - (now - _last_attack_time.get(peer_id, -CombatRules.BASIC_ATTACK_COOLDOWN_MSEC))
+	var remaining: int = CombatRules.RANGED_ATTACK_COOLDOWN_MSEC - (now - _last_attack_time.get(peer_id, -CombatRules.RANGED_ATTACK_COOLDOWN_MSEC))
 	if remaining > 0:
 		return _spell_error("Esperá el intervalo del arco.", remaining)
 	remaining = SpellCatalog.SPELL_ATTACK_GAP_MSEC - (now - _last_spell_time.get(peer_id, -SpellCatalog.SPELL_ATTACK_GAP_MSEC))
@@ -431,7 +431,8 @@ func try_cast_spell(caster_id: int, spell_id: int, target_position: Vector2i, re
 		if spell.effect == "healing":
 			target.restore_health(rolled)
 		else:
-			target.apply_damage(ClassCatalog.magic_damage(rolled, caster.class_id, target.class_id, caster.equipped_items, target.equipped_items, true, int(spell.raw.get("AntiRm", "0")) == 1))
+			var damage := ClassCatalog.magic_damage(rolled, caster.class_id, target.class_id, caster.equipped_items, target.equipped_items, true, int(spell.raw.get("AntiRm", "0")) == 1)
+			target.apply_damage(SpellCatalog.direct_damage(spell_id, damage))
 	caster.spend_mana(int(spell.mana))
 	caster.is_meditating = false
 	_last_spell_time[caster_id] = now
@@ -545,7 +546,7 @@ func try_select_class(peer_id: int, class_id: int, now: int = -1) -> Dictionary:
 	player.reset_preset_inventory()
 	player.preset_revision += 1
 	_last_spell_time[peer_id] = -SpellCatalog.CAST_INTERVAL_MSEC
-	_last_attack_time[peer_id] = -SpellCatalog.SPELL_ATTACK_GAP_MSEC
+	_last_attack_time[peer_id] = -maxi(CombatRules.RANGED_ATTACK_COOLDOWN_MSEC, SpellCatalog.SPELL_ATTACK_GAP_MSEC)
 	_last_potion_time[peer_id] = -RecoveryRules.POTION_INTERVAL_MSEC
 	_last_potion_channel_time[peer_id] = {}
 	_spell_cooldowns[peer_id] = {}
