@@ -3,5 +3,51 @@
   "commit": "89615f34162d9fa0bf0fae4242cd6639edbf772f",
   "path": "Dat/obj.dat",
   "sha256": "99e874ce0df5652b08206b77216fc76bbee45a42886dc85a4b0f683c6ce51d39",
-  "selection": "Human bodies from existing atlases; excludes each preset, duplicate bodies and AO20 CP class restrictions. Cosmetic only."
+  "selection": "User-marked blue family: dark long robes for Mage/Druid; red family: ornate armor for other classes. Cosmetics only; source item CP equipment restrictions and gameplay loadouts are unchanged.",
+  "reference_sheet": "graphics/112.png",
+  "reference_sheet_sha256": "cf26ebc01a45cab5090e88c70309cc95586076e4576fdca3efb6040541de6be6",
+  "assets": [
+    {
+      "path": "graphics/1003.png",
+      "upstream_path": "Graficos/1003.png",
+      "sha256": "f2b45379ea650ee9482236559c2577dc6dc2a1f1e9989a5c97559de6a07ace7c",
+      "bytes": 106516
+    },
+    {
+      "path": "graphics/1009.png",
+      "upstream_path": "Graficos/1009.png",
+      "sha256": "3b83e9123dda847cfdd840ca86179659572e522f0d93f458473755394f29215a",
+      "bytes": 72465
+    },
+    {
+      "path": "graphics/1010.png",
+      "upstream_path": "Graficos/1010.png",
+      "sha256": "d286af6e9707e7746f00c240ae150b4bb078c706e560766a915f4b99a3d51c48",
+      "bytes": 99750
+    },
+    {
+      "path": "graphics/1013.png",
+      "upstream_path": "Graficos/1013.png",
+      "sha256": "1a2da9e7d8210b8649dc7aa492e3e48d13c94d48140ea67b5db3777321144332",
+      "bytes": 92453
+    },
+    {
+      "path": "graphics/1014.png",
+      "upstream_path": "Graficos/1014.png",
+      "sha256": "f3e3afbff06b190cf842c3403dd63a5b904dae0113fd159ef7e8fbe403892df2",
+      "bytes": 274541
+    },
+    {
+      "path": "graphics/1016.png",
+      "upstream_path": "Graficos/1016.png",
+      "sha256": "5f7d83d9e4a9bf4be10147db3ec6a4c07b89ad2e31f4186fc6dbbaa887924391",
+      "bytes": 80157
+    },
+    {
+      "path": "graphics/1019.png",
+      "upstream_path": "Graficos/1019.png",
+      "sha256": "6195d80caa064d2f4c1acff43504d9534f5e266e7ef5d9887651e797d1d43aa8",
+      "bytes": 219780
+    }
+  ]
 }

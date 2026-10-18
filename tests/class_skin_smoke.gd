@@ -31,7 +31,7 @@ func _run() -> void:
 			_check(registry.try_select_skin(701, str(skin.id), int(skin.wins)).ok and player.equipped_items == before.equipped_items and player.current_health == int(before.current_health) and ClassCatalog.get_equipped_profile(id, player.equipped_items) == original, "Class %d cosmetic selection preserves equipment and combat statistics" % id)
 			_check(visual._body_definition == root.get_node("AOResources").get_body_definition(body_id), "Class %d renderer resolves its own reward body" % id)
 			if id == 1 or id == 6:
-				_check(body_id >= 100 and body_id <= 156, "Caster class %d reward remains a robe" % id)
+				_check(str(skin.style) == "robe" and str(skin.reference_family) == "blue" and str(skin.source_name).to_lower().contains("túnica"), "Caster class %d reward uses a blue-reference robe" % id)
 	_check(SkinCatalog.get_skin("explorer", 8).body_id != ClassCatalog.get_profile(8).body_id, "Hunter's first win cannot repeat its starter armor")
 	_check(SkinCatalog.for_class(9).is_empty(), "Discarded classes have no cosmetic catalog")
 	# v1 IDs and the same storage file retain previously earned wins/selection.

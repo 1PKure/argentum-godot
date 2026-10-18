@@ -20,7 +20,7 @@ func _run() -> void:
 	controller = main._spell_controller
 	await _wait_for(func() -> bool: return controller.server_ready and hud._players.size() > 0, 20)
 	local_id = root.multiplayer.get_unique_id()
-	_check(controller.server_ready, "Exported client negotiates protocol 13 with dedicated server")
+	_check(controller.server_ready, "Exported client negotiates protocol 14 with dedicated server")
 	if not controller.server_ready:
 		await _finish()
 		return

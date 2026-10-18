@@ -18,7 +18,7 @@ func _run() -> void:
 	controller = main._spell_controller
 	await _wait_for(func() -> bool: return controller.server_ready and hud._players.size() == 2, 20)
 	local_id = root.multiplayer.get_unique_id()
-	_check(controller.server_ready and hud._players.size() == 2, "Two clients negotiate class-aware cosmetic protocol 13")
+	_check(controller.server_ready and hud._players.size() == 2, "Two clients negotiate class-aware cosmetic protocol 14")
 	if not controller.server_ready or hud._players.size() != 2:
 		await _finish()
 		return

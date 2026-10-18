@@ -19,7 +19,8 @@ var _blood_active := false
 var _blood_age := 0.0
 var _blood_origin := Vector2.ZERO
 var _blood_direction := Vector2.RIGHT
-const BLOOD_SECONDS := 0.32
+const BLOOD_SECONDS := 0.50
+const BLOOD_ANCHOR_OFFSET := Vector2(0, 4)
 const SHOT_TRAVEL_SECONDS := 0.18
 const SHOT_IMPACT_SOUND := "res://assets/argentum/custom/audio/arrow_hit.wav"
 
@@ -114,7 +115,7 @@ func _update_anchors() -> void:
 		_words.position = origin + Vector2(-100, -107)
 	if has_target:
 		target = target_avatar.position
-		_blood_origin = target + Vector2(0, -14)
+		_blood_origin = target + BLOOD_ANCHOR_OFFSET
 		_text.position = target + Vector2(-80, -85 - _elapsed * 24.0)
 	if _projectile != null:
 		var fraction := minf(_elapsed / SHOT_TRAVEL_SECONDS, 1.0)
@@ -152,13 +153,20 @@ func _make_label(value: String, at: Vector2, font_size: int) -> Label:
 func _draw() -> void:
 	if not _blood_active:
 		return
-	# Small pixel droplets, aligned with the incoming arrow. Local presentation
-	# only: no extra damage, RNG calls, sounds, stains or persistent nodes.
-	var fade := 1.0 - _blood_age / BLOOD_SECONDS
-	for index in range(8):
-		var velocity := _blood_direction.rotated((index - 3.5) * 0.44) * (32.0 + (index % 3) * 16.0)
-		var at := _blood_origin + velocity * _blood_age + Vector2(0, 100.0 * _blood_age * _blood_age)
-		var size_value := 3.0 if index % 3 == 0 else 2.0
-		var color := Color("b82c35") if index % 2 == 0 else Color("72131d")
+	# Hold contrast through the first 300 ms; the old tiny, immediately faded
+	# drops disappeared into clothes at the arena's 1x source-pixel scale.
+	var fade := clampf((BLOOD_SECONDS - _blood_age) / 0.20, 0.0, 1.0)
+	if _blood_age < 0.18:
+		var tip := _blood_origin + _blood_direction * (14.0 + _blood_age * 55.0)
+		draw_line(_blood_origin, tip, Color(0.34, 0.01, 0.03, fade), 8.0, false)
+		draw_line(_blood_origin, tip, Color(0.94, 0.12, 0.19, fade), 5.0, false)
+	for index in range(12):
+		var direction := _blood_direction.rotated((index - 5.5) * 0.19)
+		var velocity := direction * (75.0 + (index % 4) * 15.0)
+		var at := _blood_origin + direction * 6.0 + velocity * _blood_age + Vector2(0, 120.0 * _blood_age * _blood_age)
+		var size_value := 6.0 if index % 3 == 0 else 4.0
+		var rect := Rect2(at.round(), Vector2.ONE * size_value)
+		var color := Color("f45151") if index % 3 == 0 else Color("c5192d")
 		color.a = fade
-		draw_rect(Rect2(at.round(), Vector2.ONE * size_value), color)
+		draw_rect(rect.grow(1.0), Color(0.30, 0.01, 0.03, fade))
+		draw_rect(rect, color)
