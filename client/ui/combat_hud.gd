@@ -46,10 +46,6 @@ var _spell_search: LineEdit
 var _show_catalog: CheckButton
 var _spell_scroll: ScrollContainer
 var _spell_list: VBoxContainer
-var _meditate_button: Button
-var _use_button: Button
-var _health_potion_button: Button
-var _mana_potion_button: Button
 var _status_label: Label
 var _menu_button: Button
 var _stats_button: Button
@@ -384,20 +380,7 @@ func _build_interface() -> void:
 	_mana_label = _label(_frame, "—", Rect2(0, 0, 216, 22), 14)
 	_health_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_mana_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_meditate_button = _text_button(_frame, "Meditar", Rect2(0, 0, 113, 27))
-	_meditate_button.pressed.connect(_on_meditate_pressed)
-	_use_button = _text_button(_frame, "Usar · Espacio", Rect2(0, 0, 113, 27))
-	_use_button.add_theme_font_size_override("font_size", 12)
-	_use_button.button_down.connect(_begin_use_button)
-	_use_button.button_up.connect(func() -> void: RecoveryNetwork.stop_using_selected("button"))
-	_health_potion_button = _text_button(_frame, "Vida", Rect2(0, 0, 113, 27))
-	_health_potion_button.pressed.connect(_request_recovery.bind("health_potion"))
-	_mana_potion_button = _text_button(_frame, "Maná", Rect2(0, 0, 113, 27))
-	_mana_potion_button.pressed.connect(_request_recovery.bind("mana_potion"))
 	_build_menu()
-	_stats_button = _text_button(_frame, "", Rect2(0, 0, 129, 27))
-	_stats_button.text = "Reaparecer"
-	_stats_button.pressed.connect(_request_recovery.bind("respawn"))
 	_menu_button = _text_button(_frame, "", Rect2(0, 0, 126, 27))
 	_menu_button.text = "Menú"
 	_menu_button.pressed.connect(func() -> void: set_menu_opened(not _menu_panel.visible))
@@ -506,7 +489,7 @@ func _build_menu() -> void:
 	controls.add_theme_constant_override("h_separation", 20)
 	controls.add_theme_constant_override("v_separation", 8)
 	content.add_child(controls)
-	for row: Array in [["WASD", "Movimiento"], ["CTRL", "Ataque físico"], ["1–0", "Accesos rápidos"], ["M", "Meditar"], ["Espacio / Usar", "Poción seleccionada (mantener: repetir)"], ["Q / E", "Poción de vida / maná"], ["Esc / clic derecho", "Cancelar apuntado"]]:
+	for row: Array in [["WASD", "Movimiento"], ["CTRL", "Ataque físico"], ["1–0", "Accesos rápidos"], ["M", "Meditar"], ["Espacio", "Poción seleccionada (mantener: repetir)"], ["Q / E", "Poción de vida / maná"], ["Esc / clic derecho", "Cancelar apuntado"]]:
 		for text_value: String in row:
 			var label := Label.new()
 			label.text = text_value
@@ -518,6 +501,12 @@ func _build_menu() -> void:
 	_menu_credits.add_theme_font_size_override("font_size", 12)
 	_menu_credits.modulate = Color("c3b99f")
 	content.add_child(_menu_credits)
+	_stats_button = _text_button(content, "Reaparecer", Rect2())
+	_stats_button.custom_minimum_size.y = 34
+	_stats_button.pressed.connect(func() -> void:
+		set_menu_opened(false)
+		_request_recovery("respawn")
+	)
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 12)
 	content.add_child(actions)
@@ -596,11 +585,8 @@ func _layout_footer_actions() -> void:
 	if _frame == null or _menu_button == null:
 		return
 	var side_x := _frame.size.x - 272.0
-	var y := _frame.size.y - 187
-	_stats_button.position = Vector2(side_x + 20, y)
-	_stats_button.size = Vector2(113, 27)
-	_menu_button.position = Vector2(side_x + (139 if _stats_button.visible else 20), y)
-	_menu_button.size = Vector2(113 if _stats_button.visible else 232, 27)
+	_menu_button.position = Vector2(side_x + 20, _frame.size.y - 34)
+	_menu_button.size = Vector2(232, 27)
 
 
 func _frame_patch(region: Rect2, left: int, right: int, top: int, bottom: int) -> NinePatchRect:
@@ -648,11 +634,6 @@ func _request_recovery(action: String) -> void:
 	RecoveryNetwork.request_action(action, "click" if action in ["health_potion", "mana_potion"] else "direct")
 
 
-func _on_meditate_pressed() -> void:
-	var state: PlayerState = _players.get(_local_peer_id)
-	_request_recovery("respawn" if state != null and not state.is_alive else "meditate")
-
-
 func _on_recovery_event(event: Dictionary) -> void:
 	if int(event.peer_id) != _local_peer_id:
 		return
@@ -667,38 +648,25 @@ func _on_recovery_event(event: Dictionary) -> void:
 
 
 func _update_recovery_controls() -> void:
-	if _meditate_button == null:
+	if _stats_button == null:
 		return
 	var state: PlayerState = _players.get(_local_peer_id)
 	var ready := _spell_controller != null and _spell_controller.server_ready and state != null
-	_meditate_button.disabled = not ready or (state != null and not state.is_alive)
 	_stats_button.disabled = not ready or (state != null and state.is_alive)
-	_health_potion_button.disabled = not ready or (state != null and not state.is_alive)
-	_mana_potion_button.disabled = not ready or (state != null and not state.is_alive)
-	_use_button.disabled = not ready or (state != null and not state.is_alive) or (state != null and state.max_mana == 0 and RecoveryNetwork.selected_potion == "mana_potion")
-	var preparing := str(BotNetwork.state.get("phase", "")) == "countdown" and int(BotNetwork.state.get("owner_id", 0)) == _local_peer_id
-	for action_button: Button in [_meditate_button, _health_potion_button, _mana_potion_button, _use_button]:
-		action_button.disabled = action_button.disabled or preparing
 	_reserved_buttons[0].disabled = not ready
 	_reserved_buttons[2].disabled = not ready
 	_reserved_buttons[3].disabled = not ready
-	_meditate_button.disabled = _meditate_button.disabled or (state != null and state.max_mana == 0)
-	_mana_potion_button.disabled = _mana_potion_button.disabled or (state != null and state.max_mana == 0)
 	if state == null:
 		_status_label.text = ""
-		_meditate_button.text = "Meditar"
 	elif not state.is_alive:
-		_meditate_button.text = "Meditar"
 		_status_label.text = "Fantasma"
 	else:
-		_meditate_button.text = "Dejar de meditar" if state.is_meditating else "Meditar"
 		var labels := state.active_effects.duplicate()
 		if state.is_meditating:
 			labels.append("Meditando")
 		_status_label.text = " · ".join(labels)
 	_status_label.tooltip_text = _status_label.text
 	_stats_button.visible = state != null and not state.is_alive
-	_layout_footer_actions()
 
 
 func _fit_interface() -> void:
@@ -725,7 +693,7 @@ func _fit_interface() -> void:
 	_name_label.position = Vector2(side_x + 20, 40)
 	_position_label.position = Vector2(side_x + 20, 68)
 	_connection_label.position = Vector2(side_x + 20, 96)
-	_status_label.position = Vector2(side_x + 20, height - 98)
+	_status_label.position = Vector2(side_x + 20, height - 66)
 	_status_label.size = Vector2(232, 28)
 	_inventory_button.position = Vector2(side_x + 16, 162)
 	_spell_button.position = Vector2(side_x + 138, 162)
@@ -736,16 +704,10 @@ func _fit_interface() -> void:
 	_spell_status.position.y = _spell_panel.size.y - 83
 	_spell_status.size = Vector2(220, 34)
 	_launch_button.position.y = _spell_panel.size.y - 41
-	_health_bar.position = Vector2(side_x + 32, height - 152)
-	_mana_bar.position = Vector2(side_x + 32, height - 124)
+	_health_bar.position = Vector2(side_x + 32, height - 124)
+	_mana_bar.position = Vector2(side_x + 32, height - 96)
 	_health_label.position = _health_bar.position + Vector2(0, -3)
 	_mana_label.position = _mana_bar.position + Vector2(0, -3)
-	_meditate_button.position = Vector2(side_x + 20, height - 66)
-	_use_button.position = Vector2(side_x + 139, height - 66)
-	_health_potion_button.position = Vector2(side_x + 20, height - 34)
-	_mana_potion_button.position = Vector2(side_x + 139, height - 34)
-	_stats_button.position = Vector2(side_x + 6, height - 187)
-	_menu_button.position = Vector2(side_x + 139, height - 187)
 	_menu_panel.position = Vector2.ZERO
 	_menu_panel.size = _frame.size
 	_layout_footer_actions()
@@ -996,21 +958,12 @@ func _on_bot_status() -> void:
 func _refresh_potion_selection() -> void:
 	for slot: InventorySlotButton in _inventory_slots:
 		slot.set_potion_selected(RecoveryNetwork.selected_potion)
-	if _use_button != null:
-		_use_button.tooltip_text = "%s · Espacio o mantener Usar" % RecoveryRules.get_potion(RecoveryNetwork.selected_potion).name
-	if _meditate_button != null:
-		_update_recovery_controls()
 
 
 func _release_text_focus() -> void:
 	var focused := get_viewport().gui_get_focus_owner()
 	if focused is LineEdit or focused is TextEdit:
 		focused.release_focus()
-
-
-func _begin_use_button() -> void:
-	_release_text_focus()
-	RecoveryNetwork.begin_using_selected("button")
 
 
 func is_gameplay_blocked() -> bool:

@@ -77,7 +77,7 @@ La flecha usa el archivo adjunto **Arrow hit 2.wav**, copiado sin conversión a 
 
 | Clase | 1 victoria | 3 victorias | 5 victorias |
 | --- | --- | --- | --- |
-| Mago | Legendaria gris | Roja especial | Superior gris |
+| Mago | Legendaria gris | Roja especial | Azul |
 | Clérigo | Iluminación | De la Luz | Clérigo imperial |
 | Guerrero | Legendaria | Placas completas | Dragón rojo |
 | Asesino | Escarlata | De las Sombras | Asesino imperial |

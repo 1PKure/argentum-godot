@@ -168,7 +168,7 @@ func _run() -> void:
 	_check(hud._players[local_id].active_effects.is_empty(), "Manual Remove Paralysis works while the caster is rooted")
 	await _wait_for(func() -> bool: return hud._players[local_id].current_health < hud._players[local_id].max_health - 50)
 	var life_before: int = hud._players[local_id].current_health
-	await _click(hud._health_potion_button)
+	await _click(hud._inventory_slots.filter(func(slot: Variant) -> bool: return slot.action == "health_potion")[0])
 	await _wait_for(func() -> bool: return hud._players[local_id].current_health > life_before)
 	_check(hud._players[local_id].current_health == life_before + 27, "Actual GUI red potion restores 27 health on the server")
 	await create_timer(0.42).timeout

@@ -93,12 +93,16 @@ func _run() -> void:
 	_check(hud._menu_panel.visible and hud._inventory_move.is_empty() and hud._inventory_slots[8].action == "mana_potion", "Opening a modal cancels a pending inventory move")
 	await _click(hud._menu_close_button)
 	controller.aim_spell(12)
-	await _click(hud._use_button)
+	_key(KEY_SPACE, true)
+	await create_timer(0.08).timeout
+	_key(KEY_SPACE, false)
 	await _wait_for(func() -> bool: return _mana() > mana)
-	_check(_mana() == mana + 124 and controller.aimed_spell_id == 12, "The visible Use button drinks the moved selected potion without losing aim")
+	_check(_mana() == mana + 124 and controller.aimed_spell_id == 12, "Space drinks the moved selected potion without a visible Use button or losing aim")
 	mana = _mana()
 	await _click(hud._inventory_slots[0])
-	await _click(hud._use_button)
+	_key(KEY_SPACE, true)
+	await create_timer(0.08).timeout
+	_key(KEY_SPACE, false)
 	await create_timer(0.3).timeout
 	_check(recovery.selected_potion == "health_potion" and hud._inventory_slots[0].potion_selected and _mana() == mana, "A full resource potion can still be selected without consuming the other resource")
 	await _click(hud._inventory_slots[8])

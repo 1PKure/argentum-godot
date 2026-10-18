@@ -71,7 +71,7 @@ func _run() -> void:
 	_check(hud._players[local_id].current_mana == mana_before - 375 and received_spells[-1].mana_cost == 375, "Only the casting player receives their spell cost and actual remaining mana")
 	await _choose_class(8)
 	_check(hud._players[local_id].class_id == 8 and not hud._class_panel.visible, "Choosing hunter applies immediately without resource or timer restrictions")
-	_check(not hud._players[local_id].inventory.has(37) and not hud._inventory_layout.actions.has("mana_potion") and hud._mana_potion_button.disabled, "Hunter inventory and HUD contain no blue potion supply")
+	_check(not hud._players[local_id].inventory.has(37) and not hud._inventory_layout.actions.has("mana_potion"), "Hunter inventory contains no blue potion supply")
 	_check(controller.bindings[2] == -1 and hud._hotkey_buttons[2].icon != null, "Hunter macro 3 contains its physical bow action")
 	var health: int = hud._players[opponent].current_health
 	_key(KEY_CTRL, true)
