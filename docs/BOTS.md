@@ -5,7 +5,7 @@ Primera IA de práctica, ejecutada por el dedicado. Usa los nueve presets y el b
 ## Probar
 
 1. GitHub Desktop: Fetch origin, elegir `work/arena-practice-bot` y Pull origin.
-2. Cerrar el dedicado anterior y abrir `tools/Start-PrivateWebTest.cmd`. Cliente y servidor requieren la misma revisión: protocolo **12**.
+2. Cerrar el dedicado anterior y abrir `tools/Start-PrivateWebTest.cmd`. Cliente y servidor requieren la misma revisión: protocolo **13**.
 3. Recargar la web privada con Ctrl+F5; WSS sigue precargado.
 4. Con un único jugador humano conectado: **Bot**, elegir clase y **Activar bot**.
 5. Esperar **3 → 2 → 1 → ¡YA!**, con tonos y tween visual. Durante esos tres segundos el servidor bloquea movimiento, ataques, magia y recuperación para ambos personajes. Luego jugar con Lanzar/macros, CTRL, pociones y meditación habituales. El rival se mueve, ataca y se recupera con las mismas funciones autoritativas.
@@ -58,10 +58,29 @@ La regresión de combos prueba los primeros impactos confirmados en ocho semilla
 
 Las victorias confirmadas por el dedicado suman **1 victoria por ronda**. Un ID aleatorio de ronda evita contar dos veces estados terminales repetidos. Perder, quitar el bot, cambiar de preset, desconectar o la entrada de otro humano no premian una ronda sin terminar.
 
-**Skins**, en la cabecera, muestra cuatro vistas previas y permite equipar o volver al atuendo de clase. Hitos fijos, sin azar ni duplicados: **1 victoria: Explorador; 3: Escarlata; 5: De la Luz**. Cualquier clase de bot suma igual. La barra indica el siguiente hito y termina en colección completa. Se reutilizan cuerpos AO20 67, 48 y 262 ya importados; no se modifica el equipo del inventario. Armas, casco, escudo, HP/maná, defensas, daño, intervalos y balance aceptado se conservan. El cuerpo cosmético se replica a los otros clientes y se restaura al reconectar.
+**Skins**, en la cabecera, muestra cuatro vistas previas de la clase actual: atuendo del preset y recompensas a **1, 3 y 5 victorias**. Las victorias y los IDs de los tres hitos se conservan del guardado anterior; al cambiar de clase cada hito resuelve al atuendo correspondiente. No se reinicia el progreso ni se exige volver a desbloquearlo por clase. Cada clase tiene tres cuerpos distintos del preset y entre sí, verificados con píxeles de todos los fotogramas/direcciones. Se reutilizan atlas AO20 ya importados y se respetan sus restricciones CP de clase. Catálogo y procedencia en `arena_skins.json` y `skin_sources.json`. No se altera el inventario/equipo, HP/maná, defensas, daño, intervalos ni balance.
 
 El prototipo sin cuentas guarda victorias, selección e IDs cobrados en `user://arena_skins_v1.cfg` (almacenamiento del navegador en Web). El progreso corresponde a ese navegador/dispositivo/origen; borrar sus datos lo elimina. No se comparte entre dispositivos ni se presenta como inventario protegido contra manipulación: es persistencia local gratuita; el servidor valida el catálogo y el requisito declarado, y confirma las victorias de la sesión. No hay DB, cuenta ni servicio pago. Si falla el guardado se avisa en la ventana Skins.
 
 La flecha usa el archivo adjunto **Arrow hit 2.wav**, copiado sin conversión a `assets/argentum/custom/audio/arrow_hit.wav`, a los 180 ms del impacto visual confirmado. Conserva el volumen existente y sólo suena al acertar. Procedencia y hash en `assets/argentum/custom/audio/sources.json`.
 
 `arena_rewards_smoke.gd` cubre frontera de inicio 2999/3000 ms, intentos tempranos, resultados únicos, guardado/recarga, hitos, selección cosmética y limpieza. `arena_rewards_client.gd` recorre activación, cuenta y bloqueo por RPC real, victoria mediante hechizos, desbloqueo/equipado, reconexión y réplica a un segundo cliente desde el PCK exportado.
+
+
+### Recompensas por clase
+
+| Clase | 1 victoria | 3 victorias | 5 victorias |
+| --- | --- | --- | --- |
+| Mago | Legendaria gris | Roja especial | Mago imperial |
+| Clérigo | Peto de caballero | De la Ciénaga | Clérigo del Caos |
+| Guerrero | Dragón verde | Coraza de Harald | Guerrero del Caos |
+| Asesino | Ropaje desértico | Asesino del Caos | Asesino imperial |
+| Bardo | Túnica roja | Aventurera | Bardo del Caos |
+| Druida | Aguamarina | Aventurera | Roja especial |
+| Paladín | Bruñida | Placas completas | Paladín imperial |
+| Cazador | Dragón verde | Cuero azul | Cazador del Caos |
+| Bandido | Combinada | Del Desfalco | Bandido del Caos |
+
+La flecha confirmada con daño añade ocho gotas pequeñas de sangre durante **320 ms**, al mismo instante visual que su sonido (180 ms de recorrido). Siguen al objetivo interpolado, incluso en el impacto letal, y se eliminan al terminar/desconectar; no generan daño, sonido adicional ni manchas permanentes. Preparar, cancelar o rechazar un disparo no crea sangre.
+
+`class_skin_smoke.gd`: valida los 27 atuendos, restricciones del catálogo, cuerpos y píxeles distintos por clase, estadísticas intactas y compatibilidad del guardado anterior. `class_skin_client.gd`: recorre las nueve colecciones con el PCK, selecciona un hito desbloqueado y comprueba su réplica a otro cliente tras cambiar de clase. La prueba de efectos cubre comienzo, seguimiento y fin de la sangre sin repetir audio. Las rondas aprobadas se conservan.

@@ -99,8 +99,10 @@ func _ready() -> void:
 	RecoveryNetwork.selection_changed.connect(_refresh_potion_selection)
 	BotNetwork.changed.connect(_on_bot_status)
 	Skins.victory_awarded.connect(func(result: Dictionary) -> void:
+		var player: PlayerState = _players.get(_local_peer_id)
+		var class_id := player.class_id if player != null else ClassCatalog.DEFAULT_CLASS
 		for id: String in result.unlocked:
-			console.append_message("Skin desbloqueada: %s. Equipala desde Skins." % SkinCatalog.get_skin(id).name)
+			console.append_message("Skin desbloqueada: %s. Equipala desde Skins." % SkinCatalog.get_skin(id, class_id).name)
 	)
 	InventoryNetwork.rejected.connect(func(message: String) -> void: console.append_message(message))
 	RecoveryNetwork.action_rejected.connect(func(message: String) -> void: console.append_message(message))

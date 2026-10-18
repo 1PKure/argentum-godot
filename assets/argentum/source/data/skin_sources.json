@@ -1,0 +1,7 @@
+{
+  "repository": "ao-org/Recursos",
+  "commit": "89615f34162d9fa0bf0fae4242cd6639edbf772f",
+  "path": "Dat/obj.dat",
+  "sha256": "99e874ce0df5652b08206b77216fc76bbee45a42886dc85a4b0f683c6ce51d39",
+  "selection": "Human bodies from existing atlases; excludes each preset, duplicate bodies and AO20 CP class restrictions. Cosmetic only."
+}

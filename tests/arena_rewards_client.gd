@@ -20,7 +20,7 @@ func _run() -> void:
 	controller = main._spell_controller
 	await _wait_for(func() -> bool: return controller.server_ready and hud._players.size() > 0, 20)
 	local_id = root.multiplayer.get_unique_id()
-	_check(controller.server_ready, "Exported client negotiates protocol 12 with dedicated server")
+	_check(controller.server_ready, "Exported client negotiates protocol 13 with dedicated server")
 	if not controller.server_ready:
 		await _finish()
 		return
@@ -93,7 +93,7 @@ func _run() -> void:
 	await create_timer(0.2).timeout
 	_check(skins.progress.wins == 1, "Repeated authoritative victory status cannot award twice")
 	await _click(hud._reserved_buttons[3])
-	_check(not hud._skins_panel.buttons.explorer.disabled and hud._skins_panel.buttons.scarlet.disabled and hud._skins_panel.summary.text.contains("2 para"), "Victory unlocks Explorer and shows progress toward Scarlet")
+	_check(not hud._skins_panel.buttons.explorer.disabled and hud._skins_panel.buttons.scarlet.disabled and hud._skins_panel.summary.text.contains("2 para"), "Victory unlocks the first class outfit and shows progress toward the next tier")
 	var gear: Dictionary = hud._players[local_id].equipped_items.duplicate()
 	await _click(hud._skins_panel.buttons.explorer)
 	await _wait_for(func() -> bool: return hud._players[local_id].skin_id == "explorer")

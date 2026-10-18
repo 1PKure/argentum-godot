@@ -8,6 +8,8 @@ var progress_bar: ProgressBar
 var message: Label
 var buttons: Dictionary[String, Button] = {}
 var previews: Dictionary[String, Node2D] = {}
+var _title: Label
+var _names: Dictionary[String, Label] = {}
 var _class_id := 1
 var _equipped: Dictionary = {}
 
@@ -27,7 +29,7 @@ func _ready() -> void:
 	var content := VBoxContainer.new()
 	content.add_theme_constant_override("separation", 12)
 	card.add_child(content)
-	_label(content, "Skins", 24)
+	_title = _label(content, "Skins", 24)
 	summary = _label(content, "", 16)
 	progress_bar = ProgressBar.new()
 	progress_bar.custom_minimum_size = Vector2(648, 12)
@@ -36,12 +38,15 @@ func _ready() -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
 	content.add_child(row)
-	for skin: Dictionary in SkinCatalog.ENTRIES:
+	for skin: Dictionary in SkinCatalog.for_class(_class_id):
 		var tile := VBoxContainer.new()
 		tile.custom_minimum_size.x = 153
 		row.add_child(tile)
 		var name_label := _label(tile, str(skin.name), 15)
 		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		name_label.custom_minimum_size = Vector2(153, 42)
+		name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_names[str(skin.id)] = name_label
 		var preview := Control.new()
 		preview.custom_minimum_size = Vector2(153, 108)
 		preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -83,10 +88,12 @@ func close_panel() -> void:
 
 func _refresh() -> void:
 	var profile: SkinProgress = Skins.progress
+	_title.text = "Skins · %s" % ClassCatalog.get_profile(_class_id).name
 	var next: Dictionary = {}
-	for skin: Dictionary in SkinCatalog.ENTRIES:
+	for skin: Dictionary in SkinCatalog.for_class(_class_id):
 		var id := str(skin.id)
-		var unlocked := SkinCatalog.is_unlocked(id, profile.wins)
+		var unlocked := SkinCatalog.is_unlocked(id, profile.wins, _class_id)
+		_names[id].text = str(skin.name)
 		buttons[id].text = "Equipada" if profile.selected == id else "Equipar" if unlocked else "Bloqueada"
 		buttons[id].disabled = not unlocked or profile.selected == id
 		previews[id].set_loadout(_class_id, _equipped if id == "preset" else {}, id)

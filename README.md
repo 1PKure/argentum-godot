@@ -11,7 +11,7 @@ See [the first Web test guide](docs/WEB_TEST.md) for local testing, export instr
 
 The AO20 frame includes inventory/spell panels, synchronized health/mana, arena minimap and a bounded combat console. The book imports all 213 original AO20 entries and enables 39 spells with implemented PvP rules: select → Launch → target click, or a numeric hotkey → target click. Drag spells onto the hotkey bar to reassign them. Escape/right click cancels aiming; WASD stays active and CTRL remains a physical attack without a mana cost.
 
-Use the same branch for the dedicated server and restart it after updating. `tools/Start-PrivateWebTest.cmd` imports the project before launching WSS. The spell protocol checks server support with protocol 12; player updates now redact enemy mana and physical hits use participant-only feedback.
+Use the same branch for the dedicated server and restart it after updating. `tools/Start-PrivateWebTest.cmd` imports the project before launching WSS. The spell protocol checks server support with protocol 13; player updates now redact enemy mana and physical hits use participant-only feedback.
 
 See [the interface scope and Windows test guide](docs/COMBAT_UI.md). AO20 artwork attribution, provenance and its separate license are in `assets/argentum/interface/ao20/`.
 
@@ -36,7 +36,7 @@ Equipment now lives in the server inventory: drag to move/swap, click to equip/u
 
 ## Practice bot
 
-Use **Bot** in the combat HUD while alone: choose one of the nine classes and activate, restart or remove the server-driven opponent. It uses existing movement/combat/recovery rules. Starting or restarting prepares both presets; death stops the practice. A second human joining or the owner's disconnect removes the bot. No lobby isolation is added yet. See [BOTS.md](docs/BOTS.md) for controls, behavior, tests and limits. Class statistics keep the accepted baseline; Apocalypse and Discharge have an explicit 8% arena damage reduction. Hunters use a separate 1200 ms arrow interval. Nonmagical presets contain no blue potions. The bot uses the same 120 ms movement steps and slightly slower action decisions and varied continuous bursts while attacking or recovering; see [ACTION_INTERVALS.md](docs/ACTION_INTERVALS.md) for the slightly faster player cadence. Restart the dedicated server after updating; protocol 12 is required.
+Use **Bot** in the combat HUD while alone: choose one of the nine classes and activate, restart or remove the server-driven opponent. It uses existing movement/combat/recovery rules. Starting or restarting prepares both presets; death stops the practice. A second human joining or the owner's disconnect removes the bot. No lobby isolation is added yet. See [BOTS.md](docs/BOTS.md) for controls, behavior, tests and limits. Class statistics keep the accepted baseline; Apocalypse and Discharge have an explicit 8% arena damage reduction. Hunters use a separate 1200 ms arrow interval. Nonmagical presets contain no blue potions. The bot uses the same 120 ms movement steps and slightly slower action decisions and varied continuous bursts while attacking or recovering; see [ACTION_INTERVALS.md](docs/ACTION_INTERVALS.md) for the slightly faster player cadence. Restart the dedicated server after updating; protocol 13 is required.
 
 Numeric macros and clicked hotkeys preserve the chosen inventory/spell tab. Drinking red/blue potions by click or Q/E keeps the target cursor armed, so manual Launch and macros can be used independently.
 
@@ -47,6 +47,8 @@ The practice bot now moves at the same 120 ms cadence as the player, uses confir
 
 ### Skins and round preparation
 
-**Bot** starts each practice with a server-enforced **3 → 2 → 1 → GO** countdown, tweens and generated tones. A confirmed win unlocks cosmetic outfits at **1, 3 and 5 wins**. Open **Skins** to preview/equip; the original class outfit remains available. Cosmetics preserve stats and equipped items and are replicated to other players. Changing class/reappearing restarts both presets and the countdown. Bot balance is unchanged.
+**Bot** starts each practice with a server-enforced **3 → 2 → 1 → GO** countdown, tweens and generated tones. A confirmed win unlocks cosmetic outfits at **1, 3 and 5 wins**, with three distinct class-appropriate outfits for each of the nine classes. Open **Skins** to preview/equip; the original class outfit remains available. Cosmetics preserve stats and equipped items and are replicated to other players. Changing class/reappearing restarts both presets and the countdown. Bot balance is unchanged.
 
 Progress is saved locally in the same browser/device, without accounts or paid services; clearing browser data removes it. See [BOTS.md](docs/BOTS.md). Arrow impact now uses the supplied **Arrow hit 2.wav**, with source/hash recorded under `assets/argentum/custom/audio/`.
+
+Class-aware rewards retain the previous local wins and selected tier. Mage/Druid rewards remain robes; Hunter and every other class avoid their starter body and duplicate rewards. Confirmed arrow impacts add a brief target-following pixel blood burst while preserving the supplied sound. See docs/BOTS.md for the class reward table and migration details.

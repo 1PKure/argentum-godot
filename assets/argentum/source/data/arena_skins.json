@@ -1,0 +1,182 @@
+{
+  "1": [
+    {
+      "name": "Legendaria gris",
+      "body_id": 142,
+      "source_object_id": 1091,
+      "source_name": "Tunica Legendaria Gris"
+    },
+    {
+      "name": "Roja especial",
+      "body_id": 113,
+      "source_object_id": 4346,
+      "source_name": "Túnica Roja Especial"
+    },
+    {
+      "name": "Mago imperial",
+      "body_id": 145,
+      "source_object_id": 3006,
+      "source_name": "Túnica de Mago Imperial de 4ª Jerarquía"
+    }
+  ],
+  "2": [
+    {
+      "name": "Peto de caballero",
+      "body_id": 70,
+      "source_object_id": 1921,
+      "source_name": "Peto de Caballero"
+    },
+    {
+      "name": "De la Ciénaga",
+      "body_id": 332,
+      "source_object_id": 1941,
+      "source_name": "Armadura de la Ciénaga"
+    },
+    {
+      "name": "Clérigo del Caos",
+      "body_id": 268,
+      "source_object_id": 1522,
+      "source_name": "Armadura de Clérigo del Caos (2ª Jerarquía)"
+    }
+  ],
+  "3": [
+    {
+      "name": "Dragón verde",
+      "body_id": 58,
+      "source_object_id": 1937,
+      "source_name": "Armadura Dragón Verde"
+    },
+    {
+      "name": "Coraza de Harald",
+      "body_id": 59,
+      "source_object_id": 1803,
+      "source_name": "Coraza de Harald"
+    },
+    {
+      "name": "Guerrero del Caos",
+      "body_id": 266,
+      "source_object_id": 1526,
+      "source_name": "Armadura de Guerrero del Caos (2ª Jerarquía)"
+    }
+  ],
+  "4": [
+    {
+      "name": "Ropaje desértico",
+      "body_id": 69,
+      "source_object_id": 1982,
+      "source_name": "Ropaje Desértico"
+    },
+    {
+      "name": "Asesino del Caos",
+      "body_id": 325,
+      "source_object_id": 2976,
+      "source_name": "Armadura de Asesino del Caos (3ª Jerarquía)"
+    },
+    {
+      "name": "Asesino imperial",
+      "body_id": 320,
+      "source_object_id": 3032,
+      "source_name": "Armadura de Asesino Imperial (3ª Jerarquía)"
+    }
+  ],
+  "5": [
+    {
+      "name": "Túnica roja",
+      "body_id": 109,
+      "source_object_id": 381,
+      "source_name": "Túnica Roja"
+    },
+    {
+      "name": "Aventurera",
+      "body_id": 155,
+      "source_object_id": 1226,
+      "source_name": "Túnica Aventurera"
+    },
+    {
+      "name": "Bardo del Caos",
+      "body_id": 268,
+      "source_object_id": 1530,
+      "source_name": "Armadura de Bardo del Caos (2ª Jerarquía)"
+    }
+  ],
+  "6": [
+    {
+      "name": "Aguamarina",
+      "body_id": 118,
+      "source_object_id": 3505,
+      "source_name": "Túnica Aguamarina"
+    },
+    {
+      "name": "Aventurera",
+      "body_id": 155,
+      "source_object_id": 1226,
+      "source_name": "Túnica Aventurera"
+    },
+    {
+      "name": "Roja especial",
+      "body_id": 113,
+      "source_object_id": 4346,
+      "source_name": "Túnica Roja Especial"
+    }
+  ],
+  "7": [
+    {
+      "name": "Bruñida",
+      "body_id": 258,
+      "source_object_id": 500,
+      "source_name": "Armadura Bruñida"
+    },
+    {
+      "name": "Placas completas",
+      "body_id": 254,
+      "source_object_id": 1987,
+      "source_name": "Armadura de Placas Completa"
+    },
+    {
+      "name": "Paladín imperial",
+      "body_id": 333,
+      "source_object_id": 3014,
+      "source_name": "Armadura de Paladín Imperial de 4ª Jerarquía"
+    }
+  ],
+  "8": [
+    {
+      "name": "Dragón verde",
+      "body_id": 58,
+      "source_object_id": 1937,
+      "source_name": "Armadura Dragón Verde"
+    },
+    {
+      "name": "Cuero azul",
+      "body_id": 65,
+      "source_object_id": 998,
+      "source_name": "Armadura de Cuero Azul"
+    },
+    {
+      "name": "Cazador del Caos",
+      "body_id": 267,
+      "source_object_id": 1538,
+      "source_name": "Armadura de Cazador del Caos (2ª Jerarquía)"
+    }
+  ],
+  "12": [
+    {
+      "name": "Combinada",
+      "body_id": 66,
+      "source_object_id": 1981,
+      "source_name": "Vestimenta Combinada"
+    },
+    {
+      "name": "Del Desfalco",
+      "body_id": 265,
+      "source_object_id": 1945,
+      "source_name": "Armadura del Desfalco"
+    },
+    {
+      "name": "Bandido del Caos",
+      "body_id": 327,
+      "source_object_id": 2982,
+      "source_name": "Armadura de Bandido del Caos de 4ª Jerarquía"
+    }
+  ]
+}

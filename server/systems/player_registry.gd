@@ -30,7 +30,7 @@ func is_round_locked(peer_id: int) -> bool:
 
 func try_select_skin(peer_id: int, id: String, local_wins: int) -> Dictionary:
 	var player: PlayerState = _players.get(peer_id)
-	if player == null or not SkinCatalog.is_unlocked(id, local_wins):
+	if player == null or not SkinCatalog.is_unlocked(id, local_wins, player.class_id):
 		return _spell_error("Atuendo no disponible.")
 	player.skin_id = id
 	return {"ok": true, "state": player.to_dictionary()}

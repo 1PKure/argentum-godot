@@ -12,7 +12,7 @@ func _run() -> void:
 	_test_inventory()
 	await _test_effects()
 	# Give the audio server time to release playback after its owner is freed.
-	await create_timer(0.15).timeout
+	await create_timer(0.5).timeout
 	print("Combat feedback checks: %d; failures: %d" % [checks, failures])
 	quit(1 if failures else 0)
 
@@ -97,10 +97,19 @@ func _test_effects() -> void:
 	arrow.set_process(false)
 	_check(arrow._audio != null and arrow._audio.stream.resource_path.ends_with("arrow_hit.wav") and not arrow._audio.playing, "Confirmed arrow prepares the uploaded arrow sound without playing it before impact")
 	arrow._process(0.17)
-	_check(not arrow._shot_sound_played and not arrow._audio.playing, "Arrow travel does not prematurely play its impact sound")
+	_check(not arrow._shot_sound_played and not arrow._audio.playing and not arrow._blood_active, "Arrow travel does not prematurely play its impact sound")
 	arrow._process(0.02)
 	_check(arrow._shot_sound_played and arrow._audio.playing and not arrow._projectile.visible, "Reaching the target plays arrow feedback exactly at visible impact")
 	_check(arrow._lifetime >= 0.18 + arrow._audio.stream.get_length(), "Arrow effect leaves enough time to finish its original audio")
+	_check(arrow._blood_active and arrow._blood_age < 0.02, "Confirmed arrow starts one blood burst at the same visual impact")
+	target_avatar.position += Vector2(24, 0)
+	arrow._process(0.02)
+	_check(arrow._blood_origin.is_equal_approx(target_avatar.position + Vector2(0, -14)) and arrow._blood_age > 0.02, "Blood follows the moving target without restarting its age")
+	apocalypse.visible = false
+	arrow._process(0.09)
+	await _capture("arrow-blood-impact.png")
+	arrow._process(0.33)
+	_check(not arrow._blood_active and arrow._shot_sound_played, "Blood ends after 320 ms without replaying impact audio")
 	world._on_player_despawned(2)
 	effect._process(0.0)
 	_check(not effect._sprite.visible and not effect._text.visible and effect._words.visible, "A despawn hides only the missing target's visual feedback")

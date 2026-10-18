@@ -15,6 +15,11 @@ var _audio: AudioStreamPlayer
 var _projectile: Sprite2D
 var _is_shot := false
 var _shot_sound_played := false
+var _blood_active := false
+var _blood_age := 0.0
+var _blood_origin := Vector2.ZERO
+var _blood_direction := Vector2.RIGHT
+const BLOOD_SECONDS := 0.32
 const SHOT_TRAVEL_SECONDS := 0.18
 const SHOT_IMPACT_SOUND := "res://assets/argentum/custom/audio/arrow_hit.wav"
 
@@ -74,8 +79,16 @@ func _process(delta: float) -> void:
 	_update_anchors()
 	if _is_shot and not _shot_sound_played and _elapsed >= SHOT_TRAVEL_SECONDS:
 		_shot_sound_played = true
-		if _audio != null and is_instance_valid(target_avatar) and not target_avatar.is_queued_for_deletion():
-			_audio.play()
+		if is_instance_valid(target_avatar) and not target_avatar.is_queued_for_deletion():
+			if _audio != null:
+				_audio.play()
+			if int(event.get("amount", 0)) > 0:
+				_blood_active = true
+				_blood_direction = (target - origin).normalized()
+	if _blood_active:
+		_blood_age = maxf(0.0, _elapsed - SHOT_TRAVEL_SECONDS)
+		_blood_active = _blood_age < BLOOD_SECONDS and is_instance_valid(target_avatar) and not target_avatar.is_queued_for_deletion()
+		queue_redraw()
 	var fade_start := _lifetime - 0.4
 	if _elapsed > fade_start:
 		modulate.a = maxf(0.0, 1.0 - (_elapsed - fade_start) / 0.4)
@@ -101,6 +114,7 @@ func _update_anchors() -> void:
 		_words.position = origin + Vector2(-100, -107)
 	if has_target:
 		target = target_avatar.position
+		_blood_origin = target + Vector2(0, -14)
 		_text.position = target + Vector2(-80, -85 - _elapsed * 24.0)
 	if _projectile != null:
 		var fraction := minf(_elapsed / SHOT_TRAVEL_SECONDS, 1.0)
@@ -133,3 +147,18 @@ func _make_label(value: String, at: Vector2, font_size: int) -> Label:
 	label.add_theme_constant_override("shadow_offset_y", 1)
 	add_child(label)
 	return label
+
+
+func _draw() -> void:
+	if not _blood_active:
+		return
+	# Small pixel droplets, aligned with the incoming arrow. Local presentation
+	# only: no extra damage, RNG calls, sounds, stains or persistent nodes.
+	var fade := 1.0 - _blood_age / BLOOD_SECONDS
+	for index in range(8):
+		var velocity := _blood_direction.rotated((index - 3.5) * 0.44) * (32.0 + (index % 3) * 16.0)
+		var at := _blood_origin + velocity * _blood_age + Vector2(0, 100.0 * _blood_age * _blood_age)
+		var size_value := 3.0 if index % 3 == 0 else 2.0
+		var color := Color("b82c35") if index % 2 == 0 else Color("72131d")
+		color.a = fade
+		draw_rect(Rect2(at.round(), Vector2.ONE * size_value), color)

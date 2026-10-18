@@ -95,7 +95,7 @@ func set_loadout(id: int, equipped: Dictionary, skin_id: String = "preset") -> v
 	_class_id = id
 	_equipped_items = equipped.duplicate()
 	_skin_id = skin_id
-	var skin := SkinCatalog.get_skin(skin_id)
+	var skin := SkinCatalog.get_skin(skin_id, id)
 	set_body_id(int(skin.body_id) if not skin.is_empty() and int(skin.body_id) > 0 else int(profile.body_id))
 	for kind: String in ["weapon", "shield", "helmet"]:
 		if not _equipment.has(kind):
