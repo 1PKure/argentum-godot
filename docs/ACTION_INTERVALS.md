@@ -20,7 +20,7 @@ Clic y Usar tienen tiempos propios, compartidos entre roja/azul. El mínimo com�
 
 La provisión sigue siendo ilimitada. Las clases sin maná reciben sólo rojas; al cambiar desde una azul seleccionada se selecciona la roja. Seleccionar una poción llena no la bebe ni cambia el recurso de otro color. La selección sigue al objeto al arrastrarlo con botón derecho; ver [RECOVERY.md](RECOVERY.md).
 
-No se agregan bloqueos de poción → golpe ni poción ↔ hechizo. Se conservan costes, cantidad recuperada, recargas individuales y de grupo, estados y meditación. El movimiento del jugador sigue a 120 ms. Servidor/cliente requieren protocolo **11** y la misma revisión.
+No se agregan bloqueos de poción → golpe ni poción ↔ hechizo. Se conservan costes, cantidad recuperada, recargas individuales y de grupo, estados y meditación. El movimiento del jugador sigue a 120 ms. Servidor/cliente requieren protocolo **12** y la misma revisión.
 
 ## Bot
 

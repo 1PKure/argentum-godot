@@ -16,7 +16,7 @@ var _projectile: Sprite2D
 var _is_shot := false
 var _shot_sound_played := false
 const SHOT_TRAVEL_SECONDS := 0.18
-const SHOT_IMPACT_SOUND := "res://assets/argentum/source/audio/2542.ogg"
+const SHOT_IMPACT_SOUND := "res://assets/argentum/custom/audio/arrow_hit.wav"
 
 
 func _ready() -> void:

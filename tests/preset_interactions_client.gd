@@ -27,7 +27,7 @@ func _run() -> void:
 	controller = main._spell_controller
 	world = main._world
 	await _wait_for(func() -> bool: return hud._players.size() == 2 and controller.server_ready)
-	_check(hud._players.size() == 2 and controller.server_ready, "Two clients negotiate protocol 11")
+	_check(hud._players.size() == 2 and controller.server_ready, "Two clients negotiate protocol 12")
 	if hud._players.size() != 2 or not controller.server_ready:
 		await _finish()
 		return
@@ -99,7 +99,7 @@ func _run() -> void:
 	_check(hud._players[opponent].current_health < health and not controller.aimed_attack and hud._players[local_id].current_mana == 0, "Clicking a diagonal rival confirms physical damage with zero mana")
 	_check(world._spell_effects.size() > 0, "Confirmed arrow creates visible projectile feedback")
 	var arrow = world._spell_effects[-1]
-	_check(arrow._is_shot and arrow._audio != null and arrow._audio.stream.resource_path.ends_with("2542.ogg"), "Real hunter hit loads the original AO20 arrow sound")
+	_check(arrow._is_shot and arrow._audio != null and arrow._audio.stream.resource_path.ends_with("arrow_hit.wav"), "Real hunter hit loads the uploaded arrow impact sound")
 	_check(health - hud._players[opponent].current_health >= 181 and health - hud._players[opponent].current_health <= 200, "Equipped hunter deals 181-200 damage to the equipped mage")
 	var protected_health: int = hud._players[opponent].current_health
 	var spam_start := Time.get_ticks_msec()

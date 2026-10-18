@@ -6,6 +6,7 @@ signal removed(peer_id: int)
 signal status_changed(status: Dictionary)
 
 const BOT_ID := -1000 # Entity ID only; never a network recipient or the -1 lookup sentinel.
+const COUNTDOWN_MSEC := 3000
 const THINK_MSEC := 120
 const COMMAND_INTERVAL_MSEC := 400
 const MOVE_INTERVAL_MSEC := MovementRules.PRACTICE_BOT_MOVE_INTERVAL_MSEC
@@ -16,6 +17,9 @@ var registry: PlayerRegistry
 var owner_id := 0
 var phase := "idle"
 var _ready_at := 0
+var _starts_at := 0
+var _countdown := 0
+var round_id := ""
 var _next_observation := 0
 var _observed_cell := Vector2i.ZERO
 var _observed_rooted := false
@@ -61,7 +65,8 @@ func human_ids() -> Array[int]:
 func status() -> Dictionary:
 	var bot := registry.get_player(BOT_ID)
 	return {"enabled": bot != null, "owner_id": owner_id, "bot_id": BOT_ID if bot != null else 0,
-		"class_id": bot.class_id if bot != null else 3, "phase": phase, "human_count": human_ids().size()}
+		"class_id": bot.class_id if bot != null else 3, "phase": phase, "human_count": human_ids().size(),
+		"round_id": round_id, "countdown": _countdown}
 
 func request(peer_id: int, enabled: bool, class_id: int, request_id: int, now: int = -1) -> Dictionary:
 	if now < 0:
@@ -82,6 +87,13 @@ func request(peer_id: int, enabled: bool, class_id: int, request_id: int, now: i
 		return _error("Clase de bot desconocida.")
 	if now - int(_last_command.get(peer_id, -COMMAND_INTERVAL_MSEC)) < COMMAND_INTERVAL_MSEC:
 		return _error("Esperá un instante antes de reiniciar la práctica.")
+	return _start_round(peer_id, class_id, now)
+
+func restart_after_preset(peer_id: int, now: int = -1) -> void:
+	if peer_id == owner_id and registry.has_player(BOT_ID):
+		_start_round(peer_id, registry.get_player(BOT_ID).class_id, Time.get_ticks_msec() if now < 0 else now)
+
+func _start_round(peer_id: int, class_id: int, now: int) -> Dictionary:
 	var spawns := ArenaData.get_spawn_points(registry.get_arena_id())
 	if spawns.size() < 2:
 		return _error("La arena necesita dos puntos de aparición.")
@@ -98,11 +110,16 @@ func request(peer_id: int, enabled: bool, class_id: int, request_id: int, now: i
 	bot.grid_position = spawns[1]
 	bot.facing_direction = MovementRules.Direction.WEST
 	owner_id = peer_id
-	phase = "active"
+	phase = "countdown"
+	round_id = Crypto.new().generate_random_bytes(16).hex_encode()
+	_starts_at = now + COUNTDOWN_MSEC
+	_countdown = 3
+	registry.set_round_locked(peer_id, true)
+	registry.set_round_locked(BOT_ID, true)
 	_cast_request = 0
 	_recovery_request = 0
 	_shot_request = 0
-	_ready_at = now + _rng.randi_range(600, 850)
+	_ready_at = _starts_at + _rng.randi_range(600, 850)
 	_next_observation = _ready_at
 	_observed_cell = owner.grid_position
 	_observed_rooted = false
@@ -117,12 +134,16 @@ func request(peer_id: int, enabled: bool, class_id: int, request_id: int, now: i
 	_recent_cells.clear()
 	_combo_step = 0
 	_combo_until = 0
-	_next_control = now + _rng.randi_range(10000, 14000)
+	_next_control = _starts_at + _rng.randi_range(10000, 14000)
 	reset_world.emit()
 	status_changed.emit(status())
 	return {"ok": true}
 
 func remove_bot(notify: bool = true) -> void:
+	registry.set_round_locked(owner_id, false)
+	registry.set_round_locked(BOT_ID, false)
+	round_id = ""
+	_countdown = 0
 	if registry.has_player(BOT_ID):
 		registry.remove_player(BOT_ID)
 		removed.emit(BOT_ID)
@@ -149,7 +170,7 @@ func peer_left(peer_id: int) -> void:
 
 func tick(now: int = -1) -> Array[Dictionary]:
 	var actions: Array[Dictionary] = []
-	if phase != "active":
+	if phase not in ["active", "countdown"]:
 		return actions
 	if now < 0:
 		now = Time.get_ticks_msec()
@@ -158,9 +179,18 @@ func tick(now: int = -1) -> Array[Dictionary]:
 	if bot == null or target == null or human_ids().size() != 1:
 		remove_bot()
 		return actions
-	if not bot.is_alive or not target.is_alive:
-		phase = "won" if not bot.is_alive else "lost"
-		status_changed.emit(status())
+	if phase == "countdown":
+		var seconds := maxi(0, ceili((_starts_at - now) / 1000.0))
+		if now >= _starts_at:
+			phase = "active"
+			registry.set_round_locked(owner_id, false)
+			registry.set_round_locked(BOT_ID, false)
+		if _countdown != seconds:
+			_countdown = seconds
+			status_changed.emit(status())
+		if phase == "countdown":
+			return actions
+	if settle_round():
 		return actions
 	if now < _ready_at:
 		return actions
@@ -219,6 +249,18 @@ func tick(now: int = -1) -> Array[Dictionary]:
 				_remember_move(direction, moved.grid_position)
 				actions.append({"kind": "move", "state": moved.to_dictionary()})
 	return actions
+
+# Called immediately after a human hit too, before a preset/respawn can erase a defeat.
+func settle_round() -> bool:
+	if phase != "active":
+		return phase in ["won", "lost"]
+	var bot := registry.get_player(BOT_ID)
+	var owner := registry.get_player(owner_id)
+	if bot != null and owner != null and (not bot.is_alive or not owner.is_alive):
+		phase = "won" if not bot.is_alive and owner.is_alive else "lost"
+		status_changed.emit(status())
+		return true
+	return false
 
 func _attack(bot: PlayerState, ranged: bool, caster: bool, now: int, actions: Array[Dictionary]) -> void:
 	var delta := _observed_cell - bot.grid_position

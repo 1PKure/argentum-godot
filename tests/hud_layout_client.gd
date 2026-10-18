@@ -81,6 +81,26 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	await _capture("hud-clean-layout.png")
+	hud.set_menu_opened(false)
+	await _click(hud._reserved_buttons[3])
+	for resolution: Vector2i in [Vector2i(1280, 800), Vector2i(1280, 720), Vector2i(1920, 1080), Vector2i(800, 600)]:
+		root.size = resolution
+		hud._fit_interface()
+		await process_frame
+		await process_frame
+		var card: Control = hud._skins_panel.get_child(1).get_child(0)
+		_check(Rect2(Vector2.ZERO, root.get_visible_rect().size).encloses(card.get_global_rect()), "Skin collection fits %s" % resolution)
+	_key(KEY_ESCAPE, true)
+	_key(KEY_ESCAPE, false)
+	await process_frame
+	_check(not hud._skins_panel.visible and main._local_input.is_processing(), "Skin dialog closes cleanly after responsive layout")
+	root.size = Vector2i(1280, 800)
+	hud._fit_interface()
+	await process_frame
+	await process_frame
+	hud.set_menu_opened(true)
+	await process_frame
+	await process_frame
 	await _click(hud._menu_disconnect_button)
 	_check(not hud._menu_panel.visible and hud._players.is_empty() and not main._local_input.is_processing(), "Disconnect from menu closes the modal and clears the session")
 	await _finish()

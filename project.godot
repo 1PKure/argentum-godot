@@ -25,6 +25,7 @@ SpellNetwork="*res://autoload/spell_network.gd"
 RecoveryNetwork="*res://autoload/recovery_network.gd"
 InventoryNetwork="*res://autoload/inventory_network.gd"
 BotNetwork="*res://autoload/bot_network.gd"
+Skins="*res://autoload/skins.gd"
 
 [display]
 

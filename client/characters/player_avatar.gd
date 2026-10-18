@@ -132,7 +132,7 @@ func setup(
 	_apply_move_speed(player_state)
 	is_alive = player_state.is_alive
 	_apply_effect_presentation(player_state)
-	_player_visual.set_loadout(player_state.class_id, player_state.equipped_items)
+	_player_visual.set_loadout(player_state.class_id, player_state.equipped_items, player_state.skin_id)
 
 	_player_visual.set_head_id(
 		_get_head_id_from_peer()
@@ -173,7 +173,7 @@ func apply_server_stats(
 	is_alive = player_state.is_alive
 	is_ghost = player_state.is_ghost
 	_apply_effect_presentation(player_state)
-	_player_visual.set_loadout(player_state.class_id, player_state.equipped_items)
+	_player_visual.set_loadout(player_state.class_id, player_state.equipped_items, player_state.skin_id)
 	if _movement_waypoints.is_empty():
 		_last_visual_direction = Vector2(MovementRules.get_offset(player_state.facing_direction))
 		_player_visual.set_movement(_last_visual_direction, false)

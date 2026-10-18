@@ -5,12 +5,12 @@ Primera IA de práctica, ejecutada por el dedicado. Usa los nueve presets y el b
 ## Probar
 
 1. GitHub Desktop: Fetch origin, elegir `work/arena-practice-bot` y Pull origin.
-2. Cerrar el dedicado anterior y abrir `tools/Start-PrivateWebTest.cmd`. Cliente y servidor requieren la misma revisión: protocolo **11**.
+2. Cerrar el dedicado anterior y abrir `tools/Start-PrivateWebTest.cmd`. Cliente y servidor requieren la misma revisión: protocolo **12**.
 3. Recargar la web privada con Ctrl+F5; WSS sigue precargado.
 4. Con un único jugador humano conectado: **Bot**, elegir clase y **Activar bot**.
-5. Jugar con Lanzar/macros, CTRL, pociones y meditación habituales. El rival se mueve, ataca y se recupera con las mismas funciones autoritativas.
+5. Esperar **3 → 2 → 1 → ¡YA!**, con tonos y tween visual. Durante esos tres segundos el servidor bloquea movimiento, ataques, magia y recuperación para ambos personajes. Luego jugar con Lanzar/macros, CTRL, pociones y meditación habituales. El rival se mueve, ataca y se recupera con las mismas funciones autoritativas.
 6. **Bot → Reiniciar práctica** prepara ambos personajes con sus presets, recursos/estados limpios y posiciones iniciales. También permite cambiar la clase del bot. Reconstruye inventario/equipo del preset; los macros personalizados de cada clase se conservan.
-7. **Quitar bot** lo retira. Si cualquiera muere, la IA se detiene y la consola comunica el resultado; reiniciar es explícito. Reaparecer o cambiar tu clase sigue siendo libre durante las pruebas, pero no inicia automáticamente una nueva práctica terminada.
+7. **Quitar bot** lo retira. Si cualquiera muere, la IA se detiene y la consola comunica el resultado; reiniciar es explícito. Reaparecer o cambiar tu clase sigue siendo libre y prepara de nuevo ambos presets, con otra cuenta de tres segundos. Una ronda interrumpida no da recompensas; la skin equipada se conserva.
 
 El menú Bot bloquea entradas locales mientras está abierto, igual que Clases. El servidor y el rival siguen funcionando: no es una pausa global del combate online.
 
@@ -23,7 +23,7 @@ Desconectar al dueño elimina el bot, sus efectos, recargas y propiedad. Una rec
 ## Comportamiento y reglas
 
 - Movimiento continuo con pasos de 120 ms, igual que el jugador; la interpolación visual usa la misma velocidad. Magia cada 1250–1350 ms, golpe cada 650–750 ms, arco cada 1200–1300 ms y pociones cada 280 ms sin jitter adicional; además conserva todos los límites autoritativos. Es una reducción moderada de presión, sin las pausas largas por casilla, congelación al apuntar ni recuperación excesivamente lenta de la versión de entrenamiento.
-- Reacción inicial de 600–850 ms. La posición pública del rival se observa cada 90–150 ms; ataca usando esa observación, sin guardar una casilla otros 350–600 ms ni congelarse al apuntar. Un 6% de oportunidades puede desviarse una casilla; un clic fallado consume también la oportunidad ofensiva, para impedir reintentos gratis a gran velocidad.
+- Reacción inicial de 600–850 ms después de ¡YA!. La posición pública del rival se observa cada 90–150 ms; ataca usando esa observación, sin guardar una casilla otros 350–600 ms ni congelarse al apuntar. Un 6% de oportunidades puede desviarse una casilla; un clic fallado consume también la oportunidad ofensiva, para impedir reintentos gratis a gran velocidad.
 - Mago, Clérigo y Bardo priorizan Apocalipsis → Descarga; sólo después de impactos confirmados sobre un rival que sigue vivo pasan a una magia de seguimiento barata. El Mago usa Tormenta de Fuego; Clérigo/Bardo usan Misil porque sus presets no conceden Tormenta. Druida usa Rayo Elemental y Misil. No se concede ningún hechizo ajeno al preset y se conserva el coste real. Un fallo no avanza la secuencia; seis segundos de interrupción la reinician. La fuente AO20 no contiene una entrada llamada Fuego Mágico: se usan los nombres originales y magias disponibles. Paralizar tiene una primera oportunidad a los 10–14 segundos y luego oportunidades espaciadas 14–18 segundos y no se repite sobre un rival que ya tiene una raíz visible. Guerrero, Paladín, Asesino y Bandido se acercan para golpear; los híbridos usan Remover/Curación permitidos. Cazador usa arco y munición reales con línea de tiro.
 - El desplazamiento se decide en trayectos de 2–4 casillas durante 450–800 ms. Pondera ambos ejes, penaliza regresar inmediatamente y las casillas recientes, y corta la repetición del mismo eje después de cuatro pasos cuando hay una alternativa legal; puede necesitar más al reposicionarse por rango/obstáculos. Alterna desplazamientos laterales hacia ambos lados, acercarse o alejarse; hay pausas breves ocasionales de 150–260 ms. La búsqueda de caminos varía entre prácticas. Caminar, lanzar y beber funcionan de forma independiente: lanzar ya no detiene cada trayecto ni obliga a subir después.
 - Bajo 55% de vida o, en lanzadores, 18% de maná, adopta una postura defensiva: intenta abrir distancia y recuperar recursos. Vuelve a presionar al alcanzar 75% de vida y 35% de maná. Los cuerpos a cuerpo dejan una ventana real para beber después de golpear; no se bloquean a sí mismos atacando justo antes de cada poción. La Curación permitida es una decisión ocasional, consume maná y ocupa su intervalo de magia.
@@ -53,3 +53,15 @@ En ocho semillas y 24 segundos por escenario, la simulación informa aciertos co
 El bot utiliza una sola vía de poción y no obtiene el bono de clic + Usar del jugador. El ritmo del bot es independiente del ajuste general para poder calibrarlo sin volver lento al personaje humano.
 
 La regresión de combos prueba los primeros impactos confirmados en ocho semillas contra un rival superviviente y las alternativas legales de Clérigo/Bardo/Druida. La variación de rutas mide ambos ejes, trayectorias distintas y la ruptura de subidas/bajadas prolongadas. Son comprobaciones de comportamiento, no una garantía de dificultad subjetiva.
+
+## Skins y recompensas
+
+Las victorias confirmadas por el dedicado suman **1 victoria por ronda**. Un ID aleatorio de ronda evita contar dos veces estados terminales repetidos. Perder, quitar el bot, cambiar de preset, desconectar o la entrada de otro humano no premian una ronda sin terminar.
+
+**Skins**, en la cabecera, muestra cuatro vistas previas y permite equipar o volver al atuendo de clase. Hitos fijos, sin azar ni duplicados: **1 victoria: Explorador; 3: Escarlata; 5: De la Luz**. Cualquier clase de bot suma igual. La barra indica el siguiente hito y termina en colección completa. Se reutilizan cuerpos AO20 67, 48 y 262 ya importados; no se modifica el equipo del inventario. Armas, casco, escudo, HP/maná, defensas, daño, intervalos y balance aceptado se conservan. El cuerpo cosmético se replica a los otros clientes y se restaura al reconectar.
+
+El prototipo sin cuentas guarda victorias, selección e IDs cobrados en `user://arena_skins_v1.cfg` (almacenamiento del navegador en Web). El progreso corresponde a ese navegador/dispositivo/origen; borrar sus datos lo elimina. No se comparte entre dispositivos ni se presenta como inventario protegido contra manipulación: es persistencia local gratuita; el servidor valida el catálogo y el requisito declarado, y confirma las victorias de la sesión. No hay DB, cuenta ni servicio pago. Si falla el guardado se avisa en la ventana Skins.
+
+La flecha usa el archivo adjunto **Arrow hit 2.wav**, copiado sin conversión a `assets/argentum/custom/audio/arrow_hit.wav`, a los 180 ms del impacto visual confirmado. Conserva el volumen existente y sólo suena al acertar. Procedencia y hash en `assets/argentum/custom/audio/sources.json`.
+
+`arena_rewards_smoke.gd` cubre frontera de inicio 2999/3000 ms, intentos tempranos, resultados únicos, guardado/recarga, hitos, selección cosmética y limpieza. `arena_rewards_client.gd` recorre activación, cuenta y bloqueo por RPC real, victoria mediante hechizos, desbloqueo/equipado, reconexión y réplica a un segundo cliente desde el PCK exportado.

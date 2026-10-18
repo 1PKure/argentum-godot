@@ -60,6 +60,8 @@ var _inventory_layout := ArenaInventoryLayout.new()
 var _bottom_back: Panel
 var _class_panel: ClassPresetPanel
 var _bot_panel: BotPracticePanel
+var _skins_panel: SkinsPanel
+var _round_countdown: RoundCountdown
 var _last_bot_phase := "idle"
 var _last_bot_owner := 0
 var _inventory_move: Dictionary = {}
@@ -96,6 +98,10 @@ func _ready() -> void:
 	RecoveryNetwork.action_resolved.connect(_on_recovery_event)
 	RecoveryNetwork.selection_changed.connect(_refresh_potion_selection)
 	BotNetwork.changed.connect(_on_bot_status)
+	Skins.victory_awarded.connect(func(result: Dictionary) -> void:
+		for id: String in result.unlocked:
+			console.append_message("Skin desbloqueada: %s. Equipala desde Skins." % SkinCatalog.get_skin(id).name)
+	)
 	InventoryNetwork.rejected.connect(func(message: String) -> void: console.append_message(message))
 	RecoveryNetwork.action_rejected.connect(func(message: String) -> void: console.append_message(message))
 	show_inventory()
@@ -216,6 +222,8 @@ func end_session(message: String) -> void:
 	set_menu_opened(false)
 	_class_panel.close_panel()
 	_bot_panel.close_panel()
+	_skins_panel.close_panel()
+	_round_countdown.clear()
 	_players.clear()
 	_local_peer_id = 0
 	_connection_label.text = "Sin conexión"
@@ -397,6 +405,14 @@ func _build_interface() -> void:
 	_bot_panel = BotPracticePanel.new()
 	add_child(_bot_panel)
 	_bot_panel.opened_changed.connect(func(_opened: bool) -> void: _notify_modal_state())
+	_skins_panel = SkinsPanel.new()
+	add_child(_skins_panel)
+	_skins_panel.opened_changed.connect(func(_opened: bool) -> void: _notify_modal_state())
+	_round_countdown = RoundCountdown.new()
+	game_area.add_child(_round_countdown)
+	_reserved_buttons[3].text = "Skins"
+	_reserved_buttons[3].tooltip_text = "Atuendos desbloqueados al vencer al bot"
+	_reserved_buttons[3].pressed.connect(_open_skins)
 	_reserved_buttons[0].text = "Clases"
 	_reserved_buttons[0].tooltip_text = "Ver y elegir clases, equipo y estadísticas."
 	for style_name: String in ["normal", "hover", "pressed", "disabled"]:
@@ -409,6 +425,8 @@ func _build_interface() -> void:
 	_reserved_buttons[2].text = "Bot"
 	_reserved_buttons[2].tooltip_text = "Práctica con bot"
 	_reserved_buttons[2].pressed.connect(_open_bot)
+	for style_name: String in ["normal", "hover", "pressed", "disabled"]:
+		_reserved_buttons[3].add_theme_stylebox_override(style_name, _reserved_buttons[0].get_theme_stylebox(style_name))
 	for style_name: String in ["normal", "hover", "pressed", "disabled"]:
 		_reserved_buttons[2].add_theme_stylebox_override(style_name, _reserved_buttons[0].get_theme_stylebox(style_name))
 	_reserved_buttons[1].text = "Zoom 1×"
@@ -503,7 +521,7 @@ func _build_menu() -> void:
 
 
 func is_modal_open() -> bool:
-	return _menu_panel.visible or _class_panel.visible or _bot_panel.visible
+	return _menu_panel.visible or _class_panel.visible or _bot_panel.visible or _skins_panel.visible
 
 
 func set_menu_opened(opened: bool) -> void:
@@ -518,10 +536,12 @@ func set_menu_opened(opened: bool) -> void:
 
 
 func _notify_modal_state() -> void:
-	if is_modal_open() and _spell_controller != null:
+	if _spell_controller != null:
+		_spell_controller.input_blocked = is_gameplay_blocked()
+	if is_gameplay_blocked() and _spell_controller != null:
 		_cancel_inventory_move()
 		_spell_controller.cancel_targeting()
-	modal_changed.emit(is_modal_open())
+	modal_changed.emit(is_gameplay_blocked())
 
 
 func _input(event: InputEvent) -> void:
@@ -549,6 +569,8 @@ func _input(event: InputEvent) -> void:
 	if event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
 		if _menu_panel.visible:
 			set_menu_opened(false)
+		elif _skins_panel.visible:
+			_skins_panel.close_panel()
 		elif _bot_panel.visible:
 			_bot_panel.close_panel()
 		else:
@@ -600,6 +622,7 @@ func _open_classes() -> void:
 	if state != null and _spell_controller != null and _spell_controller.server_ready:
 		set_menu_opened(false)
 		_bot_panel.close_panel()
+		_skins_panel.close_panel()
 		_spell_controller.cancel_targeting()
 		_class_panel.open_panel(state.class_id)
 
@@ -639,8 +662,12 @@ func _update_recovery_controls() -> void:
 	_health_potion_button.disabled = not ready or (state != null and not state.is_alive)
 	_mana_potion_button.disabled = not ready or (state != null and not state.is_alive)
 	_use_button.disabled = not ready or (state != null and not state.is_alive) or (state != null and state.max_mana == 0 and RecoveryNetwork.selected_potion == "mana_potion")
+	var preparing := str(BotNetwork.state.get("phase", "")) == "countdown" and int(BotNetwork.state.get("owner_id", 0)) == _local_peer_id
+	for action_button: Button in [_meditate_button, _health_potion_button, _mana_potion_button, _use_button]:
+		action_button.disabled = action_button.disabled or preparing
 	_reserved_buttons[0].disabled = not ready
 	_reserved_buttons[2].disabled = not ready
+	_reserved_buttons[3].disabled = not ready
 	_meditate_button.disabled = _meditate_button.disabled or (state != null and state.max_mana == 0)
 	_mana_potion_button.disabled = _mana_potion_button.disabled or (state != null and state.max_mana == 0)
 	if state == null:
@@ -712,8 +739,8 @@ func _fit_interface() -> void:
 	_bottom_back.size = Vector2(256, 188)
 	_close_button.position.x = _frame.size.x - 26
 	for index in range(_reserved_buttons.size()):
-		_reserved_buttons[index].position.x = side_x + 8 + index * 68
-		_reserved_buttons[index].size.x = 65 if index < 3 else 23
+		_reserved_buttons[index].position.x = side_x + 8 + index * 58
+		_reserved_buttons[index].size.x = 56
 	for index in range(_hotkey_buttons.size()):
 		_hotkey_buttons[index].position = Vector2((side_x - 410) * 0.5 + index * 41, height - 49)
 	if _world != null:
@@ -932,12 +959,15 @@ func _open_bot() -> void:
 	if _spell_controller != null and _spell_controller.server_ready and _players.has(_local_peer_id):
 		set_menu_opened(false)
 		_class_panel.close_panel()
+		_skins_panel.close_panel()
 		_spell_controller.cancel_targeting()
 		_bot_panel.open_panel()
 
 
 func _on_bot_status() -> void:
 	var state: Dictionary = BotNetwork.state
+	_round_countdown.update_status(state, _local_peer_id)
+	_notify_modal_state()
 	var phase := str(state.get("phase", "idle"))
 	var owner := int(state.get("owner_id", 0))
 	if phase != _last_bot_phase and _local_peer_id != 0:
@@ -967,3 +997,15 @@ func _release_text_focus() -> void:
 func _begin_use_button() -> void:
 	_release_text_focus()
 	RecoveryNetwork.begin_using_selected("button")
+
+
+func is_gameplay_blocked() -> bool:
+	return is_modal_open() or (str(BotNetwork.state.get("phase", "")) == "countdown" and int(BotNetwork.state.get("owner_id", 0)) == _local_peer_id and _local_peer_id != 0)
+
+func _open_skins() -> void:
+	var state: PlayerState = _players.get(_local_peer_id)
+	if state != null:
+		set_menu_opened(false)
+		_class_panel.close_panel()
+		_bot_panel.close_panel()
+		_skins_panel.open_panel(state.class_id, state.equipped_items)

@@ -11,6 +11,7 @@ var aimed_attack := false
 var _preset_revision := -1
 var bindings: Array[int] = []
 var session_active := false
+var input_blocked := false
 var server_ready := false
 var pending_request := 0
 var _next_request := 0
@@ -70,7 +71,7 @@ func aim_selected() -> void:
 
 
 func can_launch() -> bool:
-	return session_active and server_ready and _alive and pending_request == 0 and ClassCatalog.can_cast(class_id, selected_spell_id)
+	return not input_blocked and session_active and server_ready and _alive and pending_request == 0 and ClassCatalog.can_cast(class_id, selected_spell_id)
 
 
 func aim_hotkey(slot: int) -> void:
@@ -86,7 +87,7 @@ func aim_hotkey(slot: int) -> void:
 
 
 func aim_spell(id: int) -> void:
-	if not session_active or not server_ready or not _alive:
+	if input_blocked or not session_active or not server_ready or not _alive:
 		feedback.emit("No podés lanzar en este momento.", "system")
 		return
 	if not ClassCatalog.can_cast(class_id, id):
@@ -124,7 +125,7 @@ func assign_hotkey(slot: int, id: int) -> void:
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if not session_active or not event is InputEventKey or not event.pressed or event.echo:
+	if input_blocked or not session_active or not event is InputEventKey or not event.pressed or event.echo:
 		return
 	var focus := get_viewport().gui_get_focus_owner()
 	if focus is LineEdit or focus is TextEdit:
@@ -227,7 +228,7 @@ func apply_state(data: Dictionary) -> void:
 
 
 func aim_basic_attack() -> void:
-	if not session_active or not server_ready or not _alive or pending_request != 0:
+	if input_blocked or not session_active or not server_ready or not _alive or pending_request != 0:
 		return
 	cancel_targeting()
 	if class_id == 8:

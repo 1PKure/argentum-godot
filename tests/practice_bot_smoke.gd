@@ -21,9 +21,9 @@ func _run() -> void:
 	var human: PlayerState = f.human
 	human.current_health = 20
 	var original := human.to_dictionary()
-	_check(not manager.request(999, true, 3, 1, 10000).ok and manager.owner_id == 0, "Unknown sender cannot own a bot")
-	_check(not manager.request(301, true, 9, 1, 10000).ok and human.to_dictionary() == original, "Unavailable class cannot reset a character or create a bot")
-	_check(manager.request(301, true, 8, 2, 10000).ok, "A solo player can activate a hunter bot")
+	_check(not _start(manager, 999, true, 3, 1, 10000).ok and manager.owner_id == 0, "Unknown sender cannot own a bot")
+	_check(not _start(manager, 301, true, 9, 1, 10000).ok and human.to_dictionary() == original, "Unavailable class cannot reset a character or create a bot")
+	_check(_start(manager, 301, true, 8, 2, 10000).ok, "A solo player can activate a hunter bot")
 	var bot := registry.get_player(ArenaPracticeBot.BOT_ID)
 	_check(bot.is_bot and bot.class_id == 8 and bot.equipped_items.has("weapon") and bot.equipped_items.has("ammunition"), "Bot has a real selected class and equipped inventory")
 	_check(human.current_health == human.max_health and human.current_mana == human.max_mana and human.grid_position == Vector2i(4, 5) and bot.grid_position == Vector2i(15, 5), "Starting practice prepares both presets at separate spawn points")
@@ -34,15 +34,15 @@ func _run() -> void:
 	_check(not first.is_empty() and bot.grid_position != Vector2i(15, 5), "Bot begins approaching through legal grid moves")
 	var pos := bot.grid_position
 	_check(manager.tick(11300).is_empty() and bot.grid_position == pos, "Repeated same-time ticks cannot duplicate movement or damage")
-	_check(not manager.request(301, true, 1, 2, 11000).ok and bot.class_id == 8, "Replayed command cannot restart practice")
-	_check(not manager.request(301, true, 1, 3, 10399).ok, "Rapid reset commands are limited")
-	_check(manager.request(301, false, 1, 4, 10400).ok and not registry.has_player(ArenaPracticeBot.BOT_ID), "Stopping immediately removes the bot")
+	_check(not _start(manager, 301, true, 1, 2, 11000).ok and bot.class_id == 8, "Replayed command cannot restart practice")
+	_check(not _start(manager, 301, true, 1, 3, 10399).ok, "Rapid reset commands are limited")
+	_check(_start(manager, 301, false, 1, 4, 10400).ok and not registry.has_player(ArenaPracticeBot.BOT_ID), "Stopping immediately removes the bot")
 	# Every supported preset must reach and damage a stationary rival via real rules.
 	var request_id := 10
 	var now := 20000
 	for class_id: int in ClassCatalog.all_ids():
 		request_id += 1
-		_check(manager.request(301, true, class_id, request_id, now).ok, "Class %d can start a practice bot" % class_id)
+		_check(_start(manager, 301, true, class_id, request_id, now).ok, "Class %d can start a practice bot" % class_id)
 		bot = registry.get_player(ArenaPracticeBot.BOT_ID)
 		var damaged := false
 		var legal := true
@@ -58,19 +58,19 @@ func _run() -> void:
 		now += 10000
 	# Standard player casts must be able to target the virtual entity.
 	request_id += 1
-	manager.request(301, true, 3, request_id, 120000)
+	_start(manager, 301, true, 3, request_id, 120000)
 	bot = registry.get_player(ArenaPracticeBot.BOT_ID)
 	var result := registry.try_cast_spell(301, 1, bot.grid_position, 1, 120000)
 	_check(result.ok and int(result.event.target_id) == ArenaPracticeBot.BOT_ID and bot.current_health < bot.max_health, "Manual player spell can hit the bot through ordinary targeting")
 	request_id += 1
-	manager.request(301, true, 3, request_id, 130000)
+	_start(manager, 301, true, 3, request_id, 130000)
 	bot = registry.get_player(ArenaPracticeBot.BOT_ID)
 	result = registry.try_cast_spell(301, 25, bot.grid_position, 2, 130000)
 	pos = bot.grid_position
 	manager.tick(130600)
 	_check(result.ok and bot.active_effects.has("Paralizado") and bot.grid_position == pos, "Nonmagical rooted bot cannot bypass movement rules")
 	request_id += 1
-	manager.request(301, true, 1, request_id, 140000)
+	_start(manager, 301, true, 1, request_id, 140000)
 	bot = registry.get_player(ArenaPracticeBot.BOT_ID)
 	manager.tick(141300)
 	result = registry.try_cast_spell(301, 25, bot.grid_position, 3, 141400)
@@ -89,7 +89,7 @@ func _run() -> void:
 				removed_legally = step * 150 >= 650 and bot.current_mana == before - int(SpellCatalog.get_spell(27).mana) + mana_recovered
 	_check(removed_legally and bot.active_effects.is_empty(), "Delayed Remove uses the permitted spell and real mana cost")
 	request_id += 1
-	manager.request(301, true, 1, request_id, 150000)
+	_start(manager, 301, true, 1, request_id, 150000)
 	bot = registry.get_player(ArenaPracticeBot.BOT_ID)
 	bot.current_mana = 0
 	bot.current_health = 100
@@ -104,7 +104,7 @@ func _run() -> void:
 	registry.advance_runtime(153300)
 	_check(bot.current_mana == int(bot.max_mana * 0.05), "Bot meditation regenerates through the same server runtime")
 	request_id += 1
-	manager.request(301, true, 8, request_id, 160000)
+	_start(manager, 301, true, 8, request_id, 160000)
 	bot = registry.get_player(ArenaPracticeBot.BOT_ID)
 	bot.grid_position = Vector2i(10, 5)
 	var bow := int(bot.equipped_items.weapon)
@@ -116,25 +116,25 @@ func _run() -> void:
 	_check(manager.tick(164500).is_empty() and manager.phase == "won", "Bot death ends practice with a player victory")
 	_check(manager.tick(165000).is_empty() and not bot.is_alive, "Finished practice cannot silently revive or continue attacks")
 	request_id += 1
-	manager.request(301, true, 3, request_id, 170000)
+	_start(manager, 301, true, 3, request_id, 170000)
 	human.apply_damage(human.max_health)
 	manager.tick(170600)
 	_check(manager.phase == "lost" and manager.tick(171000).is_empty(), "Player death ends practice and stops the AI")
 	request_id += 1
-	manager.request(301, true, 3, request_id, 180000)
+	_start(manager, 301, true, 3, request_id, 180000)
 	_check(human.is_alive and manager.phase == "active", "Explicit restart prepares a dead player for another practice")
 	registry.add_player(302)
-	_check(not manager.request(302, false, 3, 1, 181000).ok and manager.owner_id == 301, "Another sender cannot control the owner's bot")
+	_check(not _start(manager, 302, false, 3, 1, 181000).ok and manager.owner_id == 301, "Another sender cannot control the owner's bot")
 	manager.tick(181000)
 	_check(not registry.has_player(ArenaPracticeBot.BOT_ID), "Human population reconciliation removes an orphan bot")
-	_check(not manager.request(301, true, 3, request_id + 1, 182000).ok, "Two real players cannot activate a bot")
+	_check(not _start(manager, 301, true, 3, request_id + 1, 182000).ok, "Two real players cannot activate a bot")
 	registry.remove_player(302)
-	manager.request(301, true, 3, request_id + 2, 183000)
+	_start(manager, 301, true, 3, request_id + 2, 183000)
 	manager.peer_left(301)
 	registry.remove_player(301)
 	_check(not registry.has_player(ArenaPracticeBot.BOT_ID) and manager.owner_id == 0, "Owner disconnect removes entity and ownership")
 	registry.add_player(303)
-	_check(manager.request(303, true, 3, 1, 184000).ok, "New solo player can own a clean practice session")
+	_check(_start(manager, 303, true, 3, 1, 184000).ok, "New solo player can own a clean practice session")
 	manager.peer_joining()
 	_check(not registry.has_player(ArenaPracticeBot.BOT_ID), "Joining player cleanup happens before their snapshot")
 	_test_training_behavior()
@@ -167,7 +167,7 @@ func _test_training_behavior() -> void:
 			var registry: PlayerRegistry = f.registry
 			var human: PlayerState = f.human
 			var manager := ArenaPracticeBot.new(registry, seed_value)
-			manager.request(301, true, 1, 1, 10000)
+			_start(manager, 301, true, 1, 1, 10000)
 			var bot := registry.get_player(ArenaPracticeBot.BOT_ID)
 			human.max_health = 10000
 			human.current_health = 10000
@@ -230,7 +230,7 @@ func _test_training_behavior() -> void:
 		var f := _fixture()
 		var registry: PlayerRegistry = f.registry
 		var manager := ArenaPracticeBot.new(registry, seed_value)
-		manager.request(301, true, 1, 1, 50000)
+		_start(manager, 301, true, 1, 1, 50000)
 		var bot := registry.get_player(ArenaPracticeBot.BOT_ID)
 		bot.current_health = 100
 		bot.current_mana = 0
@@ -249,7 +249,7 @@ func _test_training_behavior() -> void:
 			legal_potions = legal_potions and drinks[index] - drinks[index - 1] >= RecoveryRules.POTION_INTERVAL_MSEC
 			quick_potions = quick_potions and drinks[index] - drinks[index - 1] <= 320
 		# A melee bot has to leave the attack->potion window to actually recover.
-		manager.request(301, true, 3, 2, 60000)
+		_start(manager, 301, true, 3, 2, 60000)
 		bot = registry.get_player(ArenaPracticeBot.BOT_ID)
 		bot.grid_position = Vector2i(5, 5)
 		registry.try_basic_attack(ArenaPracticeBot.BOT_ID, 61000)
@@ -276,7 +276,7 @@ func _test_spell_rhythm() -> void:
 	var f := _fixture()
 	var registry: PlayerRegistry = f.registry
 	var manager: ArenaPracticeBot = f.manager
-	manager.request(301, true, 1, 1, 10000)
+	_start(manager, 301, true, 1, 1, 10000)
 	var bot := registry.get_player(ArenaPracticeBot.BOT_ID)
 	bot.grid_position = Vector2i(9, 5)
 	f.human.max_health = 10000
@@ -300,7 +300,7 @@ func _test_spell_rhythm() -> void:
 	_check(rooted_at > 0 and removed_at - rooted_at >= 650, "The first root remains for at least 650 ms before the bot can Remove")
 	_check(removed_at > 0 and legal, "Remove and offensive casts share the bot's 1250 ms floor instead of bypassing it")
 	# Recovery starts on the first useful red, without spending scarce turns on blue.
-	manager.request(301, true, 1, 2, 30000)
+	_start(manager, 301, true, 1, 2, 30000)
 	bot = registry.get_player(ArenaPracticeBot.BOT_ID)
 	bot.current_health = 140
 	bot.current_mana = 0
@@ -310,7 +310,7 @@ func _test_spell_rhythm() -> void:
 			if action.kind == "recovery" and str(action.result.event.action).ends_with("potion"):
 				colors.append(str(action.result.event.action))
 	_check(colors.size() >= 3 and colors.slice(0, 3) == ["health_potion", "health_potion", "health_potion"], "A wounded bot prioritizes consecutive reds over blues after a combo")
-	manager.request(301, true, 1, 3, 40000)
+	_start(manager, 301, true, 1, 3, 40000)
 	bot = registry.get_player(ArenaPracticeBot.BOT_ID)
 	bot.current_health -= 27
 	var before := bot.current_health
@@ -328,7 +328,7 @@ func _test_combos_and_paths() -> void:
 		var f := _fixture()
 		var registry: PlayerRegistry = f.registry
 		var manager := ArenaPracticeBot.new(registry, seed_value)
-		manager.request(301, true, 1, 1, 10000)
+		_start(manager, 301, true, 1, 1, 10000)
 		var bot := registry.get_player(ArenaPracticeBot.BOT_ID)
 		f.human.grid_position = Vector2i(9, 5)
 		f.human.max_health = 10000
@@ -361,7 +361,7 @@ func _test_combos_and_paths() -> void:
 		var f := _fixture()
 		var manager: ArenaPracticeBot = f.manager
 		var registry: PlayerRegistry = f.registry
-		manager.request(301, true, class_id, 1, 10000)
+		_start(manager, 301, true, class_id, 1, 10000)
 		var bot := registry.get_player(ArenaPracticeBot.BOT_ID)
 		bot.grid_position = Vector2i(9, 5)
 		f.human.max_health = 10000
@@ -387,7 +387,7 @@ func _test_exchange() -> void:
 		var human: PlayerState = f.human
 		registry.try_select_class(301, 8, 1000)
 		var manager := ArenaPracticeBot.new(registry, 900 + seed_value)
-		manager.request(301, true, 1, 1, 10000)
+		_start(manager, 301, true, 1, 1, 10000)
 		var next_walk := 11000
 		var next_shot := 12000
 		var next_potion := 11000
@@ -432,3 +432,11 @@ func _check(ok: bool, message: String) -> void:
 	if not ok:
 		failures += 1
 	print(("PASS: " if ok else "FAIL: ") + message)
+
+# Existing cadence scenarios run after the new preparation phase. The countdown
+# and its action locks are exercised separately by arena_rewards_smoke.gd.
+func _start(manager: ArenaPracticeBot, peer_id: int, enabled: bool, class_id: int, request_id: int, now: int) -> Dictionary:
+	var result := manager.request(peer_id, enabled, class_id, request_id, now - ArenaPracticeBot.COUNTDOWN_MSEC)
+	if result.ok:
+		manager.tick(now)
+	return result

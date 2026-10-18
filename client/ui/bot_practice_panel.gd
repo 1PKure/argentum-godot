@@ -43,7 +43,7 @@ func _ready() -> void:
 	selector.select(selector.get_item_index(3))
 	content.add_child(selector)
 	var note := Label.new()
-	note.text = "Reiniciar prepara ambos personajes con sus presets.\nEl bot se retira si entra otro jugador."
+	note.text = "Cada ronda comienza con una cuenta de 3 segundos.\nCambiar clase reinicia la ronda. Otro jugador retira al bot."
 	note.add_theme_font_size_override("font_size", 13)
 	content.add_child(note)
 	message = Label.new()
@@ -85,6 +85,8 @@ func _refresh() -> void:
 		_summary.text = "Disponible cuando estás solo en la arena."
 	elif not enabled:
 		_summary.text = "Elegí la clase del rival de práctica."
+	elif str(state.phase) == "countdown":
+		_summary.text = "La ronda comienza en %d…" % int(state.get("countdown", 3))
 	elif str(state.phase) == "won":
 		_summary.text = "Ganaste la práctica. Podés reiniciar."
 	elif str(state.phase) == "lost":

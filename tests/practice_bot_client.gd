@@ -76,6 +76,7 @@ func _run() -> void:
 			bot_gaps = gaps
 		else:
 			human_gaps = gaps
+	print("Movement network samples: bot=", bot_gaps, " human=", human_gaps)
 	_check(not bot_gaps.is_empty() and not human_gaps.is_empty() and bot_gaps[bot_gaps.size() / 2] >= 100 and bot_gaps[bot_gaps.size() / 2] <= 140 and human_gaps[human_gaps.size() / 2] <= 140, "Real WebSocket samples confirm equal bot/human movement cadence without a bot speed advantage")
 
 	await _wait_for(func() -> bool: return hud._players[local_id].current_health < hud._players[local_id].max_health, 15)
@@ -148,6 +149,7 @@ func _start(id: int) -> void:
 	await process_frame
 	await _click(panel.start_button)
 	await _wait_for(func() -> bool: return not network.pending and bool(network.state.enabled) and int(network.state.class_id) == id and not panel.visible)
+	await _wait_for(func() -> bool: return str(network.state.phase) == "active")
 
 func _wait_for(predicate: Callable, seconds: float = 8) -> void:
 	var deadline := Time.get_ticks_msec() + int(seconds * 1000)

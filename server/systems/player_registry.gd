@@ -17,6 +17,24 @@ var _spell_cooldowns: Dictionary = {}
 var _last_inventory_request: Dictionary[int, int] = {}
 var _last_shot_request: Dictionary[int, int] = {}
 var _status_system := ArenaStatusSystem.new()
+var _round_locks: Dictionary[int, bool] = {}
+
+func set_round_locked(peer_id: int, locked: bool) -> void:
+	if locked:
+		_round_locks[peer_id] = true
+	else:
+		_round_locks.erase(peer_id)
+
+func is_round_locked(peer_id: int) -> bool:
+	return _round_locks.has(peer_id)
+
+func try_select_skin(peer_id: int, id: String, local_wins: int) -> Dictionary:
+	var player: PlayerState = _players.get(peer_id)
+	if player == null or not SkinCatalog.is_unlocked(id, local_wins):
+		return _spell_error("Atuendo no disponible.")
+	player.skin_id = id
+	return {"ok": true, "state": player.to_dictionary()}
+
 
 var _arena_id: String = (
 	ArenaData.DEFAULT_ARENA_ID
@@ -111,6 +129,7 @@ func remove_player(
 	)
 
 	_status_system.clear_player(player)
+	_round_locks.erase(peer_id)
 	_players.erase(peer_id)
 	_last_recovery_request.erase(peer_id)
 	_last_potion_time.erase(peer_id)
@@ -130,6 +149,8 @@ func try_move_player(
 	direction: int,
 	current_time: int = -1
 ) -> PlayerState:
+	if is_round_locked(peer_id):
+		return null
 	if not _players.has(peer_id):
 		return null
 
@@ -209,6 +230,8 @@ func try_basic_attack(
 	attacker_peer_id: int,
 	current_time: int = -1
 ) -> PlayerState:
+	if is_round_locked(attacker_peer_id):
+		return null
 	if not _players.has(
 		attacker_peer_id
 	):
@@ -294,6 +317,8 @@ func try_basic_attack(
 
 
 func try_ranged_attack(peer_id: int, position: Vector2i, request_id: int, now: int = -1) -> Dictionary:
+	if is_round_locked(peer_id):
+		return _spell_error("La ronda todavía no empezó.")
 	var attacker: PlayerState = _players.get(peer_id)
 	if attacker == null or not attacker.is_alive or attacker.class_id != 8:
 		return _spell_error("Este personaje no puede disparar con arco.")
@@ -379,6 +404,8 @@ func _validate_inventory_request(peer_id: int, slot: int, item_id: int, revision
 
 
 func try_cast_spell(caster_id: int, spell_id: int, target_position: Vector2i, request_id: int, now: int = -1) -> Dictionary:
+	if is_round_locked(caster_id):
+		return _spell_error("La ronda todavía no empezó.")
 	var caster: PlayerState = _players.get(caster_id)
 	if caster == null:
 		return _spell_error("No hay un personaje conectado para lanzar.")
@@ -467,6 +494,8 @@ func try_recovery_action(peer_id: int, action: String, request_id: int, now: int
 	_last_recovery_request[peer_id] = request_id
 	if action.begins_with("class:"):
 		return try_select_class(peer_id, int(action.trim_prefix("class:")), now)
+	if is_round_locked(peer_id):
+		return _spell_error("La ronda todavía no empezó.")
 	var amount := 0
 	var message := ""
 	if action == "respawn":
@@ -582,6 +611,8 @@ func apply_damage(
 	peer_id: int,
 	amount: int
 ) -> PlayerState:
+	if is_round_locked(peer_id):
+		return null
 	if not _players.has(peer_id):
 		return null
 
@@ -601,6 +632,8 @@ func spend_mana(
 	peer_id: int,
 	amount: int
 ) -> PlayerState:
+	if is_round_locked(peer_id):
+		return null
 	if not _players.has(peer_id):
 		return null
 

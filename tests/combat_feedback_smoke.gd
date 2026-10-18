@@ -95,7 +95,7 @@ func _test_effects() -> void:
 	world._on_spell_resolved({"action": "shot", "spell_id": 247, "amount": 190, "words": "", "caster_id": 1, "target_id": 2, "origin_x": 4, "origin_y": 5, "target_x": 8, "target_y": 5})
 	var arrow = world._spell_effects[-1]
 	arrow.set_process(false)
-	_check(arrow._audio != null and arrow._audio.stream.resource_path.ends_with("2542.ogg") and not arrow._audio.playing, "Confirmed arrow prepares the original AO20 sound without playing it before impact")
+	_check(arrow._audio != null and arrow._audio.stream.resource_path.ends_with("arrow_hit.wav") and not arrow._audio.playing, "Confirmed arrow prepares the uploaded arrow sound without playing it before impact")
 	arrow._process(0.17)
 	_check(not arrow._shot_sound_played and not arrow._audio.playing, "Arrow travel does not prematurely play its impact sound")
 	arrow._process(0.02)
