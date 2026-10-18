@@ -14,6 +14,9 @@ var _words: Label
 var _audio: AudioStreamPlayer
 var _projectile: Sprite2D
 var _is_shot := false
+var _shot_sound_played := false
+const SHOT_TRAVEL_SECONDS := 0.18
+const SHOT_IMPACT_SOUND := "res://assets/argentum/source/audio/2542.ogg"
 
 
 func _ready() -> void:
@@ -53,17 +56,26 @@ func _ready() -> void:
 	var sound_path := "res://assets/argentum/source/audio/%d.wav" % int(spell.sound_id)
 	if int(spell.sound_id) > 0 and not ResourceLoader.exists(sound_path):
 		sound_path = "res://assets/argentum/source/audio/16.wav"
-	if not _is_shot and ResourceLoader.exists(sound_path):
+	if _is_shot:
+		sound_path = SHOT_IMPACT_SOUND
+	if ResourceLoader.exists(sound_path):
 		_audio = AudioStreamPlayer.new()
 		_audio.stream = load(sound_path)
 		_audio.volume_db = -12.0
 		add_child(_audio)
-		_audio.play()
+		if _is_shot:
+			_lifetime = maxf(_lifetime, SHOT_TRAVEL_SECONDS + _audio.stream.get_length() + 0.05)
+		else:
+			_audio.play()
 
 
 func _process(delta: float) -> void:
 	_elapsed += delta
 	_update_anchors()
+	if _is_shot and not _shot_sound_played and _elapsed >= SHOT_TRAVEL_SECONDS:
+		_shot_sound_played = true
+		if _audio != null and is_instance_valid(target_avatar) and not target_avatar.is_queued_for_deletion():
+			_audio.play()
 	var fade_start := _lifetime - 0.4
 	if _elapsed > fade_start:
 		modulate.a = maxf(0.0, 1.0 - (_elapsed - fade_start) / 0.4)
@@ -91,7 +103,7 @@ func _update_anchors() -> void:
 		target = target_avatar.position
 		_text.position = target + Vector2(-80, -85 - _elapsed * 24.0)
 	if _projectile != null:
-		var fraction := minf(_elapsed / 0.18, 1.0)
+		var fraction := minf(_elapsed / SHOT_TRAVEL_SECONDS, 1.0)
 		_projectile.visible = has_origin and has_target and fraction < 1.0
 		_projectile.position = origin.lerp(target, fraction) + Vector2(0, -18)
 		_projectile.rotation = (target - origin).angle() + PI / 4.0

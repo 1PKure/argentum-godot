@@ -27,7 +27,7 @@ func _run() -> void:
 	controller = main._spell_controller
 	world = main._world
 	await _wait_for(func() -> bool: return hud._players.size() == 2 and controller.server_ready)
-	_check(hud._players.size() == 2 and controller.server_ready, "Two clients negotiate protocol 10")
+	_check(hud._players.size() == 2 and controller.server_ready, "Two clients negotiate protocol 11")
 	if hud._players.size() != 2 or not controller.server_ready:
 		await _finish()
 		return
@@ -98,6 +98,8 @@ func _run() -> void:
 	await _wait_for(func() -> bool: return controller.pending_request == 0 and hud._players[opponent].current_health < health)
 	_check(hud._players[opponent].current_health < health and not controller.aimed_attack and hud._players[local_id].current_mana == 0, "Clicking a diagonal rival confirms physical damage with zero mana")
 	_check(world._spell_effects.size() > 0, "Confirmed arrow creates visible projectile feedback")
+	var arrow = world._spell_effects[-1]
+	_check(arrow._is_shot and arrow._audio != null and arrow._audio.stream.resource_path.ends_with("2542.ogg"), "Real hunter hit loads the original AO20 arrow sound")
 	_check(health - hud._players[opponent].current_health >= 181 and health - hud._players[opponent].current_health <= 200, "Equipped hunter deals 181-200 damage to the equipped mage")
 	var protected_health: int = hud._players[opponent].current_health
 	var spam_start := Time.get_ticks_msec()
@@ -113,6 +115,7 @@ func _run() -> void:
 		await _wait_for(func() -> bool: return controller.pending_request == 0)
 		attempts += 1
 	_check(attempts >= 4 and hud._players[opponent].current_health == protected_health and hud.console.get_parsed_text().contains("intervalo del arco"), "Repeated CTRL/macro clicks cannot land another arrow during the dedicated server cooldown")
+	_check(is_instance_valid(arrow) and arrow._shot_sound_played and arrow._audio.playing, "Confirmed arrow plays its audio after reaching the target")
 	await _capture("refined-bow-shot.png")
 	await _click(hud._inventory_button)
 	var weapon_id: int = hud._players[local_id].equipped_items.weapon
@@ -212,7 +215,7 @@ func _drag(source: Control, target: Control) -> void:
 	var down := InputEventMouseButton.new()
 	down.position = start
 	down.global_position = start
-	down.button_index = MOUSE_BUTTON_LEFT
+	down.button_index = MOUSE_BUTTON_RIGHT
 	down.pressed = true
 	Input.parse_input_event(down)
 	await process_frame
@@ -222,14 +225,14 @@ func _drag(source: Control, target: Control) -> void:
 		motion.position = point
 		motion.global_position = point
 		motion.relative = point - previous
-		motion.button_mask = MOUSE_BUTTON_MASK_LEFT
+		motion.button_mask = MOUSE_BUTTON_MASK_RIGHT
 		Input.parse_input_event(motion)
 		await process_frame
 		previous = point
 	var up := InputEventMouseButton.new()
 	up.position = finish
 	up.global_position = finish
-	up.button_index = MOUSE_BUTTON_LEFT
+	up.button_index = MOUSE_BUTTON_RIGHT
 	up.pressed = false
 	Input.parse_input_event(up)
 	await process_frame

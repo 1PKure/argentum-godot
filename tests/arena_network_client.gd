@@ -290,7 +290,7 @@ func _run() -> void:
 	_check(hud._players[local_id].class_id == 8, "Preset selection succeeds immediately after combat without full-resource or peace gates")
 	_check(not panel.visible and hud._players[local_id].max_mana == 0 and main._local_input.is_processing(), "Applying a hunter preset updates resources and returns to gameplay")
 	_check(controller.bindings[2] == ClassCatalog.ATTACK_BINDING and controller.aimed_spell_id == 0 and hud._launch_button.disabled, "Hunter has an attack macro and no inherited spell macros or casting cursor")
-	_check(world._avatars[local_id]._player_visual._class_id == 8 and hud._equipped_label.text.contains("Arco de Cazador"), "Hunter equipment is visible in the avatar and equipped summary")
+	_check(world._avatars[local_id]._player_visual._class_id == 8 and hud._inventory_slots.any(func(slot) -> bool: return slot.tooltip_text.contains("Arco de Cazador") and slot._equipped_badge != null and slot._equipped_badge.visible), "Hunter equipment is visible in the avatar and inventory badge without an intrusive summary")
 	await _capture("arena-hunter-equipped.png")
 	for resolution: Vector2i in [Vector2i(1280, 800), Vector2i(1440, 900), Vector2i(1280, 720)]:
 		root.size = resolution
@@ -359,6 +359,8 @@ func _click_at(point: Vector2, button: int = MOUSE_BUTTON_LEFT) -> void:
 
 
 func _drag(source: Control, target: Control) -> void:
+	var button := MOUSE_BUTTON_RIGHT if source.has_method("move_data") else MOUSE_BUTTON_LEFT
+	var mask := MOUSE_BUTTON_MASK_RIGHT if source.has_method("move_data") else MOUSE_BUTTON_MASK_LEFT
 	var start := source.get_global_rect().get_center()
 	var finish := target.get_global_rect().get_center()
 	var hover := InputEventMouseMotion.new()
@@ -369,7 +371,7 @@ func _drag(source: Control, target: Control) -> void:
 	var down := InputEventMouseButton.new()
 	down.position = start
 	down.global_position = start
-	down.button_index = MOUSE_BUTTON_LEFT
+	down.button_index = button
 	down.pressed = true
 	Input.parse_input_event(down)
 	await process_frame
@@ -379,14 +381,14 @@ func _drag(source: Control, target: Control) -> void:
 		motion.position = point
 		motion.global_position = point
 		motion.relative = point - previous
-		motion.button_mask = MOUSE_BUTTON_MASK_LEFT
+		motion.button_mask = mask
 		Input.parse_input_event(motion)
 		await process_frame
 		previous = point
 	var up := InputEventMouseButton.new()
 	up.position = finish
 	up.global_position = finish
-	up.button_index = MOUSE_BUTTON_LEFT
+	up.button_index = button
 	up.pressed = false
 	Input.parse_input_event(up)
 	await process_frame

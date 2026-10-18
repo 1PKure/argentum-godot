@@ -30,6 +30,7 @@ func _run() -> void:
 		return
 	local_id = root.multiplayer.get_unique_id()
 	_check(recovery.selected_potion == "health_potion" and hud._inventory_slots[0].potion_selected, "Red potion starts selected with a visible inventory marker")
+	_check(hud._inventory_panel.get_children().all(func(child: Node) -> bool: return not child is Label), "Inventory contains no persistent class or equipment summary text")
 	await _spend(80)
 	var mana := _mana()
 	await _click(hud._inventory_slots[1])
@@ -67,8 +68,31 @@ func _run() -> void:
 	_check(controller.aimed_spell_id == 12 and hud._inventory_panel.visible, "Combined potions keep the prepared spell ready")
 	await create_timer(0.4).timeout
 	mana = _mana()
+	var inventory: Array[int] = hud._players[local_id].inventory.duplicate()
+	await _drag(hud._inventory_slots[1], hud._inventory_slots[8], MOUSE_BUTTON_LEFT)
+	_check(hud._players[local_id].inventory == inventory and _mana() == mana, "Left-button pointer movement cannot rearrange or accidentally consume a potion")
+	await _mouse(hud._inventory_slots[1].get_global_rect().get_center(), true, MOUSE_BUTTON_RIGHT)
+	await _mouse(hud._inventory_slots[1].get_global_rect().get_center(), false, MOUSE_BUTTON_RIGHT)
+	_check(hud._players[local_id].inventory == inventory and _mana() == mana, "A right click without dragging neither moves nor drinks the potion")
 	await _drag(hud._inventory_slots[1], hud._inventory_slots[8])
 	_check(hud._inventory_slots[8].action == "mana_potion" and hud._inventory_slots[8].potion_selected and not hud._inventory_slots[1].potion_selected and _mana() == mana, "Dragging a selected potion preserves selection by item and never drinks it")
+	await _mouse(hud._inventory_slots[8].get_global_rect().get_center(), true, MOUSE_BUTTON_RIGHT)
+	_key(KEY_ESCAPE, true)
+	_key(KEY_ESCAPE, false)
+	await _mouse(hud._inventory_slots[9].get_global_rect().get_center(), false, MOUSE_BUTTON_RIGHT)
+	_check(hud._inventory_move.is_empty() and hud._inventory_slots[8].action == "mana_potion" and _mana() == mana and controller.aimed_spell_id == 12, "Escape cancels an inventory move without consuming the potion or cancelling the prepared spell")
+	await _mouse(hud._inventory_slots[8].get_global_rect().get_center(), true, MOUSE_BUTTON_RIGHT)
+	hud._notification(MainLoop.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	await _mouse(hud._inventory_slots[9].get_global_rect().get_center(), false, MOUSE_BUTTON_RIGHT)
+	_check(hud._inventory_move.is_empty() and hud._inventory_slots[8].action == "mana_potion", "Focus loss cancels a right-button inventory move")
+	await _mouse(hud._inventory_slots[8].get_global_rect().get_center(), true, MOUSE_BUTTON_RIGHT)
+	# A held mouse button owns GUI mouse focus; open the modal through its public
+	# action to exercise cancellation independently of that pointer capture.
+	hud.set_menu_opened(true)
+	await _mouse(hud._inventory_slots[9].get_global_rect().get_center(), false, MOUSE_BUTTON_RIGHT)
+	_check(hud._menu_panel.visible and hud._inventory_move.is_empty() and hud._inventory_slots[8].action == "mana_potion", "Opening a modal cancels a pending inventory move")
+	await _click(hud._menu_close_button)
+	controller.aim_spell(12)
 	await _click(hud._use_button)
 	await _wait_for(func() -> bool: return _mana() > mana)
 	_check(_mana() == mana + 124 and controller.aimed_spell_id == 12, "The visible Use button drinks the moved selected potion without losing aim")
@@ -149,7 +173,7 @@ func _click(button: Control) -> void:
 	await _mouse(button.get_global_rect().get_center(), false)
 	await process_frame
 
-func _mouse(point: Vector2, pressed: bool) -> void:
+func _mouse(point: Vector2, pressed: bool, button: MouseButton = MOUSE_BUTTON_LEFT) -> void:
 	var motion := InputEventMouseMotion.new()
 	motion.position = point
 	motion.global_position = point
@@ -157,15 +181,15 @@ func _mouse(point: Vector2, pressed: bool) -> void:
 	var event := InputEventMouseButton.new()
 	event.position = point
 	event.global_position = point
-	event.button_index = MOUSE_BUTTON_LEFT
+	event.button_index = button
 	event.pressed = pressed
 	Input.parse_input_event(event)
 	await process_frame
 
-func _drag(source: Control, target: Control) -> void:
+func _drag(source: Control, target: Control, button: MouseButton = MOUSE_BUTTON_RIGHT) -> void:
 	var a := source.get_global_rect().get_center()
 	var b := target.get_global_rect().get_center()
-	await _mouse(a, true)
+	await _mouse(a, true, button)
 	var previous := a
 	for step in range(1, 7):
 		var motion := InputEventMouseMotion.new()
@@ -173,10 +197,10 @@ func _drag(source: Control, target: Control) -> void:
 		motion.global_position = motion.position
 		motion.relative = motion.position - previous
 		previous = motion.position
-		motion.button_mask = MOUSE_BUTTON_MASK_LEFT
+		motion.button_mask = MOUSE_BUTTON_MASK_RIGHT if button == MOUSE_BUTTON_RIGHT else MOUSE_BUTTON_MASK_LEFT
 		Input.parse_input_event(motion)
 		await process_frame
-	await _mouse(b, false)
+	await _mouse(b, false, button)
 	await create_timer(0.15).timeout
 
 func _choose_class(id: int) -> void:

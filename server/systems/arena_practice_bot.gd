@@ -9,7 +9,7 @@ const BOT_ID := -1000 # Entity ID only; never a network recipient or the -1 look
 const THINK_MSEC := 120
 const COMMAND_INTERVAL_MSEC := 400
 const MOVE_INTERVAL_MSEC := MovementRules.PRACTICE_BOT_MOVE_INTERVAL_MSEC
-const CAST_INTERVAL_MSEC := 1400
+const CAST_INTERVAL_MSEC := 1250
 const ATTACK_INTERVAL_MSEC := 650
 const POTION_INTERVAL_MSEC := 280
 var registry: PlayerRegistry
@@ -31,6 +31,11 @@ var _root_observed := false
 var _defending := false
 var _next_heal := 0
 var _movement_mode := 1
+var _last_move_direction := -1
+var _axis_run := 0
+var _recent_cells: Array[Vector2i] = []
+var _combo_step := 0
+var _combo_until := 0
 var _rng := RandomNumberGenerator.new()
 var _next_control := 0
 var _cast_request := 0
@@ -107,6 +112,11 @@ func request(peer_id: int, enabled: bool, class_id: int, request_id: int, now: i
 	_next_choice = 0
 	_move_goal = Vector2i(-1, -1)
 	_movement_mode = 1
+	_last_move_direction = -1
+	_axis_run = 0
+	_recent_cells.clear()
+	_combo_step = 0
+	_combo_until = 0
 	_next_control = now + _rng.randi_range(10000, 14000)
 	reset_world.emit()
 	status_changed.emit(status())
@@ -170,7 +180,7 @@ func tick(now: int = -1) -> Array[Dictionary]:
 		_next_choice = 0
 	var rooted := bot.active_effects.has("Paralizado") or bot.active_effects.has("Inmovilizado")
 	if rooted and not _root_observed:
-		_root_due = now + _rng.randi_range(800, 1100)
+		_root_due = now + _rng.randi_range(650, 850)
 	_root_observed = rooted
 	var removing := rooted and ClassCatalog.can_cast(bot.class_id, 27) and bot.current_mana >= int(SpellCatalog.get_spell(27).mana)
 	if removing and now >= _root_due and now >= _next_spell:
@@ -199,13 +209,14 @@ func tick(now: int = -1) -> Array[Dictionary]:
 		phase = "lost"
 		status_changed.emit(status())
 		return actions
-	# Use the slower bot cadence without freezing its trajectory to cast or drink.
+	# Human movement cadence, with varied bursts independent of spell/potion clocks.
 	if not bot.is_meditating and now >= _next_move:
 		var direction := _movement_step(bot, _observed_cell, ranged, now)
 		if direction != -1:
 			var moved := registry.try_move_player(BOT_ID, direction, now)
 			if moved != null:
 				_next_move = now + MOVE_INTERVAL_MSEC
+				_remember_move(direction, moved.grid_position)
 				actions.append({"kind": "move", "state": moved.to_dictionary()})
 	return actions
 
@@ -216,25 +227,23 @@ func _attack(bot: PlayerState, ranged: bool, caster: bool, now: int, actions: Ar
 			return
 		var spell := 0
 		if caster:
-			spell = int(ClassCatalog.get_profile(bot.class_id).bindings[2])
+			spell = _combo_spell(bot, now)
 			var choice := _rng.randf()
 			if now >= _next_control and not _observed_rooted and bot.current_mana > 700 and choice < 0.3:
 				spell = 25
 				_next_control = now + _rng.randi_range(14000, 18000)
-			elif choice < 0.1:
-				spell = 3
-			elif choice > 0.95 and ClassCatalog.can_cast(bot.class_id, 53) and bot.current_mana >= 1000:
-				spell = 53
-			if not ClassCatalog.can_cast(bot.class_id, spell) or bot.current_mana < int(SpellCatalog.get_spell(spell).mana):
-				spell = 3
 		var cell := _observed_cell
 		if _rng.randf() < 0.06:
 			cell += MovementRules.get_offset(_rng.randi_range(0, 3))
 		# An inaccurate click costs the opportunity too; no free rapid retries.
 		var interval := maxi(SpellCatalog.CAST_INTERVAL_MSEC, CAST_INTERVAL_MSEC) if caster else maxi(CombatRules.RANGED_ATTACK_COOLDOWN_MSEC, ATTACK_INTERVAL_MSEC)
-		_next_offense = now + interval + _rng.randi_range(0, 150)
+		_next_offense = now + interval + _rng.randi_range(0, 100)
 		if caster:
-			_cast(spell, cell, now, actions)
+			if _cast(spell, cell, now, actions) and spell != 25:
+				# Advance only after a real confirmed hit; a missed click cannot unlock
+				# the cheaper follow-up as if the opponent had survived a combo.
+				_combo_step = 1 if spell in [53, 59] else 2 if spell == 51 or (_combo_step == 1 and spell == 3) else 0
+				_combo_until = now + 6000
 		else:
 			_shot_request += 1
 			var shot := registry.try_ranged_attack(BOT_ID, cell, _shot_request, now)
@@ -259,7 +268,7 @@ func _tick_potions(bot: PlayerState, now: int, actions: Array[Dictionary]) -> vo
 		_potion_due = 0
 		return
 	if _potion_due == 0:
-		_potion_due = now + _rng.randi_range(120, 180)
+		_potion_due = now + _rng.randi_range(100, 160)
 		return
 	if now < _potion_due:
 		return
@@ -269,7 +278,7 @@ func _tick_potions(bot: PlayerState, now: int, actions: Array[Dictionary]) -> vo
 			action = "mana_potion"
 	if _recover(action, now, actions):
 		_last_potion = action
-		_potion_due = now + maxi(RecoveryRules.POTION_INTERVAL_MSEC, POTION_INTERVAL_MSEC) + _rng.randi_range(0, 20)
+		_potion_due = now + maxi(RecoveryRules.POTION_INTERVAL_MSEC, POTION_INTERVAL_MSEC)
 	else:
 		# A normal attack/potion gap can block this; retain the pending decision.
 		_potion_due = now + 40
@@ -286,19 +295,19 @@ func _movement_step(bot: PlayerState, target: Vector2i, ranged: bool, now: int) 
 			return -1
 		if bot.grid_position != _move_goal:
 			var direction := _direction(_move_goal - bot.grid_position)
-			if _free(bot.grid_position + MovementRules.get_offset(direction)):
+			if (_axis_run < 4 or direction % 2 != _last_move_direction % 2) and _free(bot.grid_position + MovementRules.get_offset(direction)):
 				return direction
-	_next_choice = now + _rng.randi_range(480, 850)
+	_next_choice = now + _rng.randi_range(450, 800)
 	var roll := _rng.randf()
-	_movement_mode = 3 if _defending else 0 if roll < 0.1 else 1 if roll < 0.65 else 2 if roll < 0.85 else 3
+	_movement_mode = 0 if roll < 0.05 else 3 if _defending and roll < 0.7 else 1 if roll < 0.45 else 2 if roll < 0.75 else 3
 	if _movement_mode == 0:
 		_next_choice = now + _rng.randi_range(150, 260)
 		return -1
-	var delta := target - bot.grid_position
-	var candidates: Array[Vector2i] = []
+	var candidates: Array[Dictionary] = []
+	var total_weight := 0.0
 	for direction: int in _directions():
 		var offset := MovementRules.get_offset(direction)
-		if _movement_mode == 1 and ((absi(delta.x) >= absi(delta.y) and offset.x != 0) or (absi(delta.x) < absi(delta.y) and offset.y != 0)):
+		if _axis_run >= 4 and direction % 2 == _last_move_direction % 2:
 			continue
 		var cell := bot.grid_position
 		for step in range(_rng.randi_range(2, 4)):
@@ -308,16 +317,49 @@ func _movement_step(bot: PlayerState, target: Vector2i, ranged: bool, now: int) 
 				break
 			if ranged and not CombatRules.has_clear_shot(registry.get_arena_id(), next, target):
 				break
-			if (_movement_mode == 2 and after > distance) or (_movement_mode == 3 and after < distance):
-				break
 			cell = next
 		if cell != bot.grid_position:
-			candidates.append(cell)
+			var after := _distance(cell, target)
+			var weight := 3.0 if (_movement_mode == 1 and absi(after - distance) <= 1) or (_movement_mode == 2 and after < distance) or (_movement_mode == 3 and after > distance) else 1.0
+			if _last_move_direction >= 0 and direction == (_last_move_direction + 2) % 4:
+				weight *= 0.3
+			if _recent_cells.has(cell):
+				weight *= 0.25
+			total_weight += weight
+			candidates.append({"cell": cell, "weight": weight})
 	if candidates.is_empty():
 		_move_goal = Vector2i(-1, -1)
-		return -1
-	_move_goal = candidates[_rng.randi_range(0, candidates.size() - 1)]
+		return _path_step(bot, target, ranged)
+	var draw := _rng.randf() * total_weight
+	_move_goal = candidates[-1].cell
+	for candidate: Dictionary in candidates:
+		draw -= float(candidate.weight)
+		if draw <= 0.0:
+			_move_goal = candidate.cell
+			break
 	return _direction(_move_goal - bot.grid_position)
+
+
+func _remember_move(direction: int, cell: Vector2i) -> void:
+	_axis_run = _axis_run + 1 if _last_move_direction >= 0 and direction % 2 == _last_move_direction % 2 else 1
+	_last_move_direction = direction
+	_recent_cells.append(cell)
+	if _recent_cells.size() > 8:
+		_recent_cells.pop_front()
+
+
+func _combo_spell(bot: PlayerState, now: int) -> int:
+	if now > _combo_until:
+		_combo_step = 0
+	var preferred: Array[int] = [53, 51, 59, 3]
+	if _combo_step == 1:
+		preferred = [51, 3]
+	elif _combo_step == 2:
+		preferred = [41, 39, 3]
+	for id: int in preferred:
+		if ClassCatalog.can_cast(bot.class_id, id) and bot.current_mana >= int(SpellCatalog.get_spell(id).mana):
+			return id
+	return 3
 
 func _distance(a: Vector2i, b: Vector2i) -> int:
 	return maxi(absi(a.x - b.x), absi(a.y - b.y))
@@ -338,7 +380,7 @@ func _cast(spell_id: int, target: Vector2i, now: int, actions: Array[Dictionary]
 	_cast_request += 1
 	var result := registry.try_cast_spell(BOT_ID, spell_id, target, _cast_request, now)
 	if result.ok:
-		_next_spell = now + maxi(SpellCatalog.CAST_INTERVAL_MSEC, CAST_INTERVAL_MSEC) + _rng.randi_range(0, 150)
+		_next_spell = now + maxi(SpellCatalog.CAST_INTERVAL_MSEC, CAST_INTERVAL_MSEC) + _rng.randi_range(0, 100)
 		_next_offense = maxi(_next_offense, _next_spell)
 		actions.append({"kind": "cast", "result": result})
 	return bool(result.ok)

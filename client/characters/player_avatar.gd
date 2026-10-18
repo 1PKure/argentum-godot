@@ -241,18 +241,23 @@ func _create_name_label() -> void:
 	_name_label.z_index = OVERHEAD_Z_INDEX
 
 	_name_label.position = Vector2(
-		-70.0,
-		-74.0
+		-100.0,
+		46.0
 	)
 
 	_name_label.size = Vector2(
-		140.0,
+		200.0,
 		24.0
 	)
 
 	_name_label.horizontal_alignment = (
 		HORIZONTAL_ALIGNMENT_CENTER
 	)
+	_name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_name_label.add_theme_font_size_override("font_size", 16)
+	_name_label.add_theme_color_override("font_shadow_color", Color.BLACK)
+	_name_label.add_theme_constant_override("shadow_offset_x", 1)
+	_name_label.add_theme_constant_override("shadow_offset_y", 1)
 
 	add_child(_name_label)
 
@@ -274,16 +279,5 @@ func _update_label() -> void:
 	if _name_label == null:
 		return
 
-	var final_name := display_name
-
-	if is_local_player:
-		final_name += " (YOU)"
-
-	if is_ghost:
-		final_name += " [GHOST]"
-	elif _is_meditating:
-		final_name += " · Meditando"
-	elif not _effect_labels.is_empty():
-		final_name += " · " + str(_effect_labels[0])
-
-	_name_label.text = final_name
+	_name_label.text = display_name
+	_name_label.modulate = Color("f2d47b") if is_local_player else Color.WHITE

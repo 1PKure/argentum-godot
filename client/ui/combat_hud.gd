@@ -62,7 +62,9 @@ var _class_panel: ClassPresetPanel
 var _bot_panel: BotPracticePanel
 var _last_bot_phase := "idle"
 var _last_bot_owner := 0
-var _equipped_label: Label
+var _inventory_move: Dictionary = {}
+var _inventory_move_start := Vector2.ZERO
+var _inventory_move_preview: TextureRect
 var _book_class_id := -1
 var _inventory_revision := -1
 var _inventory_peer := 0
@@ -73,6 +75,15 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_inventory_layout.restore()
 	_build_interface()
+	_inventory_move_preview = TextureRect.new()
+	_inventory_move_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_inventory_move_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_inventory_move_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_inventory_move_preview.size = Vector2(32, 32)
+	_inventory_move_preview.modulate.a = 0.85
+	_inventory_move_preview.z_index = 100
+	_inventory_move_preview.hide()
+	add_child(_inventory_move_preview)
 	get_viewport().size_changed.connect(_fit_interface)
 	_fit_interface()
 	PlayerNetwork.basic_attack_resolved.connect(_on_basic_attack_event)
@@ -201,6 +212,7 @@ func start_session(peer_id: int) -> void:
 
 
 func end_session(message: String) -> void:
+	_cancel_inventory_move()
 	set_menu_opened(false)
 	_class_panel.close_panel()
 	_bot_panel.close_panel()
@@ -219,6 +231,7 @@ func show_inventory() -> void:
 
 
 func show_spells() -> void:
+	_cancel_inventory_move()
 	_inventory_panel.hide()
 	_spell_panel.show()
 	_inventory_button.button_pressed = false
@@ -296,9 +309,8 @@ func _build_interface() -> void:
 		slot.configure(index, _inventory_layout)
 		slot.item_used.connect(_use_inventory_item)
 		slot.item_dropped.connect(_move_inventory_item)
+		slot.move_started.connect(_begin_inventory_move)
 		_inventory_slots.append(slot)
-	_equipped_label = _label(_inventory_panel, "", Rect2(12, 268, 216, 126), 12)
-	_equipped_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_spell_search = LineEdit.new()
 	_spell_search.placeholder_text = "Buscar hechizo…"
 	_spell_panel.add_child(_spell_search)
@@ -507,11 +519,31 @@ func set_menu_opened(opened: bool) -> void:
 
 func _notify_modal_state() -> void:
 	if is_modal_open() and _spell_controller != null:
+		_cancel_inventory_move()
 		_spell_controller.cancel_targeting()
 	modal_changed.emit(is_modal_open())
 
 
 func _input(event: InputEvent) -> void:
+	if not _inventory_move.is_empty():
+		if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+			_cancel_inventory_move()
+			get_viewport().set_input_as_handled()
+			return
+		if event is InputEventMouseMotion:
+			_inventory_move_preview.visible = _inventory_move_preview.visible or event.position.distance_to(_inventory_move_start) >= 6.0
+			_inventory_move_preview.position = event.position + Vector2(12, 12)
+			get_viewport().set_input_as_handled()
+			return
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and not event.pressed:
+			if _inventory_move_preview.visible and _inventory_panel.visible and not is_modal_open() and _inventory_panel.get_global_rect().has_point(event.position):
+				for slot: InventorySlotButton in _inventory_slots:
+					if slot.get_global_rect().has_point(event.position):
+						slot._drop_data(Vector2.ZERO, _inventory_move)
+						break
+			_cancel_inventory_move()
+			get_viewport().set_input_as_handled()
+			return
 	if not is_modal_open() or not event is InputEventKey:
 		return
 	if event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
@@ -629,6 +661,7 @@ func _update_recovery_controls() -> void:
 
 
 func _fit_interface() -> void:
+	_cancel_inventory_move()
 	var available := get_viewport_rect().size
 	var factor := minf(available.x / DESIGN_SIZE.x, available.y / DESIGN_SIZE.y)
 	_frame.scale = Vector2.ONE * factor
@@ -736,18 +769,11 @@ func _player_name(state: PlayerState) -> String:
 
 func _update_local_stats() -> void:
 	var state: PlayerState = _players.get(_local_peer_id)
+	if not _inventory_move.is_empty() and (state == null or not state.is_alive or state.inventory_revision != int(_inventory_move.revision)):
+		_cancel_inventory_move()
 	_name_label.text = state.display_name if state != null else "Sin personaje"
 	if state != null:
-		var profile := ClassCatalog.get_equipped_profile(state.class_id, state.equipped_items)
 		_name_label.tooltip_text = state.display_name
-		var equipped := PackedStringArray()
-		for slot: String in ["armor", "weapon", "helmet", "shield", "accessory", "ammunition"]:
-			var item := ClassCatalog.get_item(int(state.equipped_items.get(slot, 0)))
-			if not item.is_empty():
-				equipped.append(str(item.Name))
-		_equipped_label.text = "%s\n%s" % [profile.name, " · ".join(equipped)]
-	else:
-		_equipped_label.text = "Sin personaje conectado."
 	_health_bar.max_value = state.max_health if state != null else 100
 	_mana_bar.max_value = state.max_mana if state != null else 100
 	_health_bar.value = state.current_health if state != null else 0
@@ -769,6 +795,30 @@ func _update_local_stats() -> void:
 	_minimap.local_peer_id = _local_peer_id
 	_minimap.queue_redraw()
 	_update_recovery_controls()
+
+
+func _begin_inventory_move(source: int, screen_position: Vector2) -> void:
+	var state: PlayerState = _players.get(_local_peer_id)
+	if is_modal_open() or state == null or not state.is_alive or _spell_controller == null or not _spell_controller.server_ready:
+		return
+	_release_text_focus()
+	_inventory_move = _inventory_slots[source].move_data()
+	_inventory_move_start = screen_position
+	_inventory_move_preview.texture = _inventory_slots[source].icon
+	_inventory_move_preview.position = screen_position + Vector2(12, 12)
+	_inventory_move_preview.hide()
+
+
+func _cancel_inventory_move() -> void:
+	_inventory_move.clear()
+	if _inventory_move_preview != null:
+		_inventory_move_preview.hide()
+		_inventory_move_preview.texture = null
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		_cancel_inventory_move()
 
 
 func _move_inventory_item(source: int, destination: int, action: String) -> void:

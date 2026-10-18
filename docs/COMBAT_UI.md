@@ -27,3 +27,7 @@ La consola muestra eventos de hechizos/recuperación confirmados, rechazo al sol
 Arte y distribución viven en CombatHUD y SpellSlotButton; selección/apuntado en SpellTargetingController; reglas y recuperación en el servidor. Cambiar texturas, colores o distribución no exige rehacer las reglas de hechizos. Cambiar la forma de apuntar o los controles sí exige adaptar y validar interacciones.
 
 La web precarga `wss://127.0.0.1:7777`: iniciar el `.cmd` y pulsar Conectar. El desarrollo nativo conserva WS; una dirección remota configurada explícitamente se respeta. La meditación conserva el anclaje y tamaño ya validados.
+
+## Lectura y movimiento de inventario
+
+El nombre de cada personaje se muestra debajo de sus barras, sin sufijos de depuración, para dejar libre la zona de palabras mágicas. El inventario no contiene el resumen permanente de clase/equipo: los objetos conservan tooltip y marca de equipado. Mantener el botón derecho y arrastrar mueve/intercambia; el izquierdo selecciona/bebe o equipa. Esc, modales, pérdida de foco, cambio de inventario y desconexión cancelan movimientos pendientes. Las flechas confirmadas reproducen el sonido original AO20 `OGG/2542.ogg` al impacto visual; preparar, cancelar o recibir rechazo de intervalo no reproduce impacto.

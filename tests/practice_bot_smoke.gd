@@ -80,9 +80,13 @@ func _run() -> void:
 	for step in range(1, 15):
 		var before := bot.current_mana
 		var actions := manager.tick(141450 + step * 150)
+		var mana_recovered := 0
+		for action: Dictionary in actions:
+			if action.kind == "recovery" and action.result.event.action == "mana_potion":
+				mana_recovered += int(action.result.event.amount)
 		for action: Dictionary in actions:
 			if action.kind == "cast" and int(action.result.event.spell_id) == 27:
-				removed_legally = step * 150 >= 800 and bot.current_mana == before - int(SpellCatalog.get_spell(27).mana)
+				removed_legally = step * 150 >= 650 and bot.current_mana == before - int(SpellCatalog.get_spell(27).mana) + mana_recovered
 	_check(removed_legally and bot.active_effects.is_empty(), "Delayed Remove uses the permitted spell and real mana cost")
 	request_id += 1
 	manager.request(301, true, 1, request_id, 150000)
@@ -135,6 +139,7 @@ func _run() -> void:
 	_check(not registry.has_player(ArenaPracticeBot.BOT_ID), "Joining player cleanup happens before their snapshot")
 	_test_training_behavior()
 	_test_spell_rhythm()
+	_test_combos_and_paths()
 	_test_exchange()
 	for item: Node in registries:
 		item.queue_free()
@@ -239,7 +244,7 @@ func _test_training_behavior() -> void:
 					drinks.append(now)
 					colors[str(action.result.event.action)] = true
 		both_colors = both_colors and colors.size() == 2
-		quick_potions = quick_potions and drinks.size() >= 10 and drinks[0] >= 51420 and drinks[0] <= 51480
+		quick_potions = quick_potions and drinks.size() >= 10 and drinks[0] >= 51400 and drinks[0] <= 51460
 		for index in range(1, drinks.size()):
 			legal_potions = legal_potions and drinks[index] - drinks[index - 1] >= RecoveryRules.POTION_INTERVAL_MSEC
 			quick_potions = quick_potions and drinks[index] - drinks[index - 1] <= 320
@@ -258,12 +263,12 @@ func _test_training_behavior() -> void:
 		recovery_windows = recovery_windows and recovered and bot.current_health > 80
 	print("Agite metrics: static_hits=%d moving_hits=%d moving_attempts=%d continuous_steps=%d cast_and_move=%d" % [static_hits, moving_hits, total_attempts, smooth_steps, simultaneous])
 	_check(paths.size() > 1, "Movement bursts vary between seeds rather than repeating a fixed approach/up pattern")
-	_check(smooth_steps >= 300 and legal_moves, "Bot sustains continuous 180 ms steps, slower than the player's 120 ms cadence")
+	_check(smooth_steps >= 300 and legal_moves, "Bot sustains continuous 120 ms steps at the player's legal cadence")
 	_check(simultaneous >= 8, "Casting and movement can happen together instead of freezing for every attack")
 	_check(static_hits >= 100, "Stationary opponents receive sustained combat pressure across eight seeds")
 	_check(moving_hits >= 40 and moving_hits < total_attempts, "Moving opponents can be hit and can also evade delayed perception")
 	_check(legal_casts, "All attacks and defensive spells respect the same slower bot spell interval")
-	_check(legal_potions and quick_potions, "Bot potions repeat around 280-300 ms without the click+Use advantage")
+	_check(legal_potions and quick_potions, "Bot repeats potions at 280 ms without extra jitter or the click+Use advantage")
 	_check(both_colors, "Under pressure the bot recovers health and mana instead of starving one resource")
 	_check(recovery_windows, "Wounded melee bots defend and recover through the real attack-potion gap")
 
@@ -288,12 +293,12 @@ func _test_spell_rhythm() -> void:
 		for action: Dictionary in manager.tick(now):
 			if action.kind == "cast":
 				if last_cast > 0:
-					legal = legal and now - last_cast >= 1400
+					legal = legal and now - last_cast >= 1250
 				last_cast = now
 				if int(action.result.event.spell_id) == 27:
 					removed_at = now
-	_check(rooted_at > 0 and removed_at - rooted_at >= 800, "The first root remains for at least 800 ms before the bot can Remove")
-	_check(removed_at > 0 and legal, "Remove and offensive casts share the bot's 1400 ms floor instead of bypassing it")
+	_check(rooted_at > 0 and removed_at - rooted_at >= 650, "The first root remains for at least 650 ms before the bot can Remove")
+	_check(removed_at > 0 and legal, "Remove and offensive casts share the bot's 1250 ms floor instead of bypassing it")
 	# Recovery starts on the first useful red, without spending scarce turns on blue.
 	manager.request(301, true, 1, 2, 30000)
 	bot = registry.get_player(ArenaPracticeBot.BOT_ID)
@@ -312,6 +317,63 @@ func _test_spell_rhythm() -> void:
 	manager.tick(41300)
 	manager.tick(41480)
 	_check(bot.current_health == before + 27, "Bot starts a useful red after the first 27 missing HP instead of waiting for 78 percent health")
+
+
+func _test_combos_and_paths() -> void:
+	var combos := true
+	var variants: Dictionary = {}
+	var longest_vertical := 0
+	var both_axes := true
+	for seed_value in range(1, 9):
+		var f := _fixture()
+		var registry: PlayerRegistry = f.registry
+		var manager := ArenaPracticeBot.new(registry, seed_value)
+		manager.request(301, true, 1, 1, 10000)
+		var bot := registry.get_player(ArenaPracticeBot.BOT_ID)
+		f.human.grid_position = Vector2i(9, 5)
+		f.human.max_health = 10000
+		f.human.current_health = 10000
+		bot.grid_position = Vector2i(13, 5)
+		var offensive: Array[int] = []
+		var vertical := 0
+		var axes: Dictionary = {}
+		var path: Array[Vector2i] = []
+		for step in range(800):
+			var now := 10000 + step * 20
+			var previous := bot.grid_position
+			for action: Dictionary in manager.tick(now):
+				if action.kind == "cast" and int(action.result.event.target_id) == 301:
+					offensive.append(int(action.result.event.spell_id))
+				elif action.kind == "move":
+					var delta := bot.grid_position - previous
+					var axis := 0 if delta.y != 0 else 1
+					axes[axis] = true
+					vertical = vertical + 1 if axis == 0 else 0
+					longest_vertical = maxi(longest_vertical, vertical)
+					path.append(bot.grid_position)
+		combos = combos and offensive.size() >= 3 and offensive.slice(0, 3) == [53, 51, 41]
+		both_axes = both_axes and axes.size() == 2
+		variants[str(path)] = true
+	_check(combos, "Across eight seeds, confirmed mage hits start Apocalypse then Discharge before Firestorm against a surviving rival")
+	_check(both_axes and variants.size() >= 6, "Comfortable-range movement uses both axes with distinct trajectories across seeds")
+	_check(longest_vertical <= 6, "The bot breaks extended up-down patterns instead of staying on one vertical line")
+	for class_id: int in [2, 5, 6]:
+		var f := _fixture()
+		var manager: ArenaPracticeBot = f.manager
+		var registry: PlayerRegistry = f.registry
+		manager.request(301, true, class_id, 1, 10000)
+		var bot := registry.get_player(ArenaPracticeBot.BOT_ID)
+		bot.grid_position = Vector2i(9, 5)
+		f.human.max_health = 10000
+		f.human.current_health = 10000
+		var offensive: Array[int] = []
+		for step in range(260):
+			for action: Dictionary in manager.tick(10000 + step * 20):
+				if action.kind == "cast" and int(action.result.event.target_id) == 301:
+					offensive.append(int(action.result.event.spell_id))
+		var expected := [59, 3, 3] if class_id == 6 else [53, 51, 3]
+		_check(offensive.size() >= 3 and offensive.slice(0, 3) == expected, "Class %d uses only its legal combo and affordable follow-up spells" % class_id)
+	print("Movement variation: %d paths, longest vertical run %d tiles" % [variants.size(), longest_vertical])
 
 
 func _test_exchange() -> void:
