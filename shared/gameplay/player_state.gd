@@ -3,6 +3,8 @@ extends RefCounted
 
 var peer_id: int
 var display_name: String
+var is_bot := false
+var skin_id := "preset"
 var class_id := ClassCatalog.DEFAULT_CLASS
 var inventory: Array[int] = []
 var equipped_items: Dictionary = {}
@@ -58,7 +60,8 @@ func reset_preset_inventory() -> void:
 	inventory.resize(42)
 	inventory.fill(0)
 	inventory[0] = 38
-	inventory[1] = 37
+	if max_mana > 0:
+		inventory[1] = 37
 	equipped_items = ClassCatalog.default_equipment(class_id)
 	var index := 2
 	for slot: String in ClassCatalog.EQUIPMENT_SLOTS:
@@ -138,6 +141,8 @@ func to_dictionary() -> Dictionary:
 		"peer_id": peer_id,
 		"display_name": display_name,
 		"class_id": class_id,
+		"is_bot": is_bot,
+		"skin_id": skin_id,
 		"inventory": inventory.duplicate(),
 		"equipped_items": equipped_items.duplicate(),
 		"inventory_revision": inventory_revision,
@@ -227,6 +232,8 @@ static func from_dictionary(
 	state.mana_is_private = bool(data.get("mana_is_private", false))
 	if state.mana_is_private:
 		state.current_mana = 0
+	state.is_bot = bool(data.get("is_bot", false))
+	state.skin_id = str(data.get("skin_id", "preset"))
 	state.is_meditating = bool(data.get("is_meditating", false))
 	state.class_id = int(data.get("class_id", ClassCatalog.DEFAULT_CLASS))
 	if data.has("inventory"):

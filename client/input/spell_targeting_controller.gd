@@ -11,6 +11,7 @@ var aimed_attack := false
 var _preset_revision := -1
 var bindings: Array[int] = []
 var session_active := false
+var input_blocked := false
 var server_ready := false
 var pending_request := 0
 var _next_request := 0
@@ -54,6 +55,7 @@ func end_session() -> void:
 	cancel_targeting()
 	SpellNetwork.clear_session()
 	RecoveryNetwork.clear_session()
+	BotNetwork.clear_session()
 
 
 func select_spell(id: int) -> void:
@@ -69,7 +71,7 @@ func aim_selected() -> void:
 
 
 func can_launch() -> bool:
-	return session_active and server_ready and _alive and pending_request == 0 and ClassCatalog.can_cast(class_id, selected_spell_id)
+	return not input_blocked and session_active and server_ready and _alive and pending_request == 0 and ClassCatalog.can_cast(class_id, selected_spell_id)
 
 
 func aim_hotkey(slot: int) -> void:
@@ -85,7 +87,7 @@ func aim_hotkey(slot: int) -> void:
 
 
 func aim_spell(id: int) -> void:
-	if not session_active or not server_ready or not _alive:
+	if input_blocked or not session_active or not server_ready or not _alive:
 		feedback.emit("No podés lanzar en este momento.", "system")
 		return
 	if not ClassCatalog.can_cast(class_id, id):
@@ -123,7 +125,14 @@ func assign_hotkey(slot: int, id: int) -> void:
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if not session_active or not event is InputEventKey or not event.pressed or event.echo:
+	if input_blocked or not session_active or not event is InputEventKey or not event.pressed or event.echo:
+		return
+	var focus := get_viewport().gui_get_focus_owner()
+	if focus is LineEdit or focus is TextEdit:
+		return
+	if event.keycode == KEY_SPACE and not event.alt_pressed and not event.meta_pressed:
+		RecoveryNetwork.begin_using_selected()
+		get_viewport().set_input_as_handled()
 		return
 	if event.keycode == KEY_CTRL:
 		aim_basic_attack()
@@ -135,7 +144,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	elif not event.ctrl_pressed and not event.alt_pressed and not event.meta_pressed:
 		var recovery_action := {KEY_M: "meditate", KEY_Q: "health_potion", KEY_E: "mana_potion"}
 		if recovery_action.has(event.keycode):
-			cancel_targeting()
+			if recovery_action[event.keycode] == "meditate":
+				cancel_targeting()
 			RecoveryNetwork.request_action(recovery_action[event.keycode])
 			get_viewport().set_input_as_handled()
 			return
@@ -205,16 +215,20 @@ func _on_spell_rejected(request_id: int, message: String, _remaining: int) -> vo
 
 func _on_stats_updated(data: Dictionary) -> void:
 	if int(data.get("peer_id", 0)) == _local_id:
-		apply_class(int(data.get("class_id", ClassCatalog.DEFAULT_CLASS)), int(data.get("preset_revision", 0)))
-		_alive = bool(data.get("is_alive", true))
-		if not _alive:
-			cancel_targeting()
-		else:
-			changed.emit()
+		apply_state(data)
+
+
+func apply_state(data: Dictionary) -> void:
+	apply_class(int(data.get("class_id", ClassCatalog.DEFAULT_CLASS)), int(data.get("preset_revision", 0)))
+	_alive = bool(data.get("is_alive", true))
+	if not _alive:
+		cancel_targeting()
+	else:
+		changed.emit()
 
 
 func aim_basic_attack() -> void:
-	if not session_active or not server_ready or not _alive or pending_request != 0:
+	if input_blocked or not session_active or not server_ready or not _alive or pending_request != 0:
 		return
 	cancel_targeting()
 	if class_id == 8:

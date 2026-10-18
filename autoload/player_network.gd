@@ -273,7 +273,8 @@ func for_recipient(data: Dictionary, recipient: int) -> Dictionary:
 func send_basic_attack_result(event: Dictionary) -> void:
 	if multiplayer.is_server():
 		for recipient: int in [int(event.caster_id), int(event.target_id)]:
-			_receive_basic_attack_result.rpc_id(recipient, event)
+			if multiplayer.get_peers().has(recipient):
+				_receive_basic_attack_result.rpc_id(recipient, event)
 
 
 @rpc("authority", "call_remote", "reliable")

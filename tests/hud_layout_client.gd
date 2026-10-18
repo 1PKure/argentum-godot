@@ -21,6 +21,17 @@ func _run() -> void:
 		await _finish()
 		return
 	local_id = root.multiplayer.get_unique_id()
+	_check(_footer_buttons() == [hud._menu_button], "Footer exposes only Menu; recovery buttons are removed")
+	root.get_node("PlayerNetwork").request_debug_mana_spend()
+	await _wait_for(func() -> bool: return hud._players[local_id].current_mana < hud._players[local_id].max_mana)
+	_key(KEY_M, true)
+	_key(KEY_M, false)
+	await _wait_for(func() -> bool: return hud._players[local_id].is_meditating)
+	_check(hud._players[local_id].is_meditating and hud._status_label.text.contains("Meditando"), "M still starts meditation without a visible button")
+	_key(KEY_M, true)
+	_key(KEY_M, false)
+	await _wait_for(func() -> bool: return not hud._players[local_id].is_meditating)
+	_check(not hud._players[local_id].is_meditating, "M still stops meditation")
 	hud.show_spells()
 	_key(KEY_1, true)
 	_key(KEY_1, false)
@@ -32,7 +43,7 @@ func _run() -> void:
 	var tile: Vector2i = hud._players[local_id].grid_position
 	var health: int = hud._players[local_id].current_health
 	var mana: int = hud._players[local_id].current_mana
-	for key: Key in [KEY_1, KEY_CTRL, KEY_M, KEY_Q, KEY_E]:
+	for key: Key in [KEY_1, KEY_CTRL, KEY_M, KEY_Q, KEY_E, KEY_SPACE]:
 		_key(key, true)
 		_key(key, false)
 	_key(KEY_D, true)
@@ -50,16 +61,15 @@ func _run() -> void:
 		root.get_node("PlayerNetwork").request_debug_damage()
 	await _wait_for(func() -> bool: return not hud._players[local_id].is_alive)
 	_check(hud._status_label.z_index > hud._bottom_back.z_index, "Status text draws above the footer background")
-	_check(hud._stats_button.visible and not hud._stats_button.disabled and hud._status_label.text == "Fantasma", "Ghost shows one status and a separate respawn action")
+	_check(hud._stats_button.visible and hud._menu_panel.is_ancestor_of(hud._stats_button) and not hud._stats_button.disabled and hud._status_label.text == "Fantasma" and _footer_buttons() == [hud._menu_button], "Ghost keeps only Menu in the footer and exposes Respawn inside its menu")
 	_check(hud._name_label.text == hud._players[local_id].display_name and not hud._name_label.text.contains("Fantasma"), "Character name does not duplicate class or ghost state")
 	await _capture("hud-clean-ghost.png")
 	await _click(hud._menu_button)
-	await _click(hud._stats_button)
-	await create_timer(0.15).timeout
-	_check(not hud._menu_panel.visible and not hud._players[local_id].is_alive, "Clicking a covered respawn button only dismisses the backdrop")
+	_check(hud._stats_button.is_visible_in_tree(), "Opening Menu reveals the ghost respawn action")
+	await _capture("hud-clean-ghost-menu.png")
 	await _click(hud._stats_button)
 	await _wait_for(func() -> bool: return hud._players[local_id].is_alive)
-	_check(hud._players[local_id].is_alive and not hud._stats_button.visible, "Respawn works after closing the menu and hides its inactive action")
+	_check(hud._players[local_id].is_alive and not hud._stats_button.visible and not hud._menu_panel.visible and main._local_input.is_processing(), "Menu respawn restores the player, closes the modal and resumes controls")
 	# Use the longest existing status case while checking footer and content bounds.
 	hud._status_label.text = "Paralizado · Inmovilizado · Putrefacción"
 	hud._spell_status.text = "Este hechizo requiere un sistema que todavía no está disponible en la arena de pruebas."
@@ -73,13 +83,34 @@ func _run() -> void:
 		_check(hud._menu_panel.z_index > hud._bottom_back.z_index, "Menu draws above footer at %s" % resolution)
 		_check(not hud._menu_credits.get_global_rect().intersects(hud._menu_disconnect_button.get_global_rect()), "Credits and disconnect do not overlap at %s" % resolution)
 		_check(not hud._menu_close_button.get_global_rect().intersects(hud._menu_disconnect_button.get_global_rect()), "Menu actions have distinct hit areas at %s" % resolution)
-		_check(not hud._status_label.get_global_rect().intersects(hud._meditate_button.get_global_rect()) and not hud._status_label.get_global_rect().intersects(hud._mana_label.get_global_rect()), "Status has a dedicated footer row at %s" % resolution)
+		_check(_footer_buttons() == [hud._menu_button] and Rect2(Vector2.ZERO, root.get_visible_rect().size).encloses(hud._menu_button.get_global_rect()), "Only Menu remains in the compact footer at %s" % resolution)
+		_check(not hud._status_label.get_global_rect().intersects(hud._menu_button.get_global_rect()) and not hud._status_label.get_global_rect().intersects(hud._mana_label.get_global_rect()), "Status has a dedicated footer row at %s" % resolution)
 		_check(not hud._spell_status.get_global_rect().intersects(hud._launch_button.get_global_rect()) and not hud._spell_status.get_global_rect().intersects(hud._spell_scroll.get_global_rect()), "Long spell status stays separate from list and Launch at %s" % resolution)
 	root.size = Vector2i(1280, 800)
 	hud._fit_interface()
 	await process_frame
 	await process_frame
 	await _capture("hud-clean-layout.png")
+	hud.set_menu_opened(false)
+	await _click(hud._reserved_buttons[3])
+	for resolution: Vector2i in [Vector2i(1280, 800), Vector2i(1280, 720), Vector2i(1920, 1080), Vector2i(800, 600)]:
+		root.size = resolution
+		hud._fit_interface()
+		await process_frame
+		await process_frame
+		var card: Control = hud._skins_panel.get_child(1).get_child(0)
+		_check(Rect2(Vector2.ZERO, root.get_visible_rect().size).encloses(card.get_global_rect()), "Skin collection fits %s" % resolution)
+	_key(KEY_ESCAPE, true)
+	_key(KEY_ESCAPE, false)
+	await process_frame
+	_check(not hud._skins_panel.visible and main._local_input.is_processing(), "Skin dialog closes cleanly after responsive layout")
+	root.size = Vector2i(1280, 800)
+	hud._fit_interface()
+	await process_frame
+	await process_frame
+	hud.set_menu_opened(true)
+	await process_frame
+	await process_frame
 	await _click(hud._menu_disconnect_button)
 	_check(not hud._menu_panel.visible and hud._players.is_empty() and not main._local_input.is_processing(), "Disconnect from menu closes the modal and clears the session")
 	await _finish()
@@ -88,6 +119,9 @@ func _wait_for(predicate: Callable) -> void:
 	var deadline := Time.get_ticks_msec() + 8000
 	while not predicate.call() and Time.get_ticks_msec() < deadline:
 		await create_timer(0.02).timeout
+
+func _footer_buttons() -> Array:
+	return hud._frame.get_children().filter(func(child: Node) -> bool: return child is Button and child.visible and child.get_rect().intersects(hud._bottom_back.get_rect()))
 
 func _key(code: Key, pressed: bool) -> void:
 	var event := InputEventKey.new()

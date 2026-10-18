@@ -59,7 +59,7 @@ func _run() -> void:
 		network.request_cast(53, hud._players[opponent].grid_position, 3)
 		await _wait_for(func() -> bool: return hud._players[local_id].current_mana == 1297)
 		_check(hud._players[local_id].current_mana == 1297, "Remote Apocalypse keeps its original 1000 mana cost")
-		await _wait_for(func() -> bool: return hud._players[opponent].is_meditating)
+		await _wait_for(func() -> bool: return hud._players[opponent].is_meditating, 18.0)
 		var med_health: int = hud._players[opponent].current_health
 		_check(hud._players[opponent].is_meditating and world._avatars[opponent]._meditation_fx.visible, "Other client sees the confirmed meditation and its FX")
 		await _wait_for(func() -> bool: return hud._players[opponent].current_health > med_health)
@@ -168,7 +168,7 @@ func _run() -> void:
 	_check(hud._players[local_id].active_effects.is_empty(), "Manual Remove Paralysis works while the caster is rooted")
 	await _wait_for(func() -> bool: return hud._players[local_id].current_health < hud._players[local_id].max_health - 50)
 	var life_before: int = hud._players[local_id].current_health
-	await _click(hud._health_potion_button)
+	await _click(hud._inventory_slots.filter(func(slot: Variant) -> bool: return slot.action == "health_potion")[0])
 	await _wait_for(func() -> bool: return hud._players[local_id].current_health > life_before)
 	_check(hud._players[local_id].current_health == life_before + 27, "Actual GUI red potion restores 27 health on the server")
 	await create_timer(0.42).timeout
@@ -178,6 +178,40 @@ func _run() -> void:
 	await _wait_for(func() -> bool: return hud._players[local_id].current_mana > mana_before)
 	_check(hud._players[local_id].current_mana == mana_before + 124, "Blue-potion hotkey restores 5 percent of 2487 mana")
 	hud.show_inventory()
+	var original_bindings: Array[int] = controller.bindings.duplicate()
+	var all_keys_preserve_inventory := true
+	for index in range(10):
+		controller.bindings[index] = 1
+		_key(KEY_1 + index if index < 9 else KEY_0, true)
+		_key(KEY_1 + index if index < 9 else KEY_0, false)
+		await process_frame
+		all_keys_preserve_inventory = all_keys_preserve_inventory and controller.aimed_spell_id == 1 and hud._inventory_panel.visible and not hud._spell_panel.visible
+		controller.cancel_targeting()
+	controller.bindings.assign(original_bindings)
+	_check(all_keys_preserve_inventory, "All 1-0 spell macros preserve the visible inventory tab")
+	_key(KEY_1, true)
+	_key(KEY_1, false)
+	await process_frame
+	await create_timer(0.35).timeout
+	life_before = hud._players[local_id].current_health
+	await _click(hud._inventory_slots[0])
+	await _wait_for(func() -> bool: return hud._players[local_id].current_health > life_before)
+	_check(hud._players[local_id].current_health == life_before + 27 and controller.aimed_spell_id == 1 and hud._inventory_panel.visible, "Inventory red potion works while a macro cursor stays armed")
+	await create_timer(0.35).timeout
+	mana_before = hud._players[local_id].current_mana
+	_key(KEY_E, true)
+	_key(KEY_E, false)
+	await _wait_for(func() -> bool: return hud._players[local_id].current_mana > mana_before)
+	_check(hud._players[local_id].current_mana == mana_before + 124 and controller.aimed_spell_id == 1 and hud._inventory_panel.visible, "Blue-potion key preserves aiming and inventory")
+	mana_before = hud._players[local_id].current_mana
+	var life_before_macro: int = hud._players[opponent].current_health
+	await _click_world(opponent)
+	await _wait_for(func() -> bool: return controller.pending_request == 0 and hud._players[local_id].current_mana == mana_before - 10)
+	_check(hud._players[local_id].current_mana == mana_before - 10 and hud._players[opponent].current_health < life_before_macro and hud._inventory_panel.visible, "After potions the same macro cursor casts normally without switching tabs")
+	await _click(hud._hotkey_buttons[0])
+	_check(controller.aimed_spell_id == 1 and hud._inventory_panel.visible, "Clicking a macro also keeps the inventory open")
+	controller.cancel_targeting()
+	await _capture("macro-inventory-potions.png")
 	var drag_health: int = hud._players[local_id].current_health
 	var drag_mana: int = hud._players[local_id].current_mana
 	await _drag(hud._inventory_slots[0], hud._inventory_slots[8])
@@ -227,7 +261,7 @@ func _run() -> void:
 	await _click_world(opponent)
 	await _wait_for(func() -> bool: return hud._players[local_id].current_mana == mana_before - 1000)
 	var apoc_damage: int = target_life - hud._players[opponent].current_health
-	_check(hud._players[local_id].current_mana == mana_before - 1000 and apoc_damage >= 223 and apoc_damage <= 238, "Search, Launch and camera-adjusted target resolve Apocalypse with equipment modifiers")
+	_check(hud._players[local_id].current_mana == mana_before - 1000 and apoc_damage >= 205 and apoc_damage <= 219, "Search, Launch and camera-adjusted target resolve tuned Apocalypse with equipment modifiers")
 	await _capture("arena-apocalypse.png")
 	await _click(hud._show_catalog)
 	await _search_spell(7)
@@ -256,7 +290,7 @@ func _run() -> void:
 	_check(hud._players[local_id].class_id == 8, "Preset selection succeeds immediately after combat without full-resource or peace gates")
 	_check(not panel.visible and hud._players[local_id].max_mana == 0 and main._local_input.is_processing(), "Applying a hunter preset updates resources and returns to gameplay")
 	_check(controller.bindings[2] == ClassCatalog.ATTACK_BINDING and controller.aimed_spell_id == 0 and hud._launch_button.disabled, "Hunter has an attack macro and no inherited spell macros or casting cursor")
-	_check(world._avatars[local_id]._player_visual._class_id == 8 and hud._equipped_label.text.contains("Arco de Cazador"), "Hunter equipment is visible in the avatar and equipped summary")
+	_check(world._avatars[local_id]._player_visual._class_id == 8 and hud._inventory_slots.any(func(slot) -> bool: return slot.tooltip_text.contains("Arco de Cazador") and slot._equipped_badge != null and slot._equipped_badge.visible), "Hunter equipment is visible in the avatar and inventory badge without an intrusive summary")
 	await _capture("arena-hunter-equipped.png")
 	for resolution: Vector2i in [Vector2i(1280, 800), Vector2i(1440, 900), Vector2i(1280, 720)]:
 		root.size = resolution
@@ -325,6 +359,8 @@ func _click_at(point: Vector2, button: int = MOUSE_BUTTON_LEFT) -> void:
 
 
 func _drag(source: Control, target: Control) -> void:
+	var button := MOUSE_BUTTON_RIGHT if source.has_method("move_data") else MOUSE_BUTTON_LEFT
+	var mask := MOUSE_BUTTON_MASK_RIGHT if source.has_method("move_data") else MOUSE_BUTTON_MASK_LEFT
 	var start := source.get_global_rect().get_center()
 	var finish := target.get_global_rect().get_center()
 	var hover := InputEventMouseMotion.new()
@@ -335,7 +371,7 @@ func _drag(source: Control, target: Control) -> void:
 	var down := InputEventMouseButton.new()
 	down.position = start
 	down.global_position = start
-	down.button_index = MOUSE_BUTTON_LEFT
+	down.button_index = button
 	down.pressed = true
 	Input.parse_input_event(down)
 	await process_frame
@@ -345,14 +381,14 @@ func _drag(source: Control, target: Control) -> void:
 		motion.position = point
 		motion.global_position = point
 		motion.relative = point - previous
-		motion.button_mask = MOUSE_BUTTON_MASK_LEFT
+		motion.button_mask = mask
 		Input.parse_input_event(motion)
 		await process_frame
 		previous = point
 	var up := InputEventMouseButton.new()
 	up.position = finish
 	up.global_position = finish
-	up.button_index = MOUSE_BUTTON_LEFT
+	up.button_index = button
 	up.pressed = false
 	Input.parse_input_event(up)
 	await process_frame

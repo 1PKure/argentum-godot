@@ -406,5 +406,14 @@
     2,
     12,
     13
-  ]
+  ],
+  "arrow_impact_audio": {
+    "repository": "https://github.com/ao-org/Recursos",
+    "commit": "89615f34162d9fa0bf0fae4242cd6639edbf772f",
+    "source_path": "OGG/2542.ogg",
+    "runtime_path": "audio/2542.ogg",
+    "bytes": 41762,
+    "sha256": "9e3788935cbcd4c29125bc52ca93beaaf5f73432ff4b5dd29feea37806f52ecc",
+    "reason": "Original audio ID of Disparo (247); used at confirmed physical arrow impact without a magic-sound fallback."
+  }
 }

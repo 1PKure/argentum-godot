@@ -19,6 +19,25 @@ func _run() -> void:
 	_check(ClassCatalog.magic_damage(92, 1, 1) == 223 and ClassCatalog.magic_damage(98, 1, 1) == 238, "Level-50 Apocalypse includes the original +3 percent per level")
 	_check(ClassCatalog.magic_damage(92, 1, 1, null, null, false) == 89, "Periodic effects do not inherit the direct-hit level bonus")
 	_check(ClassCatalog.magic_damage(92, 1, 1, null, null, true, true) == 251, "AntiRm spells bypass resistance but retain level and weapon bonuses")
+	_check(SpellCatalog.direct_damage(53, ClassCatalog.magic_damage(92, 1, 1)) == 205 and SpellCatalog.direct_damage(53, ClassCatalog.magic_damage(98, 1, 1)) == 219, "Arena Apocalypse is reduced eight percent after equipment and resistance")
+	_check(SpellCatalog.direct_damage(51, ClassCatalog.magic_damage(70, 1, 1)) == 156 and SpellCatalog.direct_damage(51, ClassCatalog.magic_damage(76, 1, 1)) == 169, "Arena Discharge is reduced eight percent after equipment and resistance")
+	_check(SpellCatalog.direct_damage(3, 170) == 170 and SpellCatalog.get_spell(53).min_amount == 92 and SpellCatalog.get_spell(51).max_amount == 76, "Other spells and imported AO20 data keep their original damage values")
+	var registry = load("res://server/systems/player_registry.gd").new()
+	root.add_child(registry)
+	var caster: PlayerState = registry.add_player(701)
+	var target: PlayerState = registry.add_player(702)
+	target.max_health = 10000
+	target.current_health = 10000
+	var tuned := true
+	for index in range(20):
+		caster.current_mana = caster.max_mana
+		var id := 53 if index % 2 == 0 else 51
+		var result: Dictionary = registry.try_cast_spell(701, id, target.grid_position, index + 1, 10000 + index * 1000)
+		var lower := 205 if id == 53 else 156
+		var upper := 219 if id == 53 else 169
+		tuned = tuned and result.ok and int(result.event.amount) >= lower and int(result.event.amount) <= upper and caster.current_mana == caster.max_mana - int(SpellCatalog.get_spell(id).mana)
+	_check(tuned, "Real authoritative casts apply tuned damage with original mana costs to both combat actors")
+	registry.queue_free()
 	var state := PlayerState.new(7, "Rival")
 	state.current_mana = 73
 	var net = root.get_node("PlayerNetwork")

@@ -59,6 +59,7 @@ var _effect_labels: Array[String] = []
 var _target_position: Vector2
 var _movement_waypoints: Array[Vector2] = []
 var _is_selected := false
+var _move_speed := MOVE_SPEED
 
 
 func _ready() -> void:
@@ -67,7 +68,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	var remaining_distance := MOVE_SPEED * maxf(delta, 0.0)
+	var remaining_distance := _move_speed * maxf(delta, 0.0)
 	var moved_this_frame := false
 	# Preserve each confirmed turn. Carry unused frame time to the next segment
 	# instead of cutting diagonally toward the newest received grid position.
@@ -128,9 +129,10 @@ func setup(
 	is_alive = player_state.is_alive
 	is_ghost = player_state.is_ghost
 	is_local_player = local_player
+	_apply_move_speed(player_state)
 	is_alive = player_state.is_alive
 	_apply_effect_presentation(player_state)
-	_player_visual.set_loadout(player_state.class_id, player_state.equipped_items)
+	_player_visual.set_loadout(player_state.class_id, player_state.equipped_items, player_state.skin_id)
 
 	_player_visual.set_head_id(
 		_get_head_id_from_peer()
@@ -167,10 +169,11 @@ func apply_server_position(
 func apply_server_stats(
 	player_state: PlayerState
 ) -> void:
+	_apply_move_speed(player_state)
 	is_alive = player_state.is_alive
 	is_ghost = player_state.is_ghost
 	_apply_effect_presentation(player_state)
-	_player_visual.set_loadout(player_state.class_id, player_state.equipped_items)
+	_player_visual.set_loadout(player_state.class_id, player_state.equipped_items, player_state.skin_id)
 	if _movement_waypoints.is_empty():
 		_last_visual_direction = Vector2(MovementRules.get_offset(player_state.facing_direction))
 		_player_visual.set_movement(_last_visual_direction, false)
@@ -189,6 +192,10 @@ func apply_server_stats(
 		)
 
 	_update_label()
+
+
+func _apply_move_speed(state: PlayerState) -> void:
+	_move_speed = TILE_SIZE * 1000.0 / MovementRules.PRACTICE_BOT_MOVE_INTERVAL_MSEC if state.is_bot else MOVE_SPEED
 
 
 func _apply_effect_presentation(state: PlayerState) -> void:
@@ -234,18 +241,23 @@ func _create_name_label() -> void:
 	_name_label.z_index = OVERHEAD_Z_INDEX
 
 	_name_label.position = Vector2(
-		-70.0,
-		-74.0
+		-100.0,
+		46.0
 	)
 
 	_name_label.size = Vector2(
-		140.0,
+		200.0,
 		24.0
 	)
 
 	_name_label.horizontal_alignment = (
 		HORIZONTAL_ALIGNMENT_CENTER
 	)
+	_name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_name_label.add_theme_font_size_override("font_size", 16)
+	_name_label.add_theme_color_override("font_shadow_color", Color.BLACK)
+	_name_label.add_theme_constant_override("shadow_offset_x", 1)
+	_name_label.add_theme_constant_override("shadow_offset_y", 1)
 
 	add_child(_name_label)
 
@@ -267,16 +279,5 @@ func _update_label() -> void:
 	if _name_label == null:
 		return
 
-	var final_name := display_name
-
-	if is_local_player:
-		final_name += " (YOU)"
-
-	if is_ghost:
-		final_name += " [GHOST]"
-	elif _is_meditating:
-		final_name += " · Meditando"
-	elif not _effect_labels.is_empty():
-		final_name += " · " + str(_effect_labels[0])
-
-	_name_label.text = final_name
+	_name_label.text = display_name
+	_name_label.modulate = Color("f2d47b") if is_local_player else Color.WHITE

@@ -4,9 +4,22 @@ extends Node
 	$PlayerRegistry
 )
 
+var practice_bot: ArenaPracticeBot
+
 
 func _ready() -> void:
 	print("Starting Argentum server...")
+	practice_bot = ArenaPracticeBot.new(player_registry)
+	practice_bot.reset_world.connect(_on_practice_reset)
+	practice_bot.removed.connect(_on_bot_removed)
+	practice_bot.status_changed.connect(_broadcast_bot_status)
+	Skins.skin_requested.connect(func(peer_id: int, class_id: int, id: String, wins: int) -> void:
+		var result := player_registry.try_select_skin(peer_id, id, wins, class_id)
+		if result.ok:
+			PlayerNetwork.broadcast_player_stats_updated(result.state)
+	)
+	BotNetwork.command_requested.connect(_on_bot_command)
+	BotNetwork.status_requested.connect(func(peer_id: int) -> void: BotNetwork.send_status(peer_id, practice_bot.status()))
 	player_registry.basic_attack_resolved.connect(PlayerNetwork.send_basic_attack_result)
 
 	NetworkManager.peer_connected.connect(
@@ -56,17 +69,23 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	for player: PlayerState in player_registry.advance_runtime():
 		PlayerNetwork.broadcast_player_stats_updated(player.to_dictionary())
+	for action: Dictionary in practice_bot.tick():
+		_publish_bot_action(action)
 
 
-func _on_recovery_action_requested(peer_id: int, action: String, request_id: int) -> void:
-	var result := player_registry.try_recovery_action(peer_id, action, request_id)
+func _on_recovery_action_requested(peer_id: int, action: String, request_id: int, source: String) -> void:
+	practice_bot.settle_round()
+	var result := player_registry.try_recovery_action(peer_id, action, request_id, -1, source)
 	if not result.ok:
-		RecoveryNetwork.send_rejection(peer_id, str(result.message))
+		RecoveryNetwork.send_rejection(peer_id, request_id, str(result.message), int(result.get("remaining_msec", 0)))
 		return
 	PlayerNetwork.broadcast_player_stats_updated(result.state)
 	if action == "respawn":
 		PlayerNetwork.broadcast_player_moved(result.state)
+	result.event.request_id = request_id
 	RecoveryNetwork.broadcast_result(result.event)
+	if action.begins_with("class:") or action == "respawn":
+		practice_bot.restart_after_preset(peer_id)
 
 
 func _on_peer_connected(
@@ -77,6 +96,7 @@ func _on_peer_connected(
 		% peer_id
 	)
 
+	practice_bot.peer_joining()
 	var player: PlayerState = (
 		player_registry.add_player(
 			peer_id
@@ -92,6 +112,7 @@ func _on_peer_connected(
 		peer_id,
 		player_registry.get_snapshot()
 	)
+	_broadcast_bot_status(practice_bot.status())
 
 
 func _on_peer_disconnected(
@@ -102,18 +123,20 @@ func _on_peer_disconnected(
 	):
 		return
 
+	practice_bot.peer_left(peer_id)
 	player_registry.remove_player(
 		peer_id
 	)
 
 	for existing_peer_id in (
-		player_registry.get_peer_ids()
+		multiplayer.get_peers()
 	):
 		PlayerNetwork.send_player_despawned_to(
 			existing_peer_id,
 			peer_id
 		)
 
+	_broadcast_bot_status(practice_bot.status())
 
 func _on_move_requested(
 	peer_id: int,
@@ -162,6 +185,7 @@ func _on_basic_attack_requested(
 	PlayerNetwork.broadcast_player_stats_updated(
 		target.to_dictionary()
 	)
+	practice_bot.settle_round()
 
 
 func _on_spell_cast_requested(peer_id: int, spell_id: int, target: Vector2i, request_id: int) -> void:
@@ -173,11 +197,14 @@ func _on_spell_cast_requested(peer_id: int, spell_id: int, target: Vector2i, req
 	if int(result.target_state.peer_id) != peer_id:
 		PlayerNetwork.broadcast_player_stats_updated(result.target_state)
 	SpellNetwork.broadcast_result(result.event)
+	practice_bot.settle_round()
 
 
 func _on_debug_damage_requested(
 	peer_id: int
 ) -> void:
+	if practice_bot.owner_id == peer_id:
+		return
 	var player: PlayerState = (
 		player_registry.apply_damage(
 			peer_id,
@@ -220,7 +247,7 @@ func _send_new_player_to_existing_clients(
 	)
 
 	for existing_peer_id in (
-		player_registry.get_peer_ids()
+		multiplayer.get_peers()
 	):
 		if existing_peer_id == new_peer_id:
 			continue
@@ -239,6 +266,7 @@ func _on_shot_requested(peer_id: int, target: Vector2i, request_id: int) -> void
 	PlayerNetwork.broadcast_player_stats_updated(result.caster_state)
 	PlayerNetwork.broadcast_player_stats_updated(result.target_state)
 	SpellNetwork.broadcast_result(result.event)
+	practice_bot.settle_round()
 
 
 func _on_inventory_move(peer_id: int, source: int, destination: int, item_id: int, revision: int, request_id: int) -> void:
@@ -254,3 +282,39 @@ func _broadcast_inventory(peer_id: int, result: Dictionary) -> void:
 		InventoryNetwork.send_rejection(peer_id, str(result.message))
 		return
 	PlayerNetwork.broadcast_player_stats_updated(result.state)
+
+
+func _on_bot_command(peer_id: int, enabled: bool, class_id: int, request_id: int) -> void:
+	var result := practice_bot.request(peer_id, enabled, class_id, request_id)
+	BotNetwork.send_result(peer_id, request_id, result)
+
+
+func _on_practice_reset() -> void:
+	for peer_id: int in multiplayer.get_peers():
+		PlayerNetwork.send_snapshot_to(peer_id, player_registry.get_snapshot())
+
+
+func _on_bot_removed(bot_id: int) -> void:
+	for peer_id: int in multiplayer.get_peers():
+		PlayerNetwork.send_player_despawned_to(peer_id, bot_id)
+
+
+func _broadcast_bot_status(status: Dictionary) -> void:
+	for peer_id: int in multiplayer.get_peers():
+		BotNetwork.send_status(peer_id, status)
+
+
+func _publish_bot_action(action: Dictionary) -> void:
+	match str(action.kind):
+		"move":
+			PlayerNetwork.broadcast_player_moved(action.state)
+		"cast":
+			PlayerNetwork.broadcast_player_stats_updated(action.result.caster_state)
+			if int(action.result.target_state.peer_id) != int(action.result.caster_state.peer_id):
+				PlayerNetwork.broadcast_player_stats_updated(action.result.target_state)
+			SpellNetwork.broadcast_result(action.result.event)
+		"recovery":
+			PlayerNetwork.broadcast_player_stats_updated(action.result.state)
+		"melee":
+			PlayerNetwork.broadcast_player_stats_updated(action.attacker)
+			PlayerNetwork.broadcast_player_stats_updated(action.target)

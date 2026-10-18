@@ -1,20 +1,42 @@
 # Cadencia de la arena
 
-Ajuste solicitado para que el combate sea ligeramente más rápido. Estos son valores propios del prototipo, aplicados por el servidor; no son una copia exacta del balance AO20 ni modifican los DAT/INI originales.
+Perfil de prueba con pociones seleccionadas y combinación clic + Usar. Los ajustes de daño de arena se describen en [CLASSES.md](CLASSES.md); los DAT/INI originales se conservan.
 
-| Acción o cruce | Perfil anterior | Perfil actual |
-| --- | ---: | ---: |
-| Poción → poción, compartido entre roja/azul | 380 ms | 330 ms |
-| Golpe → golpe | 750 ms | 650 ms |
-| Hechizo → hechizo, intervalo global | 1230 ms | 1100 ms |
-| Golpe → hechizo | 800 ms | 700 ms |
-| Hechizo → golpe | 800 ms | 700 ms |
-| Golpe → poción | 800 ms | 700 ms |
+| Acción del jugador | Intervalo actual |
+| --- | ---: |
+| Poción por clic | 280 ms |
+| Poción por Usar / Espacio / Q/E | 280 ms |
+| Alternar clic + Usar | Mínimo común 200 ms |
+| Hechizo → hechizo | 950 ms |
+| Golpe → golpe | 550 ms |
+| Flecha → flecha | 1200 ms |
+| Golpe → hechizo | 600 ms |
+| Hechizo → golpe/arco | 600 ms |
+| Golpe/arco → poción, por cualquier vía | 600 ms |
 
-La reducción es de aproximadamente 10–13%. No agrega bloqueos nuevos de poción → golpe ni poción ↔ hechizo. Se conservan el daño, los costes, la cantidad recuperada, las recargas individuales de cada hechizo, la duración de estados y la meditación. El movimiento mantiene su cadencia de 120 ms.
+El arco usa **1200 ms** de `IntervaloFlechasCazadores` del INI AO20, con un límite propio en PlayerRegistry. Antes compartía los 550 ms del golpe, lo que permitía encadenar demasiado rápido sus impactos de 181–200 contra el Mago equipado. El servidor comprueba este límite para humanos y bots: repetir CTRL, macro 3, clic o nonces nuevos no aumenta la cadencia. El golpe frontal no dispara flechas. El resto de golpes mantiene 550 ms.
 
-Los valores viven en CombatRules, RecoveryRules y SpellCatalog. La validación y el gasto siguen en PlayerRegistry. El tiempo opcional de sus métodos internos permite probar los límites con precisión; el cliente no envía timestamps ni decide cuándo una acción se acepta. Las firmas RPC no cambian.
+Clic y Usar tienen tiempos propios, compartidos entre roja/azul. El mínimo común de 200 ms se aplica además de ambos: dos acciones simultáneas no producen dos pociones instantáneas. Q/E comparte Usar. Cambiar de color, alternar teclas, repetir solicitudes o inventar otra vía no añade capacidad. El límite teórico es 3,57 pociones/s por una sola vía y 5/s al alternar, sujeto a recursos, bloqueo tras golpe, conexión y ejecución.
 
-Se separan las claves de recarga por hechizo (`spell:ID`) de las claves de grupo compartido (`group:CdEffectId`). Antes Dardo Mágico, ID 1, podía bloquear accidentalmente Restauración, grupo 1. Las variantes que pertenecen realmente al mismo grupo siguen compartiendo sus 30 segundos; el intervalo global reducido no los saltea.
+La provisión sigue siendo ilimitada. Las clases sin maná reciben sólo rojas; al cambiar desde una azul seleccionada se selecciona la roja. Seleccionar una poción llena no la bebe ni cambia el recurso de otro color. La selección sigue al objeto al arrastrarlo con botón derecho; ver [RECOVERY.md](RECOVERY.md).
 
-`tests/action_intervals_smoke.gd` verifica el milisegundo anterior y el límite exacto, ambos sentidos de golpe/magia, el cruce golpe/poción, cambio de color, solicitudes repetidas y recargas individuales. La prueba con servidor y dos clientes conserva la validación de clics, macros, CTRL y pociones mientras se medita. La sensación final se evalúa jugando esta revisión con el servidor actualizado.
+No se agregan bloqueos de poción → golpe ni poción ↔ hechizo. Se conservan costes, cantidad recuperada, recargas individuales y de grupo, estados y meditación. El movimiento del jugador sigue a 120 ms. Servidor/cliente requieren protocolo **15** y la misma revisión.
+
+## Bot
+
+| Acción | Cadencia del bot |
+| --- | ---: |
+| Paso, también en la interpolación visual | 120 ms (igual al jugador) |
+| Magia ofensiva, Curación y Remover | 1250–1350 ms |
+| Golpe | 650–750 ms |
+| Arco | 1200–1300 ms |
+| Poción, una sola vía | 280 ms |
+| Reacción inicial a una raíz | 650–850 ms |
+
+La reacción a una raíz se suma a las restricciones vigentes: Remover no saltea la pausa de magia del bot. Se conservan recargas, maná y validaciones del servidor. El bot no usa clic + Usar. Empieza a beber cuando faltan 27 HP, reacciona en 100–160 ms y prioriza rojas bajo 65% de vida, manteniendo movimiento y recuperación en paralelo. Ver [BOTS.md](BOTS.md).
+
+## Validación
+
+`action_intervals_smoke.gd` prueba fronteras exactas y spam de 2400 solicitudes nuevas de flecha, con actor humano y bot, además de las vías de poción, cruces y recargas. `class_presets_smoke.gd` comprueba provisiones por clase y arco dirigido. `practice_bot_smoke.gd` valida la espera común de daño/Remover y rojas tras un combo. `movement_smoke.gd` mide interpolación humana de 120 ms y bot de 120 ms.
+
+`preset_interactions_client.gd` repite CTRL/macro 3 y clics durante el intervalo de arco con dos clientes y dedicado reales. `potion_use_client.gd` recorre selección, Espacio sostenido, combinación, arrastre, botón Usar, macros, cancelaciones y cambio a una clase sin maná. La dificultad subjetiva se evalúa jugando esta revisión.

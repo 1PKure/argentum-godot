@@ -46,9 +46,6 @@ var _spell_search: LineEdit
 var _show_catalog: CheckButton
 var _spell_scroll: ScrollContainer
 var _spell_list: VBoxContainer
-var _meditate_button: Button
-var _health_potion_button: Button
-var _mana_potion_button: Button
 var _status_label: Label
 var _menu_button: Button
 var _stats_button: Button
@@ -58,7 +55,14 @@ var _inventory_slots: Array[InventorySlotButton] = []
 var _inventory_layout := ArenaInventoryLayout.new()
 var _bottom_back: Panel
 var _class_panel: ClassPresetPanel
-var _equipped_label: Label
+var _bot_panel: BotPracticePanel
+var _skins_panel: SkinsPanel
+var _round_countdown: RoundCountdown
+var _last_bot_phase := "idle"
+var _last_bot_owner := 0
+var _inventory_move: Dictionary = {}
+var _inventory_move_start := Vector2.ZERO
+var _inventory_move_preview: TextureRect
 var _book_class_id := -1
 var _inventory_revision := -1
 var _inventory_peer := 0
@@ -69,6 +73,15 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_inventory_layout.restore()
 	_build_interface()
+	_inventory_move_preview = TextureRect.new()
+	_inventory_move_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_inventory_move_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_inventory_move_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_inventory_move_preview.size = Vector2(32, 32)
+	_inventory_move_preview.modulate.a = 0.85
+	_inventory_move_preview.z_index = 100
+	_inventory_move_preview.hide()
+	add_child(_inventory_move_preview)
 	get_viewport().size_changed.connect(_fit_interface)
 	_fit_interface()
 	PlayerNetwork.basic_attack_resolved.connect(_on_basic_attack_event)
@@ -79,6 +92,20 @@ func _ready() -> void:
 	PlayerNetwork.player_stats_updated.connect(_on_player_stats_updated)
 	SpellNetwork.spell_resolved.connect(_on_spell_event)
 	RecoveryNetwork.action_resolved.connect(_on_recovery_event)
+	RecoveryNetwork.selection_changed.connect(_refresh_potion_selection)
+	BotNetwork.changed.connect(_on_bot_status)
+	Skins.victory_awarded.connect(func(result: Dictionary) -> void:
+		var class_id := int(result.class_id)
+		for id: String in result.unlocked:
+			console.append_message("Skin desbloqueada: %s. Equipala desde Skins." % SkinCatalog.get_skin(id, class_id).name)
+		if bool(result.get("invite_other_class", false)) or bool(result.get("all_collections_complete", false)):
+			set_menu_opened(false)
+			_class_panel.close_panel()
+			_skins_panel.close_panel()
+			if _spell_controller != null:
+				_spell_controller.cancel_targeting()
+			_bot_panel.show_collection_result(result)
+	)
 	InventoryNetwork.rejected.connect(func(message: String) -> void: console.append_message(message))
 	RecoveryNetwork.action_rejected.connect(func(message: String) -> void: console.append_message(message))
 	show_inventory()
@@ -118,7 +145,6 @@ func _update_spell_ui() -> void:
 		_controls_hint.text = "Arco · Elegí un objetivo"
 		_spell_status.text = ""
 	elif _spell_controller.aimed_spell_id != 0:
-		show_spells()
 		var spell := SpellCatalog.get_spell(_spell_controller.aimed_spell_id)
 		_controls_hint.text = "%s · Elegí un objetivo" % spell.name
 		_spell_status.text = ""
@@ -139,11 +165,13 @@ func _update_spell_ui() -> void:
 
 
 func _on_spell_selected(id: int) -> void:
+	_release_text_focus()
 	if _spell_controller != null:
 		_spell_controller.select_spell(id)
 
 
 func _on_hotkey_pressed(slot: int) -> void:
+	_release_text_focus()
 	if _spell_controller != null:
 		_spell_controller.aim_hotkey(slot)
 
@@ -154,6 +182,7 @@ func _on_hotkey_assigned(slot: int, id: int) -> void:
 
 
 func _on_launch_pressed() -> void:
+	_release_text_focus()
 	if _spell_controller != null:
 		_spell_controller.aim_selected()
 
@@ -193,8 +222,12 @@ func start_session(peer_id: int) -> void:
 
 
 func end_session(message: String) -> void:
+	_cancel_inventory_move()
 	set_menu_opened(false)
 	_class_panel.close_panel()
+	_bot_panel.close_panel()
+	_skins_panel.close_panel()
+	_round_countdown.clear()
 	_players.clear()
 	_local_peer_id = 0
 	_connection_label.text = "Sin conexión"
@@ -210,6 +243,7 @@ func show_inventory() -> void:
 
 
 func show_spells() -> void:
+	_cancel_inventory_move()
 	_inventory_panel.hide()
 	_spell_panel.show()
 	_inventory_button.button_pressed = false
@@ -287,9 +321,8 @@ func _build_interface() -> void:
 		slot.configure(index, _inventory_layout)
 		slot.item_used.connect(_use_inventory_item)
 		slot.item_dropped.connect(_move_inventory_item)
+		slot.move_started.connect(_begin_inventory_move)
 		_inventory_slots.append(slot)
-	_equipped_label = _label(_inventory_panel, "", Rect2(12, 268, 216, 126), 12)
-	_equipped_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_spell_search = LineEdit.new()
 	_spell_search.placeholder_text = "Buscar hechizo…"
 	_spell_panel.add_child(_spell_search)
@@ -347,16 +380,7 @@ func _build_interface() -> void:
 	_mana_label = _label(_frame, "—", Rect2(0, 0, 216, 22), 14)
 	_health_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_mana_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_meditate_button = _text_button(_frame, "Meditar", Rect2(0, 0, 232, 27))
-	_meditate_button.pressed.connect(_on_meditate_pressed)
-	_health_potion_button = _text_button(_frame, "Vida", Rect2(0, 0, 113, 27))
-	_health_potion_button.pressed.connect(_request_recovery.bind("health_potion"))
-	_mana_potion_button = _text_button(_frame, "Maná", Rect2(0, 0, 113, 27))
-	_mana_potion_button.pressed.connect(_request_recovery.bind("mana_potion"))
 	_build_menu()
-	_stats_button = _text_button(_frame, "", Rect2(0, 0, 129, 27))
-	_stats_button.text = "Reaparecer"
-	_stats_button.pressed.connect(_request_recovery.bind("respawn"))
 	_menu_button = _text_button(_frame, "", Rect2(0, 0, 126, 27))
 	_menu_button.text = "Menú"
 	_menu_button.pressed.connect(func() -> void: set_menu_opened(not _menu_panel.visible))
@@ -369,6 +393,23 @@ func _build_interface() -> void:
 	_class_panel = ClassPresetPanel.new()
 	add_child(_class_panel)
 	_class_panel.opened_changed.connect(func(_opened: bool) -> void: _notify_modal_state())
+	_bot_panel = BotPracticePanel.new()
+	add_child(_bot_panel)
+	_bot_panel.opened_changed.connect(func(_opened: bool) -> void: _notify_modal_state())
+	_bot_panel.try_class_requested.connect(func(id: int) -> void:
+		_open_classes()
+		if id != 0 and _class_panel.visible:
+			_class_panel.selector.select(_class_panel.selector.get_item_index(id))
+			_class_panel.selector.item_selected.emit(_class_panel.selector.selected)
+	)
+	_skins_panel = SkinsPanel.new()
+	add_child(_skins_panel)
+	_skins_panel.opened_changed.connect(func(_opened: bool) -> void: _notify_modal_state())
+	_round_countdown = RoundCountdown.new()
+	game_area.add_child(_round_countdown)
+	_reserved_buttons[3].text = "Skins"
+	_reserved_buttons[3].tooltip_text = "Atuendos desbloqueados al vencer al bot"
+	_reserved_buttons[3].pressed.connect(_open_skins)
 	_reserved_buttons[0].text = "Clases"
 	_reserved_buttons[0].tooltip_text = "Ver y elegir clases, equipo y estadísticas."
 	for style_name: String in ["normal", "hover", "pressed", "disabled"]:
@@ -378,6 +419,13 @@ func _build_interface() -> void:
 		class_style.set_border_width_all(1)
 		_reserved_buttons[0].add_theme_stylebox_override(style_name, class_style)
 	_reserved_buttons[0].pressed.connect(_open_classes)
+	_reserved_buttons[2].text = "Bot"
+	_reserved_buttons[2].tooltip_text = "Práctica con bot"
+	_reserved_buttons[2].pressed.connect(_open_bot)
+	for style_name: String in ["normal", "hover", "pressed", "disabled"]:
+		_reserved_buttons[3].add_theme_stylebox_override(style_name, _reserved_buttons[0].get_theme_stylebox(style_name))
+	for style_name: String in ["normal", "hover", "pressed", "disabled"]:
+		_reserved_buttons[2].add_theme_stylebox_override(style_name, _reserved_buttons[0].get_theme_stylebox(style_name))
 	_reserved_buttons[1].text = "Zoom 1×"
 	_reserved_buttons[1].tooltip_text = "Acercar / alejar el mundo"
 	for style_name: String in ["normal", "hover", "pressed"]:
@@ -441,7 +489,7 @@ func _build_menu() -> void:
 	controls.add_theme_constant_override("h_separation", 20)
 	controls.add_theme_constant_override("v_separation", 8)
 	content.add_child(controls)
-	for row: Array in [["WASD", "Movimiento"], ["CTRL", "Ataque físico"], ["1–0", "Accesos rápidos"], ["M", "Meditar"], ["Q / E", "Poción de vida / maná"], ["Esc / clic derecho", "Cancelar apuntado"]]:
+	for row: Array in [["WASD", "Movimiento"], ["CTRL", "Ataque físico"], ["1–0", "Accesos rápidos"], ["M", "Meditar"], ["Espacio", "Poción seleccionada (mantener: repetir)"], ["Q / E", "Poción de vida / maná"], ["Esc / clic derecho", "Cancelar apuntado"]]:
 		for text_value: String in row:
 			var label := Label.new()
 			label.text = text_value
@@ -453,6 +501,12 @@ func _build_menu() -> void:
 	_menu_credits.add_theme_font_size_override("font_size", 12)
 	_menu_credits.modulate = Color("c3b99f")
 	content.add_child(_menu_credits)
+	_stats_button = _text_button(content, "Reaparecer", Rect2())
+	_stats_button.custom_minimum_size.y = 34
+	_stats_button.pressed.connect(func() -> void:
+		set_menu_opened(false)
+		_request_recovery("respawn")
+	)
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 12)
 	content.add_child(actions)
@@ -470,7 +524,7 @@ func _build_menu() -> void:
 
 
 func is_modal_open() -> bool:
-	return _menu_panel.visible or _class_panel.visible
+	return _menu_panel.visible or _class_panel.visible or _bot_panel.visible or _skins_panel.visible
 
 
 func set_menu_opened(opened: bool) -> void:
@@ -485,17 +539,43 @@ func set_menu_opened(opened: bool) -> void:
 
 
 func _notify_modal_state() -> void:
-	if is_modal_open() and _spell_controller != null:
+	if _spell_controller != null:
+		_spell_controller.input_blocked = is_gameplay_blocked()
+	if is_gameplay_blocked() and _spell_controller != null:
+		_cancel_inventory_move()
 		_spell_controller.cancel_targeting()
-	modal_changed.emit(is_modal_open())
+	modal_changed.emit(is_gameplay_blocked())
 
 
 func _input(event: InputEvent) -> void:
+	if not _inventory_move.is_empty():
+		if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+			_cancel_inventory_move()
+			get_viewport().set_input_as_handled()
+			return
+		if event is InputEventMouseMotion:
+			_inventory_move_preview.visible = _inventory_move_preview.visible or event.position.distance_to(_inventory_move_start) >= 6.0
+			_inventory_move_preview.position = event.position + Vector2(12, 12)
+			get_viewport().set_input_as_handled()
+			return
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and not event.pressed:
+			if _inventory_move_preview.visible and _inventory_panel.visible and not is_modal_open() and _inventory_panel.get_global_rect().has_point(event.position):
+				for slot: InventorySlotButton in _inventory_slots:
+					if slot.get_global_rect().has_point(event.position):
+						slot._drop_data(Vector2.ZERO, _inventory_move)
+						break
+			_cancel_inventory_move()
+			get_viewport().set_input_as_handled()
+			return
 	if not is_modal_open() or not event is InputEventKey:
 		return
 	if event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
 		if _menu_panel.visible:
 			set_menu_opened(false)
+		elif _skins_panel.visible:
+			_skins_panel.close_panel()
+		elif _bot_panel.visible:
+			_bot_panel.close_panel()
 		else:
 			_class_panel.close_panel()
 	get_viewport().set_input_as_handled()
@@ -505,11 +585,8 @@ func _layout_footer_actions() -> void:
 	if _frame == null or _menu_button == null:
 		return
 	var side_x := _frame.size.x - 272.0
-	var y := _frame.size.y - 187
-	_stats_button.position = Vector2(side_x + 20, y)
-	_stats_button.size = Vector2(113, 27)
-	_menu_button.position = Vector2(side_x + (139 if _stats_button.visible else 20), y)
-	_menu_button.size = Vector2(113 if _stats_button.visible else 232, 27)
+	_menu_button.position = Vector2(side_x + 20, _frame.size.y - 34)
+	_menu_button.size = Vector2(232, 27)
 
 
 func _frame_patch(region: Rect2, left: int, right: int, top: int, bottom: int) -> NinePatchRect:
@@ -544,19 +621,17 @@ func _open_classes() -> void:
 	var state: PlayerState = _players.get(_local_peer_id)
 	if state != null and _spell_controller != null and _spell_controller.server_ready:
 		set_menu_opened(false)
+		_bot_panel.close_panel()
+		_skins_panel.close_panel()
 		_spell_controller.cancel_targeting()
 		_class_panel.open_panel(state.class_id)
 
 
 func _request_recovery(action: String) -> void:
-	if _spell_controller != null:
+	_release_text_focus()
+	if _spell_controller != null and action not in ["health_potion", "mana_potion"]:
 		_spell_controller.cancel_targeting()
-	RecoveryNetwork.request_action(action)
-
-
-func _on_meditate_pressed() -> void:
-	var state: PlayerState = _players.get(_local_peer_id)
-	_request_recovery("respawn" if state != null and not state.is_alive else "meditate")
+	RecoveryNetwork.request_action(action, "click" if action in ["health_potion", "mana_potion"] else "direct")
 
 
 func _on_recovery_event(event: Dictionary) -> void:
@@ -573,35 +648,29 @@ func _on_recovery_event(event: Dictionary) -> void:
 
 
 func _update_recovery_controls() -> void:
-	if _meditate_button == null:
+	if _stats_button == null:
 		return
 	var state: PlayerState = _players.get(_local_peer_id)
 	var ready := _spell_controller != null and _spell_controller.server_ready and state != null
-	_meditate_button.disabled = not ready or (state != null and not state.is_alive)
 	_stats_button.disabled = not ready or (state != null and state.is_alive)
-	_health_potion_button.disabled = not ready or (state != null and not state.is_alive)
-	_mana_potion_button.disabled = not ready or (state != null and not state.is_alive)
 	_reserved_buttons[0].disabled = not ready
-	_meditate_button.disabled = _meditate_button.disabled or (state != null and state.max_mana == 0)
-	_mana_potion_button.disabled = _mana_potion_button.disabled or (state != null and state.max_mana == 0)
+	_reserved_buttons[2].disabled = not ready
+	_reserved_buttons[3].disabled = not ready
 	if state == null:
 		_status_label.text = ""
-		_meditate_button.text = "Meditar"
 	elif not state.is_alive:
-		_meditate_button.text = "Meditar"
 		_status_label.text = "Fantasma"
 	else:
-		_meditate_button.text = "Dejar de meditar" if state.is_meditating else "Meditar"
 		var labels := state.active_effects.duplicate()
 		if state.is_meditating:
 			labels.append("Meditando")
 		_status_label.text = " · ".join(labels)
 	_status_label.tooltip_text = _status_label.text
 	_stats_button.visible = state != null and not state.is_alive
-	_layout_footer_actions()
 
 
 func _fit_interface() -> void:
+	_cancel_inventory_move()
 	var available := get_viewport_rect().size
 	var factor := minf(available.x / DESIGN_SIZE.x, available.y / DESIGN_SIZE.y)
 	_frame.scale = Vector2.ONE * factor
@@ -624,7 +693,7 @@ func _fit_interface() -> void:
 	_name_label.position = Vector2(side_x + 20, 40)
 	_position_label.position = Vector2(side_x + 20, 68)
 	_connection_label.position = Vector2(side_x + 20, 96)
-	_status_label.position = Vector2(side_x + 20, height - 98)
+	_status_label.position = Vector2(side_x + 20, height - 66)
 	_status_label.size = Vector2(232, 28)
 	_inventory_button.position = Vector2(side_x + 16, 162)
 	_spell_button.position = Vector2(side_x + 138, 162)
@@ -635,15 +704,10 @@ func _fit_interface() -> void:
 	_spell_status.position.y = _spell_panel.size.y - 83
 	_spell_status.size = Vector2(220, 34)
 	_launch_button.position.y = _spell_panel.size.y - 41
-	_health_bar.position = Vector2(side_x + 32, height - 152)
-	_mana_bar.position = Vector2(side_x + 32, height - 124)
+	_health_bar.position = Vector2(side_x + 32, height - 124)
+	_mana_bar.position = Vector2(side_x + 32, height - 96)
 	_health_label.position = _health_bar.position + Vector2(0, -3)
 	_mana_label.position = _mana_bar.position + Vector2(0, -3)
-	_meditate_button.position = Vector2(side_x + 20, height - 66)
-	_health_potion_button.position = Vector2(side_x + 20, height - 34)
-	_mana_potion_button.position = Vector2(side_x + 139, height - 34)
-	_stats_button.position = Vector2(side_x + 6, height - 187)
-	_menu_button.position = Vector2(side_x + 139, height - 187)
 	_menu_panel.position = Vector2.ZERO
 	_menu_panel.size = _frame.size
 	_layout_footer_actions()
@@ -651,8 +715,8 @@ func _fit_interface() -> void:
 	_bottom_back.size = Vector2(256, 188)
 	_close_button.position.x = _frame.size.x - 26
 	for index in range(_reserved_buttons.size()):
-		_reserved_buttons[index].position.x = side_x + 8 + index * 68
-		_reserved_buttons[index].size.x = 65 if index < 3 else 23
+		_reserved_buttons[index].position.x = side_x + 8 + index * 58
+		_reserved_buttons[index].size.x = 56
 	for index in range(_hotkey_buttons.size()):
 		_hotkey_buttons[index].position = Vector2((side_x - 410) * 0.5 + index * 41, height - 49)
 	if _world != null:
@@ -666,8 +730,8 @@ func _on_snapshot_received(players: Array) -> void:
 		var state := PlayerState.from_dictionary(data)
 		_players[state.peer_id] = state
 		if state.peer_id == _local_peer_id and _spell_controller != null:
-			_spell_controller.apply_class(state.class_id, state.preset_revision)
-	console.append_message("Arena lista · %d jugador(es) conectados." % _players.size())
+			_spell_controller.apply_state(data)
+	console.append_message("Arena lista · %d jugador(es) conectados." % _players.values().filter(func(player: PlayerState) -> bool: return not player.is_bot).size())
 	_update_local_stats()
 
 
@@ -708,18 +772,11 @@ func _player_name(state: PlayerState) -> String:
 
 func _update_local_stats() -> void:
 	var state: PlayerState = _players.get(_local_peer_id)
+	if not _inventory_move.is_empty() and (state == null or not state.is_alive or state.inventory_revision != int(_inventory_move.revision)):
+		_cancel_inventory_move()
 	_name_label.text = state.display_name if state != null else "Sin personaje"
 	if state != null:
-		var profile := ClassCatalog.get_equipped_profile(state.class_id, state.equipped_items)
 		_name_label.tooltip_text = state.display_name
-		var equipped := PackedStringArray()
-		for slot: String in ["armor", "weapon", "helmet", "shield", "accessory", "ammunition"]:
-			var item := ClassCatalog.get_item(int(state.equipped_items.get(slot, 0)))
-			if not item.is_empty():
-				equipped.append(str(item.Name))
-		_equipped_label.text = "%s\n%s" % [profile.name, " · ".join(equipped)]
-	else:
-		_equipped_label.text = "Sin personaje conectado."
 	_health_bar.max_value = state.max_health if state != null else 100
 	_mana_bar.max_value = state.max_mana if state != null else 100
 	_health_bar.value = state.current_health if state != null else 0
@@ -736,10 +793,35 @@ func _update_local_stats() -> void:
 	elif state == null:
 		_inventory_revision = -1
 		_inventory_peer = 0
+	_refresh_potion_selection()
 	_minimap.players = _players
 	_minimap.local_peer_id = _local_peer_id
 	_minimap.queue_redraw()
 	_update_recovery_controls()
+
+
+func _begin_inventory_move(source: int, screen_position: Vector2) -> void:
+	var state: PlayerState = _players.get(_local_peer_id)
+	if is_modal_open() or state == null or not state.is_alive or _spell_controller == null or not _spell_controller.server_ready:
+		return
+	_release_text_focus()
+	_inventory_move = _inventory_slots[source].move_data()
+	_inventory_move_start = screen_position
+	_inventory_move_preview.texture = _inventory_slots[source].icon
+	_inventory_move_preview.position = screen_position + Vector2(12, 12)
+	_inventory_move_preview.hide()
+
+
+func _cancel_inventory_move() -> void:
+	_inventory_move.clear()
+	if _inventory_move_preview != null:
+		_inventory_move_preview.hide()
+		_inventory_move_preview.texture = null
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		_cancel_inventory_move()
 
 
 func _move_inventory_item(source: int, destination: int, action: String) -> void:
@@ -847,3 +929,50 @@ func _resource_bar(filename: String, at: Vector2) -> TextureProgressBar:
 	bar.position = at
 	bar.size = Vector2(216, 16)
 	return bar
+
+
+func _open_bot() -> void:
+	if _spell_controller != null and _spell_controller.server_ready and _players.has(_local_peer_id):
+		set_menu_opened(false)
+		_class_panel.close_panel()
+		_skins_panel.close_panel()
+		_spell_controller.cancel_targeting()
+		_bot_panel.open_panel()
+
+
+func _on_bot_status() -> void:
+	var state: Dictionary = BotNetwork.state
+	_round_countdown.update_status(state, _local_peer_id)
+	_notify_modal_state()
+	var phase := str(state.get("phase", "idle"))
+	var owner := int(state.get("owner_id", 0))
+	if phase != _last_bot_phase and _local_peer_id != 0:
+		if owner == _local_peer_id and phase in ["won", "lost"]:
+			console.append_message("Ganaste la práctica." if phase == "won" else "Perdiste la práctica. Podés reiniciar desde Bot.")
+		elif phase == "idle" and _last_bot_owner == _local_peer_id and int(state.get("human_count", 0)) > 0:
+			console.append_message("Bot desactivado.")
+	_last_bot_phase = phase
+	_last_bot_owner = owner
+
+
+func _refresh_potion_selection() -> void:
+	for slot: InventorySlotButton in _inventory_slots:
+		slot.set_potion_selected(RecoveryNetwork.selected_potion)
+
+
+func _release_text_focus() -> void:
+	var focused := get_viewport().gui_get_focus_owner()
+	if focused is LineEdit or focused is TextEdit:
+		focused.release_focus()
+
+
+func is_gameplay_blocked() -> bool:
+	return is_modal_open() or (str(BotNetwork.state.get("phase", "")) == "countdown" and int(BotNetwork.state.get("owner_id", 0)) == _local_peer_id and _local_peer_id != 0)
+
+func _open_skins() -> void:
+	var state: PlayerState = _players.get(_local_peer_id)
+	if state != null:
+		set_menu_opened(false)
+		_class_panel.close_panel()
+		_bot_panel.close_panel()
+		_skins_panel.open_panel(state.class_id, state.equipped_items)

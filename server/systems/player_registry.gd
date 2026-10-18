@@ -11,11 +11,30 @@ var _last_spell_time: Dictionary[int, int] = {}
 var _last_spell_request: Dictionary[int, int] = {}
 var _last_recovery_request: Dictionary[int, int] = {}
 var _last_potion_time: Dictionary[int, int] = {}
+var _last_potion_channel_time: Dictionary[int, Dictionary] = {}
 var _next_meditation_tick: Dictionary[int, int] = {}
 var _spell_cooldowns: Dictionary = {}
 var _last_inventory_request: Dictionary[int, int] = {}
 var _last_shot_request: Dictionary[int, int] = {}
 var _status_system := ArenaStatusSystem.new()
+var _round_locks: Dictionary[int, bool] = {}
+
+func set_round_locked(peer_id: int, locked: bool) -> void:
+	if locked:
+		_round_locks[peer_id] = true
+	else:
+		_round_locks.erase(peer_id)
+
+func is_round_locked(peer_id: int) -> bool:
+	return _round_locks.has(peer_id)
+
+func try_select_skin(peer_id: int, id: String, local_wins: int, expected_class_id: int = -1) -> Dictionary:
+	var player: PlayerState = _players.get(peer_id)
+	if player == null or (expected_class_id != -1 and expected_class_id != player.class_id) or not SkinCatalog.is_unlocked(id, local_wins, player.class_id):
+		return _spell_error("Atuendo no disponible.")
+	player.skin_id = id
+	return {"ok": true, "state": player.to_dictionary()}
+
 
 var _arena_id: String = (
 	ArenaData.DEFAULT_ARENA_ID
@@ -75,11 +94,12 @@ func add_player(
 	_players[peer_id] = player
 
 	_last_move_time[peer_id] = 0
-	_last_attack_time[peer_id] = -SpellCatalog.ATTACK_SPELL_GAP_MSEC
+	_last_attack_time[peer_id] = -maxi(CombatRules.RANGED_ATTACK_COOLDOWN_MSEC, SpellCatalog.ATTACK_SPELL_GAP_MSEC)
 	_last_spell_time[peer_id] = -SpellCatalog.CAST_INTERVAL_MSEC
 	_last_spell_request[peer_id] = 0
 	_last_recovery_request[peer_id] = 0
 	_last_potion_time[peer_id] = -RecoveryRules.POTION_INTERVAL_MSEC
+	_last_potion_channel_time[peer_id] = {}
 	_spell_cooldowns[peer_id] = {}
 
 	print(
@@ -109,9 +129,11 @@ func remove_player(
 	)
 
 	_status_system.clear_player(player)
+	_round_locks.erase(peer_id)
 	_players.erase(peer_id)
 	_last_recovery_request.erase(peer_id)
 	_last_potion_time.erase(peer_id)
+	_last_potion_channel_time.erase(peer_id)
 	_next_meditation_tick.erase(peer_id)
 	_spell_cooldowns.erase(peer_id)
 	_last_move_time.erase(peer_id)
@@ -124,8 +146,11 @@ func remove_player(
 
 func try_move_player(
 	peer_id: int,
-	direction: int
+	direction: int,
+	current_time: int = -1
 ) -> PlayerState:
+	if is_round_locked(peer_id):
+		return null
 	if not _players.has(peer_id):
 		return null
 
@@ -144,9 +169,8 @@ func try_move_player(
 	):
 		return null
 
-	var current_time: int = (
-		Time.get_ticks_msec()
-	)
+	if current_time < 0:
+		current_time = Time.get_ticks_msec()
 
 	var last_move_time: int = (
 		_last_move_time.get(
@@ -206,6 +230,8 @@ func try_basic_attack(
 	attacker_peer_id: int,
 	current_time: int = -1
 ) -> PlayerState:
+	if is_round_locked(attacker_peer_id):
+		return null
 	if not _players.has(
 		attacker_peer_id
 	):
@@ -291,6 +317,8 @@ func try_basic_attack(
 
 
 func try_ranged_attack(peer_id: int, position: Vector2i, request_id: int, now: int = -1) -> Dictionary:
+	if is_round_locked(peer_id):
+		return _spell_error("La ronda todavía no empezó.")
 	var attacker: PlayerState = _players.get(peer_id)
 	if attacker == null or not attacker.is_alive or attacker.class_id != 8:
 		return _spell_error("Este personaje no puede disparar con arco.")
@@ -309,7 +337,7 @@ func try_ranged_attack(peer_id: int, position: Vector2i, request_id: int, now: i
 		return _spell_error("Hay un obstáculo entre el arco y el objetivo.")
 	if now < 0:
 		now = Time.get_ticks_msec()
-	var remaining: int = CombatRules.BASIC_ATTACK_COOLDOWN_MSEC - (now - _last_attack_time.get(peer_id, -CombatRules.BASIC_ATTACK_COOLDOWN_MSEC))
+	var remaining: int = CombatRules.RANGED_ATTACK_COOLDOWN_MSEC - (now - _last_attack_time.get(peer_id, -CombatRules.RANGED_ATTACK_COOLDOWN_MSEC))
 	if remaining > 0:
 		return _spell_error("Esperá el intervalo del arco.", remaining)
 	remaining = SpellCatalog.SPELL_ATTACK_GAP_MSEC - (now - _last_spell_time.get(peer_id, -SpellCatalog.SPELL_ATTACK_GAP_MSEC))
@@ -376,6 +404,8 @@ func _validate_inventory_request(peer_id: int, slot: int, item_id: int, revision
 
 
 func try_cast_spell(caster_id: int, spell_id: int, target_position: Vector2i, request_id: int, now: int = -1) -> Dictionary:
+	if is_round_locked(caster_id):
+		return _spell_error("La ronda todavía no empezó.")
 	var caster: PlayerState = _players.get(caster_id)
 	if caster == null:
 		return _spell_error("No hay un personaje conectado para lanzar.")
@@ -428,7 +458,8 @@ func try_cast_spell(caster_id: int, spell_id: int, target_position: Vector2i, re
 		if spell.effect == "healing":
 			target.restore_health(rolled)
 		else:
-			target.apply_damage(ClassCatalog.magic_damage(rolled, caster.class_id, target.class_id, caster.equipped_items, target.equipped_items, true, int(spell.raw.get("AntiRm", "0")) == 1))
+			var damage := ClassCatalog.magic_damage(rolled, caster.class_id, target.class_id, caster.equipped_items, target.equipped_items, true, int(spell.raw.get("AntiRm", "0")) == 1)
+			target.apply_damage(SpellCatalog.direct_damage(spell_id, damage))
 	caster.spend_mana(int(spell.mana))
 	caster.is_meditating = false
 	_last_spell_time[caster_id] = now
@@ -447,7 +478,7 @@ func try_cast_spell(caster_id: int, spell_id: int, target_position: Vector2i, re
 	}
 
 
-func try_recovery_action(peer_id: int, action: String, request_id: int, now: int = -1) -> Dictionary:
+func try_recovery_action(peer_id: int, action: String, request_id: int, now: int = -1, source: String = "direct") -> Dictionary:
 	if now < 0:
 		now = Time.get_ticks_msec()
 	var player: PlayerState = _players.get(peer_id)
@@ -455,11 +486,16 @@ func try_recovery_action(peer_id: int, action: String, request_id: int, now: int
 		return _spell_error("No hay un personaje conectado.")
 	if not action in ["meditate", "health_potion", "mana_potion", "respawn"] and not action.begins_with("class:"):
 		return _spell_error("Acción desconocida.")
+	if source not in ["direct", "use", "click"]:
+		return _spell_error("Forma de uso de poción desconocida.")
+	var channel := "click" if source == "click" else "use"
 	if request_id <= _last_recovery_request.get(peer_id, 0):
 		return _spell_error("La acción ya fue procesada.")
 	_last_recovery_request[peer_id] = request_id
 	if action.begins_with("class:"):
 		return try_select_class(peer_id, int(action.trim_prefix("class:")), now)
+	if is_round_locked(peer_id):
+		return _spell_error("La ronda todavía no empezó.")
 	var amount := 0
 	var message := ""
 	if action == "respawn":
@@ -475,6 +511,7 @@ func try_recovery_action(peer_id: int, action: String, request_id: int, now: int
 		_last_attack_time[peer_id] = now
 		_spell_cooldowns[peer_id].clear()
 		_last_potion_time[peer_id] = -RecoveryRules.POTION_INTERVAL_MSEC
+		_last_potion_channel_time[peer_id] = {}
 		message = "Reapareció en la arena."
 	elif not player.is_alive:
 		return _spell_error("No podés meditar ni usar pociones mientras sos un fantasma. Usá Reaparecer.")
@@ -487,10 +524,11 @@ func try_recovery_action(peer_id: int, action: String, request_id: int, now: int
 		_next_meditation_tick[peer_id] = now + RecoveryRules.MEDITATION_WARMUP_MSEC
 		message = "Comenzó a meditar." if player.is_meditating else "Dejó de meditar."
 	else:
-		if now - _last_potion_time.get(peer_id, -RecoveryRules.POTION_INTERVAL_MSEC) < RecoveryRules.POTION_INTERVAL_MSEC:
-			return _spell_error("Esperá el intervalo de pociones.")
-		if now - _last_attack_time.get(peer_id, -RecoveryRules.ATTACK_POTION_GAP_MSEC) < RecoveryRules.ATTACK_POTION_GAP_MSEC:
-			return _spell_error("Esperá el intervalo entre golpe y poción.")
+		var remaining := maxi(RecoveryRules.POTION_COMBINED_MIN_MSEC - (now - _last_potion_time.get(peer_id, -RecoveryRules.POTION_INTERVAL_MSEC)),
+			RecoveryRules.POTION_INTERVAL_MSEC - (now - int(_last_potion_channel_time.get(peer_id, {}).get(channel, -RecoveryRules.POTION_INTERVAL_MSEC))))
+		remaining = maxi(remaining, RecoveryRules.ATTACK_POTION_GAP_MSEC - (now - _last_attack_time.get(peer_id, -RecoveryRules.ATTACK_POTION_GAP_MSEC)))
+		if remaining > 0:
+			return _spell_error("Esperá el intervalo de pociones.", remaining)
 		var potion := RecoveryRules.get_potion(action)
 		if potion.is_empty():
 			return _spell_error("Faltan los datos de la poción.")
@@ -511,9 +549,10 @@ func try_recovery_action(peer_id: int, action: String, request_id: int, now: int
 		if player.current_mana >= player.max_mana:
 			player.is_meditating = false
 		_last_potion_time[peer_id] = now
+		_last_potion_channel_time[peer_id][channel] = now
 		message = "Usó %s (+%d)." % [potion.name, amount]
 	return {"ok": true, "state": player.to_dictionary(), "event": {
-		"peer_id": peer_id, "player_name": player.display_name, "action": action,
+		"peer_id": peer_id, "player_name": player.display_name, "action": action, "source": channel, "request_id": request_id,
 		"amount": amount, "message": message, "is_meditating": player.is_meditating}}
 
 
@@ -524,6 +563,8 @@ func try_select_class(peer_id: int, class_id: int, now: int = -1) -> Dictionary:
 		return _spell_error("Clase desconocida o personaje desconectado.")
 	if now < 0:
 		now = Time.get_ticks_msec()
+	if player.class_id != class_id:
+		player.skin_id = "preset"
 	player.class_id = class_id
 	player.max_health = int(profile.max_health)
 	player.max_mana = int(profile.max_mana)
@@ -536,8 +577,9 @@ func try_select_class(peer_id: int, class_id: int, now: int = -1) -> Dictionary:
 	player.reset_preset_inventory()
 	player.preset_revision += 1
 	_last_spell_time[peer_id] = -SpellCatalog.CAST_INTERVAL_MSEC
-	_last_attack_time[peer_id] = -SpellCatalog.SPELL_ATTACK_GAP_MSEC
+	_last_attack_time[peer_id] = -maxi(CombatRules.RANGED_ATTACK_COOLDOWN_MSEC, SpellCatalog.SPELL_ATTACK_GAP_MSEC)
 	_last_potion_time[peer_id] = -RecoveryRules.POTION_INTERVAL_MSEC
+	_last_potion_channel_time[peer_id] = {}
 	_spell_cooldowns[peer_id] = {}
 	return {"ok": true, "state": player.to_dictionary(), "event": {
 		"peer_id": peer_id, "player_name": player.display_name, "action": "class",
@@ -571,6 +613,8 @@ func apply_damage(
 	peer_id: int,
 	amount: int
 ) -> PlayerState:
+	if is_round_locked(peer_id):
+		return null
 	if not _players.has(peer_id):
 		return null
 
@@ -590,6 +634,8 @@ func spend_mana(
 	peer_id: int,
 	amount: int
 ) -> PlayerState:
+	if is_round_locked(peer_id):
+		return null
 	if not _players.has(peer_id):
 		return null
 

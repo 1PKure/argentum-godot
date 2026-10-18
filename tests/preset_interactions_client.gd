@@ -27,7 +27,7 @@ func _run() -> void:
 	controller = main._spell_controller
 	world = main._world
 	await _wait_for(func() -> bool: return hud._players.size() == 2 and controller.server_ready)
-	_check(hud._players.size() == 2 and controller.server_ready, "Two clients negotiate protocol 5")
+	_check(hud._players.size() == 2 and controller.server_ready, "Two clients negotiate protocol 15")
 	if hud._players.size() != 2 or not controller.server_ready:
 		await _finish()
 		return
@@ -71,6 +71,7 @@ func _run() -> void:
 	_check(hud._players[local_id].current_mana == mana_before - 375 and received_spells[-1].mana_cost == 375, "Only the casting player receives their spell cost and actual remaining mana")
 	await _choose_class(8)
 	_check(hud._players[local_id].class_id == 8 and not hud._class_panel.visible, "Choosing hunter applies immediately without resource or timer restrictions")
+	_check(not hud._players[local_id].inventory.has(37) and not hud._inventory_layout.actions.has("mana_potion"), "Hunter inventory contains no blue potion supply")
 	_check(controller.bindings[2] == -1 and hud._hotkey_buttons[2].icon != null, "Hunter macro 3 contains its physical bow action")
 	var health: int = hud._players[opponent].current_health
 	_key(KEY_CTRL, true)
@@ -97,7 +98,24 @@ func _run() -> void:
 	await _wait_for(func() -> bool: return controller.pending_request == 0 and hud._players[opponent].current_health < health)
 	_check(hud._players[opponent].current_health < health and not controller.aimed_attack and hud._players[local_id].current_mana == 0, "Clicking a diagonal rival confirms physical damage with zero mana")
 	_check(world._spell_effects.size() > 0, "Confirmed arrow creates visible projectile feedback")
+	var arrow = world._spell_effects[-1]
+	_check(arrow._is_shot and arrow._audio != null and arrow._audio.stream.resource_path.ends_with("arrow_hit.wav"), "Real hunter hit loads the uploaded arrow impact sound")
 	_check(health - hud._players[opponent].current_health >= 181 and health - hud._players[opponent].current_health <= 200, "Equipped hunter deals 181-200 damage to the equipped mage")
+	var protected_health: int = hud._players[opponent].current_health
+	var spam_start := Time.get_ticks_msec()
+	var attempts := 0
+	while Time.get_ticks_msec() - spam_start < 750:
+		if attempts % 2 == 0:
+			_key(KEY_CTRL, true)
+			_key(KEY_CTRL, false)
+		else:
+			_key(KEY_3, true)
+			_key(KEY_3, false)
+		await _click_world(opponent)
+		await _wait_for(func() -> bool: return controller.pending_request == 0)
+		attempts += 1
+	_check(attempts >= 4 and hud._players[opponent].current_health == protected_health and hud.console.get_parsed_text().contains("intervalo del arco"), "Repeated CTRL/macro clicks cannot land another arrow during the dedicated server cooldown")
+	_check(is_instance_valid(arrow) and arrow._shot_sound_played and arrow._audio.playing, "Confirmed arrow plays its audio after reaching the target")
 	await _capture("refined-bow-shot.png")
 	await _click(hud._inventory_button)
 	var weapon_id: int = hud._players[local_id].equipped_items.weapon
@@ -197,7 +215,7 @@ func _drag(source: Control, target: Control) -> void:
 	var down := InputEventMouseButton.new()
 	down.position = start
 	down.global_position = start
-	down.button_index = MOUSE_BUTTON_LEFT
+	down.button_index = MOUSE_BUTTON_RIGHT
 	down.pressed = true
 	Input.parse_input_event(down)
 	await process_frame
@@ -207,14 +225,14 @@ func _drag(source: Control, target: Control) -> void:
 		motion.position = point
 		motion.global_position = point
 		motion.relative = point - previous
-		motion.button_mask = MOUSE_BUTTON_MASK_LEFT
+		motion.button_mask = MOUSE_BUTTON_MASK_RIGHT
 		Input.parse_input_event(motion)
 		await process_frame
 		previous = point
 	var up := InputEventMouseButton.new()
 	up.position = finish
 	up.global_position = finish
-	up.button_index = MOUSE_BUTTON_LEFT
+	up.button_index = MOUSE_BUTTON_RIGHT
 	up.pressed = false
 	Input.parse_input_event(up)
 	await process_frame

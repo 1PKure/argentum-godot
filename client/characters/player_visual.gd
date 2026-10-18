@@ -34,6 +34,7 @@ var _head_definition: Dictionary = {}
 
 var _head_textures: Dictionary = {}
 var _class_id := 0
+var _skin_id := "preset"
 var _equipped_items: Dictionary = {}
 var _equipment: Dictionary[String, AnimatedSprite2D] = {}
 
@@ -85,15 +86,17 @@ func set_class_id(id: int) -> void:
 	set_loadout(id, ClassCatalog.default_equipment(id))
 
 
-func set_loadout(id: int, equipped: Dictionary) -> void:
-	if _class_id == id and _equipped_items == equipped:
+func set_loadout(id: int, equipped: Dictionary, skin_id: String = "preset") -> void:
+	if _class_id == id and _equipped_items == equipped and _skin_id == skin_id:
 		return
 	var profile := ClassCatalog.get_equipped_profile(id, equipped)
 	if profile.is_empty():
 		return
 	_class_id = id
 	_equipped_items = equipped.duplicate()
-	set_body_id(int(profile.body_id))
+	_skin_id = skin_id
+	var skin := SkinCatalog.get_skin(skin_id, id)
+	set_body_id(int(skin.body_id) if not skin.is_empty() and int(skin.body_id) > 0 else int(profile.body_id))
 	for kind: String in ["weapon", "shield", "helmet"]:
 		if not _equipment.has(kind):
 			var sprite := AnimatedSprite2D.new()

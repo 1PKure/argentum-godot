@@ -19,7 +19,7 @@ La consola muestra eventos de hechizos/recuperación confirmados, rechazo al sol
 3. Reabrir project.godot y esperar la importación. F5 prueba el proyecto desde el editor. Para web, ejecutar tools/Start-PrivateWebTest.cmd y conectar a wss://127.0.0.1:7777.
 4. Abrir dos clientes y acercarse usando el minimapa. Probar Lanzar, macros, buscar Apocalipsis y asignarlo por arrastre.
 5. Arrastrar la roja a un casillero vacío, intercambiarla con la azul y cancelar un arrastre fuera de la grilla: no deben cambiar los recursos. Usarlas con clic desde sus nuevas posiciones. Probar Q/E y M; ambas pociones permiten seguir meditando. Caminar interrumpe la meditación. Comprobar cámara y puntero después de caminar.
-6. Probar parálisis/remo, morir y usar Reaparecer. Al desconectar/reconectar no deben quedar avatar, FX o estado de la sesión anterior.
+6. Probar parálisis/remo, morir y usar Menú → Reaparecer. Al desconectar/reconectar no deben quedar avatar, FX o estado de la sesión anterior.
 7. Curarse y caminar antes de que termine la animación: FX y resultado deben seguir al personaje; las palabras de un hechizo dirigido a otro jugador deben seguir a quien lo lanzó.
 
 ## Rediseño posterior
@@ -27,3 +27,13 @@ La consola muestra eventos de hechizos/recuperación confirmados, rechazo al sol
 Arte y distribución viven en CombatHUD y SpellSlotButton; selección/apuntado en SpellTargetingController; reglas y recuperación en el servidor. Cambiar texturas, colores o distribución no exige rehacer las reglas de hechizos. Cambiar la forma de apuntar o los controles sí exige adaptar y validar interacciones.
 
 La web precarga `wss://127.0.0.1:7777`: iniciar el `.cmd` y pulsar Conectar. El desarrollo nativo conserva WS; una dirección remota configurada explícitamente se respeta. La meditación conserva el anclaje y tamaño ya validados.
+
+## Lectura y movimiento de inventario
+
+El nombre de cada personaje se muestra debajo de sus barras, sin sufijos de depuración, para dejar libre la zona de palabras mágicas. El inventario no contiene el resumen permanente de clase/equipo: los objetos conservan tooltip y marca de equipado. Mantener el botón derecho y arrastrar mueve/intercambia; el izquierdo selecciona/bebe o equipa. Esc, modales, pérdida de foco, cambio de inventario y desconexión cancelan movimientos pendientes. Las flechas confirmadas reproducen el audio adjunto `Arrow hit 2.wav` al impacto visual; preparar, cancelar o recibir rechazo de intervalo no reproduce impacto.
+
+La cabecera suma **Skins**: vistas previas, hitos de victorias y selección de atuendo sin alterar equipo. La preparación del bot muestra **3, 2, 1, ¡YA!** con tweens/tonos; ambos personajes quedan bloqueados por el servidor hasta comenzar. Véase `BOTS.md` para progreso local y cancelaciones.
+
+## Pie compacto
+
+Se retiraron los cuatro botones Meditar, Vida, Maná y Usar. El pie muestra recursos, estados y **Menú**; Reaparecer vive dentro del menú cuando el personaje está muerto. Se conservan M, Q/E, Espacio mantenido, clic en pociones y macros sin cambiar la pestaña o el apuntado. `hud_layout_client.gd` valida menú/reaparición/meditación y cuatro resoluciones; `potion_use_client.gd` valida las pociones seleccionadas desde teclado.

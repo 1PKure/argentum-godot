@@ -14,6 +14,15 @@ var _words: Label
 var _audio: AudioStreamPlayer
 var _projectile: Sprite2D
 var _is_shot := false
+var _shot_sound_played := false
+var _blood_active := false
+var _blood_age := 0.0
+var _blood_origin := Vector2.ZERO
+var _blood_direction := Vector2.RIGHT
+const BLOOD_SECONDS := 0.50
+const BLOOD_ANCHOR_OFFSET := Vector2(0, 4)
+const SHOT_TRAVEL_SECONDS := 0.18
+const SHOT_IMPACT_SOUND := "res://assets/argentum/custom/audio/arrow_hit.wav"
 
 
 func _ready() -> void:
@@ -53,17 +62,34 @@ func _ready() -> void:
 	var sound_path := "res://assets/argentum/source/audio/%d.wav" % int(spell.sound_id)
 	if int(spell.sound_id) > 0 and not ResourceLoader.exists(sound_path):
 		sound_path = "res://assets/argentum/source/audio/16.wav"
-	if not _is_shot and ResourceLoader.exists(sound_path):
+	if _is_shot:
+		sound_path = SHOT_IMPACT_SOUND
+	if ResourceLoader.exists(sound_path):
 		_audio = AudioStreamPlayer.new()
 		_audio.stream = load(sound_path)
 		_audio.volume_db = -12.0
 		add_child(_audio)
-		_audio.play()
+		if _is_shot:
+			_lifetime = maxf(_lifetime, SHOT_TRAVEL_SECONDS + _audio.stream.get_length() + 0.05)
+		else:
+			_audio.play()
 
 
 func _process(delta: float) -> void:
 	_elapsed += delta
 	_update_anchors()
+	if _is_shot and not _shot_sound_played and _elapsed >= SHOT_TRAVEL_SECONDS:
+		_shot_sound_played = true
+		if is_instance_valid(target_avatar) and not target_avatar.is_queued_for_deletion():
+			if _audio != null:
+				_audio.play()
+			if int(event.get("amount", 0)) > 0:
+				_blood_active = true
+				_blood_direction = (target - origin).normalized()
+	if _blood_active:
+		_blood_age = maxf(0.0, _elapsed - SHOT_TRAVEL_SECONDS)
+		_blood_active = _blood_age < BLOOD_SECONDS and is_instance_valid(target_avatar) and not target_avatar.is_queued_for_deletion()
+		queue_redraw()
 	var fade_start := _lifetime - 0.4
 	if _elapsed > fade_start:
 		modulate.a = maxf(0.0, 1.0 - (_elapsed - fade_start) / 0.4)
@@ -89,9 +115,10 @@ func _update_anchors() -> void:
 		_words.position = origin + Vector2(-100, -107)
 	if has_target:
 		target = target_avatar.position
+		_blood_origin = target + BLOOD_ANCHOR_OFFSET
 		_text.position = target + Vector2(-80, -85 - _elapsed * 24.0)
 	if _projectile != null:
-		var fraction := minf(_elapsed / 0.18, 1.0)
+		var fraction := minf(_elapsed / SHOT_TRAVEL_SECONDS, 1.0)
 		_projectile.visible = has_origin and has_target and fraction < 1.0
 		_projectile.position = origin.lerp(target, fraction) + Vector2(0, -18)
 		_projectile.rotation = (target - origin).angle() + PI / 4.0
@@ -121,3 +148,25 @@ func _make_label(value: String, at: Vector2, font_size: int) -> Label:
 	label.add_theme_constant_override("shadow_offset_y", 1)
 	add_child(label)
 	return label
+
+
+func _draw() -> void:
+	if not _blood_active:
+		return
+	# Hold contrast through the first 300 ms; the old tiny, immediately faded
+	# drops disappeared into clothes at the arena's 1x source-pixel scale.
+	var fade := clampf((BLOOD_SECONDS - _blood_age) / 0.20, 0.0, 1.0)
+	if _blood_age < 0.18:
+		var tip := _blood_origin + _blood_direction * (14.0 + _blood_age * 55.0)
+		draw_line(_blood_origin, tip, Color(0.34, 0.01, 0.03, fade), 8.0, false)
+		draw_line(_blood_origin, tip, Color(0.94, 0.12, 0.19, fade), 5.0, false)
+	for index in range(12):
+		var direction := _blood_direction.rotated((index - 5.5) * 0.19)
+		var velocity := direction * (75.0 + (index % 4) * 15.0)
+		var at := _blood_origin + direction * 6.0 + velocity * _blood_age + Vector2(0, 120.0 * _blood_age * _blood_age)
+		var size_value := 6.0 if index % 3 == 0 else 4.0
+		var rect := Rect2(at.round(), Vector2.ONE * size_value)
+		var color := Color("f45151") if index % 3 == 0 else Color("c5192d")
+		color.a = fade
+		draw_rect(rect.grow(1.0), Color(0.30, 0.01, 0.03, fade))
+		draw_rect(rect, color)

@@ -4,9 +4,10 @@ extends RefCounted
 const DATA_FILE := "res://assets/argentum/source/data/Hechizos.dat"
 const DEFAULT_BINDINGS: Array[int] = [1, 2, 12, 13]
 # Arena cadence is deliberately faster than the imported reference profile.
-const CAST_INTERVAL_MSEC := 1100 # Previous: 1230 ms.
-const ATTACK_SPELL_GAP_MSEC := 700 # Previous: 800 ms.
-const SPELL_ATTACK_GAP_MSEC := 700
+const CAST_INTERVAL_MSEC := 950 # Arena tuning; previous: 1000 ms.
+const ATTACK_SPELL_GAP_MSEC := 600 # Previous: 650 ms.
+const SPELL_ATTACK_GAP_MSEC := 600
+const ARENA_DAMAGE_MULTIPLIERS := {51: 0.92, 53: 0.92}
 # Every enabled entry has a real server handler. Other entries stay consultable.
 const STATUS_HANDLERS := [11, 25, 26, 27, 28, 29, 112, 132, 133, 263, 350]
 const PERIODIC_HANDLERS := [242, 243, 268, 269]
@@ -48,6 +49,10 @@ static func display_icon_grh(spell_id: int) -> int:
 	if spell_id == 4:
 		return 74714
 	return int(get_spell(spell_id).get("icon_grh", 0))
+
+
+static func direct_damage(spell_id: int, rolled_amount: int) -> int:
+	return maxi(1, roundi(rolled_amount * float(ARENA_DAMAGE_MULTIPLIERS.get(spell_id, 1.0))))
 
 
 static func _ensure_loaded() -> void:

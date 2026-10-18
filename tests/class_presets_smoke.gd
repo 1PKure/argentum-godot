@@ -14,6 +14,11 @@ func _run() -> void:
 	for id: int in ClassCatalog.all_ids():
 		var profile := ClassCatalog.get_profile(id)
 		_check(int(profile.max_health) > 0 and int(profile.max_mana) >= 0, "%s has a real resource profile" % profile.name)
+		var preset := PlayerState.new()
+		preset.class_id = id
+		preset.max_mana = int(profile.max_mana)
+		preset.reset_preset_inventory()
+		_check(preset.inventory.has(38) and preset.inventory.has(37) == (preset.max_mana > 0), "%s receives blue potions only if it uses mana" % profile.name)
 		var body: Dictionary = resources.get_body_definition(int(profile.body_id))
 		_check(not body.is_empty() and resources.get_texture(int(body.file_num)) != null, "%s has an available original armor atlas" % profile.name)
 		for slot: String in ["weapon", "shield", "helmet"]:
@@ -68,9 +73,9 @@ func _run() -> void:
 	result = registry.try_ranged_attack(801, target.grid_position, 3, 10000)
 	_check(result.ok and result.event.amount > 0 and player.current_mana == 0, "Click-targeted diagonal arrow applies real damage without mana")
 	var health := target.current_health
-	_check(not registry.try_ranged_attack(801, target.grid_position, 3, 10650).ok and target.current_health == health, "Arrow request replay cannot duplicate damage")
-	_check(not registry.try_ranged_attack(801, target.grid_position, 4, 10649).ok, "Arrow cooldown rejects one millisecond early")
-	_check(registry.try_ranged_attack(801, target.grid_position, 5, 10650).ok, "Arrow accepts at the 650 ms boundary")
+	_check(not registry.try_ranged_attack(801, target.grid_position, 3, 11200).ok and target.current_health == health, "Arrow request replay cannot duplicate damage")
+	_check(not registry.try_ranged_attack(801, target.grid_position, 4, 11199).ok, "Arrow cooldown rejects one millisecond early")
+	_check(registry.try_ranged_attack(801, target.grid_position, 5, 11200).ok, "Arrow accepts at its separate 1200 ms boundary")
 	var weapon_id := int(player.equipped_items.weapon)
 	var weapon_index := player.inventory.find(weapon_id)
 	var revision := player.inventory_revision

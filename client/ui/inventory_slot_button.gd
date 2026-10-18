@@ -3,12 +3,13 @@ extends Button
 
 signal item_used(action: String)
 signal item_dropped(source: int, destination: int, action: String)
+signal move_started(source: int, screen_position: Vector2)
 
 var slot_index := 0
 var action := ""
 var layout: ArenaInventoryLayout
-var _drag_started := false
 var _equipped_badge: Label
+var potion_selected := false
 
 
 func _ready() -> void:
@@ -42,7 +43,7 @@ func configure(index: int, inventory: ArenaInventoryLayout) -> void:
 		var item := ClassCatalog.get_item(item_id)
 		icon = AOResources.get_equipment_icon(item_id)
 		var equipped := inventory.equipped_ids.has(item_id)
-		tooltip_text = "%s · %s\nClic: equipar / desequipar · Arrastrar: mover" % [item.get("Name", "Objeto"), "Equipado" if equipped else "En inventario"]
+		tooltip_text = "%s · %s\nClic: equipar / desequipar · Arrastrar con botón derecho: mover" % [item.get("Name", "Objeto"), "Equipado" if equipped else "En inventario"]
 		if _equipped_badge == null:
 			_equipped_badge = Label.new()
 			_equipped_badge.text = "E"
@@ -58,24 +59,30 @@ func configure(index: int, inventory: ArenaInventoryLayout) -> void:
 	elif not action.is_empty():
 		var potion := RecoveryRules.get_potion(action)
 		icon = AOResources.get_icon_texture(int(potion.get("icon_grh", 0)))
-		tooltip_text = "%s · Provisión de arena ilimitada\nClic para usar · Arrastrá para mover o intercambiar" % potion.get("name", "Poción")
+		tooltip_text = "%s · Provisión de arena ilimitada\nClic: seleccionar y beber · Espacio: usar seleccionada
+Arrastrá con botón derecho para mover o intercambiar" % potion.get("name", "Poción")
 
 
 func _on_pressed() -> void:
-	if not _drag_started and not action.is_empty():
+	if not action.is_empty():
 		item_used.emit(action)
 
 
 func _get_drag_data(_position: Vector2) -> Variant:
+	# Godot's native drag starts with left click, which remains reserved for Use.
+	return null
+
+
+func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
+		if not action.is_empty():
+			move_started.emit(slot_index, get_global_transform() * event.position)
+		accept_event()
+
+
+func move_data() -> Dictionary:
 	if action.is_empty():
-		return null
-	_drag_started = true
-	var preview := TextureRect.new()
-	preview.texture = icon
-	preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	preview.custom_minimum_size = Vector2(32, 32)
-	preview.modulate.a = 0.85
-	set_drag_preview(preview)
+		return {}
 	return {"type": "arena_inventory", "layout_id": layout.get_instance_id(), "source": slot_index, "action": action, "revision": layout.revision}
 
 
@@ -88,7 +95,11 @@ func _drop_data(_position: Vector2, data: Variant) -> void:
 		item_dropped.emit(int(data.source), slot_index, str(data.action))
 
 
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_DRAG_END:
-		# Releasing a drag (even outside the grid) must never drink the item.
-		set_deferred("_drag_started", false)
+func set_potion_selected(selected_action: String) -> void:
+	potion_selected = action in ["health_potion", "mana_potion"] and action == selected_action
+	queue_redraw()
+
+
+func _draw() -> void:
+	if potion_selected:
+		draw_rect(Rect2(Vector2.ONE, size - Vector2.ONE * 2), Color("e9c66f"), false, 2.0)

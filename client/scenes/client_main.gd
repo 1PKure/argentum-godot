@@ -22,6 +22,7 @@ func _ready() -> void:
 	_spell_controller.setup(_world, _hud.game_area)
 	_hud.configure_spells(_spell_controller)
 	_hud.modal_changed.connect(func(blocked: bool) -> void:
+		RecoveryNetwork.set_input_blocked(blocked)
 		_local_input.set_process(not blocked and _spell_controller.session_active)
 	)
 
