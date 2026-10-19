@@ -37,6 +37,9 @@ var _arena_ground: ArenaGround
 var _arena_props: Array[Node2D] = []
 var _arena_revision := -1
 var _spell_effects: Array[Node2D] = []
+var _melee_audio: Array[AudioStreamPlayer] = []
+var _game_paused := false
+const MELEE_IMPACT_SOUND := preload("res://assets/argentum/custom/audio/melee_hit.wav")
 
 var _viewport_size := Vector2.ZERO
 var _camera_enabled := false
@@ -48,6 +51,7 @@ func _ready() -> void:
 	process_priority = 100
 	y_sort_enabled = true
 	SpellNetwork.spell_resolved.connect(_on_spell_resolved)
+	PlayerNetwork.basic_attack_resolved.connect(_on_melee_resolved)
 	ArenaNetwork.changed.connect(_on_arena_state)
 
 	_create_arena_ground()
@@ -141,6 +145,33 @@ func _on_spell_resolved(event: Dictionary) -> void:
 	add_child(effect)
 	_spell_effects.append(effect)
 	effect.tree_exited.connect(func() -> void: _spell_effects.erase(effect))
+
+
+func _on_melee_resolved(event: Dictionary) -> void:
+	# Rejections and misses never produce an impact sound.
+	if int(event.get("amount",0)) <= 0 or not _avatars.has(int(event.get("target_id",0))) or not _avatars.has(int(event.get("caster_id",0))): return
+	var audio := AudioStreamPlayer.new()
+	audio.stream = MELEE_IMPACT_SOUND
+	audio.volume_db = -12.0
+	add_child(audio)
+	_melee_audio.append(audio)
+	audio.finished.connect(audio.queue_free)
+	audio.tree_exited.connect(func() -> void: _melee_audio.erase(audio))
+	audio.play()
+	audio.stream_paused = _game_paused
+
+
+func set_game_paused(paused: bool) -> void:
+	if _game_paused == paused: return
+	_game_paused = paused
+	# Networking and the HUD stay live; freeze only this room's rendered world.
+	process_mode = Node.PROCESS_MODE_DISABLED if paused else Node.PROCESS_MODE_INHERIT
+	_pause_world_audio(self,paused)
+
+
+func _pause_world_audio(node: Node, paused: bool) -> void:
+	if node is AudioStreamPlayer: node.stream_paused = paused
+	for child in node.get_children(): _pause_world_audio(child,paused)
 
 
 func _request_basic_attack() -> void:
@@ -445,10 +476,13 @@ func _grid_to_world(
 
 
 func clear_session() -> void:
+	set_game_paused(false)
 	_clear_players()
 	for effect in _spell_effects.duplicate():
 		if is_instance_valid(effect):
 			effect.queue_free()
+	for audio in _melee_audio.duplicate():
+		if is_instance_valid(audio): audio.queue_free()
 
 
 func _clear_players() -> void:

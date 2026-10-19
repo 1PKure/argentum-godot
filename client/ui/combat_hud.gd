@@ -2,6 +2,7 @@ class_name CombatHUD
 extends Control
 
 signal disconnect_requested
+signal connection_disconnect_requested
 signal modal_changed(blocked: bool)
 
 const PALETTE := preload("res://client/ui/arena_presentation_theme.gd")
@@ -24,6 +25,8 @@ var _health_bar: ProgressBar
 var _mana_bar: ProgressBar
 var _minimap: ArenaMinimap
 var _inventory_panel: Control
+var _inventory_scroll: ScrollContainer
+var _inventory_grid: GridContainer
 var _spell_panel: Control
 var _menu_panel: Control
 var _menu_card: PanelContainer
@@ -49,6 +52,11 @@ var _spell_scroll: ScrollContainer
 var _spell_list: VBoxContainer
 var _status_label: Label
 var _menu_button: Button
+var _disconnect_button: Button
+var _controls_button: Button
+var _controls_panel: ControlsPanel
+var _pause_label: Label
+var _hud_pause_owned := false
 var _stats_button: Button
 var _close_button: Button
 var _reserved_buttons: Array[Button] = []
@@ -102,6 +110,7 @@ func _ready() -> void:
 	SpellNetwork.spell_resolved.connect(_on_spell_event)
 	RecoveryNetwork.action_resolved.connect(_on_recovery_event)
 	RecoveryNetwork.selection_changed.connect(_refresh_potion_selection)
+	InputBindings.changed.connect(_on_bindings_changed)
 	BotNetwork.changed.connect(_on_bot_status)
 	ArenaNetwork.changed.connect(_on_arena_status)
 	Skins.victory_awarded.connect(func(result: Dictionary) -> void:
@@ -120,6 +129,7 @@ func _ready() -> void:
 	InventoryNetwork.rejected.connect(func(message: String) -> void: console.append_message(message))
 	RecoveryNetwork.action_rejected.connect(func(message: String) -> void: console.append_message(message))
 	show_inventory()
+	_on_bindings_changed()
 	_update_local_stats()
 	console.append_message("Bienvenido a la arena PvP.")
 
@@ -239,6 +249,7 @@ func end_session(message: String) -> void:
 	_bot_panel.close_panel()
 	_skins_panel.close_panel()
 	_arena_panel.close_panel()
+	_controls_panel.close_panel()
 	_round_countdown.clear()
 	_players.clear()
 	_local_peer_id = 0
@@ -301,8 +312,9 @@ func _build_interface() -> void:
 	_controls_hint.add_theme_color_override("font_color",PALETTE.IVORY)
 	_minimap = ArenaMinimap.new()
 	_frame.add_child(_minimap)
-	_minimap.size = Vector2(72,64)
+	_minimap.size = Vector2(168,100)
 	_name_label = _label(_frame,"Sin personaje",Rect2(),17)
+	_name_label.clip_text = true
 	_position_label = _label(_frame,"Bosque",Rect2(),13)
 	_position_label.add_theme_color_override("font_color",PALETTE.MUTED)
 	_connection_label = _label(_frame,"Sin conexión",Rect2(),12)
@@ -322,11 +334,20 @@ func _build_interface() -> void:
 	_spell_button = _text_button(_frame,"Hechizos",Rect2())
 	_spell_button.toggle_mode = true
 	_spell_button.pressed.connect(show_spells)
-	for index in range(42):
+	_inventory_scroll = ScrollContainer.new()
+	_inventory_panel.add_child(_inventory_scroll)
+	_inventory_scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_inventory_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_inventory_scroll.get_v_scroll_bar().focus_mode = Control.FOCUS_NONE
+	_inventory_grid = GridContainer.new()
+	_inventory_grid.columns = 6
+	_inventory_grid.add_theme_constant_override("h_separation",4)
+	_inventory_grid.add_theme_constant_override("v_separation",4)
+	_inventory_scroll.add_child(_inventory_grid)
+	for index in range(ArenaInventoryLayout.SLOT_COUNT):
 		var slot := InventorySlotButton.new()
-		_inventory_panel.add_child(slot)
-		slot.position = Vector2(4+(index%6)*44,8+(index/6)*44)
-		slot.size = Vector2(40,40)
+		_inventory_grid.add_child(slot)
+		slot.custom_minimum_size = Vector2(38,40)
 		slot.configure(index,_inventory_layout)
 		slot.item_used.connect(_use_inventory_item)
 		slot.item_dropped.connect(_move_inventory_item)
@@ -385,8 +406,11 @@ func _build_interface() -> void:
 	_build_menu()
 	_menu_button = _text_button(_frame,"Menú",Rect2())
 	_menu_button.pressed.connect(func() -> void: set_menu_opened(not _menu_panel.visible))
+	_disconnect_button = _text_button(_frame,"Desconectar",Rect2())
+	_disconnect_button.tooltip_text = "Cerrar la conexión con el servidor"
+	_disconnect_button.pressed.connect(connection_disconnect_requested.emit)
 	_close_button = _text_button(_frame,"×",Rect2())
-	_close_button.tooltip_text = "Desconectarse"
+	_close_button.tooltip_text = "Salir de la sala"
 	_close_button.pressed.connect(disconnect_requested.emit)
 	for index in range(4):
 		_reserved_buttons.append(_text_button(_frame,"",Rect2()))
@@ -408,6 +432,14 @@ func _build_interface() -> void:
 	_arena_panel = ArenaSelectionPanel.new()
 	add_child(_arena_panel)
 	_arena_panel.opened_changed.connect(func(_opened: bool) -> void: _notify_modal_state())
+	_controls_panel = ControlsPanel.new()
+	add_child(_controls_panel)
+	_controls_panel.opened_changed.connect(func(_opened: bool) -> void: _notify_modal_state())
+	_pause_label = _label(game_area,"EN PAUSA",Rect2(),18)
+	_pause_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_pause_label.add_theme_color_override("font_color",PALETTE.GOLD)
+	_pause_label.z_index = 90
+	_pause_label.hide()
 	_round_countdown = RoundCountdown.new()
 	game_area.add_child(_round_countdown)
 	_reserved_buttons[3].text = "Skins"
@@ -433,6 +465,9 @@ func _build_interface() -> void:
 		macro.size = Vector2(48, 52)
 		macro.pressed.connect(_on_hotkey_pressed.bind(index))
 		macro.spell_dropped.connect(_on_hotkey_assigned)
+		macro.clear_requested.connect(func(slot: int) -> void:
+			if _spell_controller != null: _spell_controller.clear_hotkey(slot)
+		)
 		_hotkey_buttons.append(macro)
 	# GUI hit testing follows sibling order, independently of drawing z_index.
 	_frame.move_child(_menu_panel, _frame.get_child_count() - 1)
@@ -473,20 +508,15 @@ func _build_menu() -> void:
 	content.add_theme_constant_override("separation", 14)
 	_menu_card.add_child(content)
 	var title := Label.new()
-	title.text = "Controles"
+	title.text = "Menú"
 	title.add_theme_font_size_override("font_size", 20)
 	content.add_child(title)
-	var controls := GridContainer.new()
-	controls.columns = 2
-	controls.add_theme_constant_override("h_separation", 20)
-	controls.add_theme_constant_override("v_separation", 8)
-	content.add_child(controls)
-	for row: Array in [["WASD", "Movimiento"], ["CTRL", "Ataque físico"], ["1–0", "Accesos rápidos"], ["M", "Meditar"], ["Espacio", "Poción seleccionada (mantener: repetir)"], ["Q / E", "Poción de vida / maná"], ["Esc / clic derecho", "Cancelar apuntado"]]:
-		for text_value: String in row:
-			var label := Label.new()
-			label.text = text_value
-			label.add_theme_font_size_override("font_size", 14)
-			controls.add_child(label)
+	_controls_button = _text_button(content,"Controles y atajos",Rect2())
+	_controls_button.custom_minimum_size.y = 38
+	_controls_button.pressed.connect(func() -> void:
+		_controls_panel.open_panel()
+		set_menu_opened(false)
+	)
 	content.add_child(HSeparator.new())
 	_menu_credits = Label.new()
 	_menu_credits.text = "AO20 · © Noland Studios\nCC BY-NC-ND 4.0\ngithub.com/ao-org/Recursos"
@@ -519,7 +549,7 @@ func _build_menu() -> void:
 
 
 func is_modal_open() -> bool:
-	return _menu_panel.visible or _class_panel.visible or _bot_panel.visible or _skins_panel.visible or _arena_panel.visible
+	return _menu_panel.visible or _class_panel.visible or _bot_panel.visible or _skins_panel.visible or _arena_panel.visible or (_controls_panel != null and _controls_panel.visible)
 
 
 func set_menu_opened(opened: bool) -> void:
@@ -527,6 +557,7 @@ func set_menu_opened(opened: bool) -> void:
 		return
 	_menu_panel.visible = opened
 	if opened:
+		InputBindings.release_all()
 		var focused := get_viewport().gui_get_focus_owner()
 		if focused != null:
 			focused.release_focus()
@@ -540,11 +571,33 @@ func _notify_modal_state() -> void:
 		_cancel_inventory_move()
 		_spell_controller.cancel_targeting()
 	modal_changed.emit(is_gameplay_blocked())
+	# Aggregate Menu → Controls changes before requesting a pause for this room.
+	call_deferred("_sync_bot_pause")
+
+
+func _sync_bot_pause() -> void:
+	if is_modal_open():
+		if LobbyNetwork.can_pause():
+			_hud_pause_owned = true
+			LobbyNetwork.request_pause(true)
+	elif _hud_pause_owned:
+		_hud_pause_owned = false
+		LobbyNetwork.request_pause(false)
+
+
+func _on_bindings_changed() -> void:
+	for index in range(_inventory_slots.size()):
+		_inventory_slots[index].configure(index,_inventory_layout)
+	_update_spell_ui()
+
+
+func set_round_paused(paused: bool) -> void:
+	_pause_label.visible = paused
 
 
 func _input(event: InputEvent) -> void:
 	if not _inventory_move.is_empty():
-		if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+		if event is InputEventKey and event.pressed and InputBindings.matches(event,"menu"):
 			_cancel_inventory_move()
 			get_viewport().set_input_as_handled()
 			return
@@ -562,9 +615,16 @@ func _input(event: InputEvent) -> void:
 			_cancel_inventory_move()
 			get_viewport().set_input_as_handled()
 			return
-	if not is_modal_open() or not event is InputEventKey:
-		return
-	if event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+	if not event is InputEventKey: return
+	if _controls_panel != null and _controls_panel.visible: return
+	if event.pressed and not event.echo and InputBindings.matches(event,"menu"):
+		if not is_modal_open():
+			# Cancel targeting first; another press opens the menu.
+			if _spell_controller != null and (_spell_controller.aimed_spell_id != 0 or _spell_controller.aimed_attack): return
+			if LobbyNetwork.room.is_empty(): return
+			set_menu_opened(true)
+			get_viewport().set_input_as_handled()
+			return
 		if _menu_panel.visible:
 			set_menu_opened(false)
 		elif _arena_panel.visible:
@@ -575,13 +635,15 @@ func _input(event: InputEvent) -> void:
 			_bot_panel.close_panel()
 		else:
 			_class_panel.close_panel()
-	get_viewport().set_input_as_handled()
+		get_viewport().set_input_as_handled()
 
 
 func _layout_footer_actions() -> void:
 	if _frame == null or _menu_button == null: return
 	_menu_button.position = Vector2(_frame.size.x-296,_frame.size.y-58)
-	_menu_button.size = Vector2(264,34)
+	_menu_button.size = Vector2(128,34)
+	_disconnect_button.position = _menu_button.position+Vector2(136,0)
+	_disconnect_button.size = Vector2(128,34)
 
 
 func _frame_patch(region: Rect2, left: int, right: int, top: int, bottom: int) -> NinePatchRect:
@@ -676,60 +738,65 @@ func _fit_interface() -> void:
 	var side_x := width-312.0
 	_header_art.position = Vector2(16,12)
 	_header_art.size = Vector2(width-32,64)
-	_world_art.position = Vector2(16,88)
-	_world_art.size = Vector2(side_x-32,height-348)
+	_world_art.position = Vector2(16,228)
+	_world_art.size = Vector2(side_x-32,height-332)
 	_side_art.position = Vector2(side_x,88)
 	_side_art.size = Vector2(296,height-104)
 	game_area.position = _world_art.position+Vector2(2,2)
 	game_area.size = _world_art.size-Vector2(4,4)
-	_console_back.position = Vector2(16,height-152)
-	_console_back.size = Vector2(side_x-32,136)
-	_console_title.position = Vector2(32,height-142)
+	_console_back.position = Vector2(16,88)
+	_console_back.size = Vector2(side_x-32,128)
+	_console_title.position = Vector2(32,98)
 	_console_title.size = Vector2(100,25)
 	for index in range(3):
-		_filter_buttons[index].position = Vector2(144+index*82,height-144)
+		_filter_buttons[index].position = Vector2(144+index*82,96)
 		_filter_buttons[index].size = Vector2(78,27)
-	console.position = Vector2(32,height-108)
-	console.size = Vector2(side_x-64,78)
-	_controls_hint.position = Vector2(32,height-253)
+	console.position = Vector2(32,132)
+	console.size = Vector2(side_x-64,72)
+	_controls_hint.position = Vector2(32,height-100)
 	_controls_hint.size = Vector2(side_x-64,22)
-	_macro_back.position = Vector2((side_x-556)*0.5,height-224)
+	_macro_back.position = Vector2((side_x-556)*0.5,height-76)
 	_macro_back.size = Vector2(556,60)
 	for index in range(_hotkey_buttons.size()):
 		_hotkey_buttons[index].position = _macro_back.position+Vector2(10+index*54,4)
-	_minimap.position = Vector2(side_x+204,108)
 	_name_label.position = Vector2(side_x+16,106)
-	_name_label.size = Vector2(180,25)
-	_position_label.position = Vector2(side_x+16,134)
-	_position_label.size = Vector2(180,25)
-	_connection_label.position = Vector2(side_x+16,159)
-	_connection_label.size = Vector2(180,22)
-	_health_bar.position = Vector2(side_x+16,190)
-	_health_bar.size = Vector2(264,23)
-	_mana_bar.position = Vector2(side_x+16,221)
-	_mana_bar.size = Vector2(264,23)
-	_health_label.position = _health_bar.position
-	_health_label.size = _health_bar.size
-	_mana_label.position = _mana_bar.position
-	_mana_label.size = _mana_bar.size
-	_inventory_button.position = Vector2(side_x+16,258)
-	_spell_button.position = Vector2(side_x+152,258)
+	_name_label.size = Vector2(264,25)
+	_position_label.position = Vector2(side_x+16,138)
+	_position_label.size = Vector2(128,22)
+	_connection_label.position = Vector2(side_x+150,138)
+	_connection_label.size = Vector2(130,22)
+	_minimap.position = Vector2(side_x+64,174)
+	_minimap.size = Vector2(168,100)
+	_inventory_button.position = Vector2(side_x+16,288)
+	_spell_button.position = Vector2(side_x+152,288)
 	_inventory_button.size = Vector2(128,34)
 	_spell_button.size = Vector2(128,34)
 	for panel: Control in [_inventory_panel,_spell_panel]:
-		panel.position = Vector2(side_x+16,302)
-		panel.size = Vector2(264,height-414)
+		panel.position = Vector2(side_x+16,332)
+		panel.size = Vector2(264,height-524)
+	# Six visible rows instead of seven; all server slots remain scrollable.
+	_inventory_panel.size.y = maxf(128,height-540)
 	_spell_scroll.size = Vector2(264,_spell_panel.size.y-166)
 	_spell_status.position = Vector2(0,_spell_panel.size.y-80)
 	_spell_status.size = Vector2(264,34)
 	_launch_button.position = Vector2(0,_spell_panel.size.y-40)
 	_launch_button.size = Vector2(264,38)
-	_bottom_back.position = Vector2(side_x+8,height-104)
-	_bottom_back.size = Vector2(280,80)
-	_status_label.position = Vector2(side_x+16,height-98)
-	_status_label.size = Vector2(264,28)
+	_bottom_back.position = Vector2(side_x+8,height-176)
+	_bottom_back.size = Vector2(280,152)
+	_status_label.position = Vector2(side_x+16,height-170)
+	_status_label.size = Vector2(264,30)
+	_mana_bar.position = Vector2(side_x+16,height-128)
+	_mana_bar.size = Vector2(264,24)
+	_health_bar.position = Vector2(side_x+16,height-96)
+	_health_bar.size = Vector2(264,24)
+	_health_label.position = _health_bar.position
+	_health_label.size = _health_bar.size
+	_mana_label.position = _mana_bar.position
+	_mana_label.size = _mana_bar.size
 	_menu_panel.position = Vector2.ZERO
 	_menu_panel.size = _frame.size
+	_pause_label.position = Vector2(0,16)
+	_pause_label.size = Vector2(game_area.size.x,30)
 	_layout_footer_actions()
 	_close_button.position = Vector2(width-56,27)
 	_close_button.size = Vector2(28,32)

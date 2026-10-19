@@ -10,9 +10,9 @@ Prototipo multijugador real en Godot 4.7 Standard, con cliente web y dedicado au
 4. Crear una sala con nombre/arena, o unirse a una disponible. Cada sala tiene dos plazas.
 5. Elegir clase, ver el preset y equipar skins. Si falta un humano, añadir un bot y elegir su clase.
 6. Ambos humanos marcan Listo; en práctica, basta el dueño con bot habilitado. Cuenta 3→2→1→¡YA!, combate, resultado y revancha.
-7. Menú → Salir de la sala vuelve al directorio conservando conexión. Desconectar está en el directorio.
+7. Menú → Salir de la sala vuelve al directorio conservando conexión. El botón Desconectar del HUD o del directorio cierra la conexión.
 
-Cliente y dedicado deben usar la misma revisión y **protocolo 17**. `tools/Start-PrivateWebTest.cmd` importa el proyecto antes de iniciar WSS. [Guía WSS](docs/WEB_TEST.md).
+Cliente y dedicado deben usar la misma revisión y **protocolo 18**. `tools/Start-PrivateWebTest.cmd` importa el proyecto antes de iniciar WSS. [Guía WSS](docs/WEB_TEST.md).
 
 ## Salas y escenarios
 
@@ -24,11 +24,13 @@ Bosque, Desierto, Lava y Sala de Duelos conservan pisos interiores y colisiones 
 
 ## Combate y presentación
 
-Nueve presets AO20 con estadísticas, equipo visible en inventario y macros por clase. Trabajador/Pirata/Ladrón quedan excluidos. Balance y dificultad del bot aprobados conservados. [Clases y balance](docs/CLASSES.md) · [Intervalos](docs/ACTION_INTERVALS.md).
+Nueve presets AO20 con estadísticas, equipo visible en inventario y macros por clase. Trabajador/Pirata/Ladrón quedan excluidos. Balance y dificultad del bot aprobados conservados, salvo el intervalo de golpe cuerpo a cuerpo ajustado a 1200 ms. [Clases y balance](docs/CLASSES.md) · [Intervalos](docs/ACTION_INTERVALS.md).
 
 Seleccionar hechizo → Lanzar → objetivo, o macro 1–0 → objetivo. Cazador: CTRL/3 prepara el arco y clic dispara con intervalo autoritativo. M medita; Q/E recuperan; clic selecciona/bebe y Espacio usa la poción seleccionada, mantenido para repetir. Macros conservan pestaña/apuntado; arrastre derecho reorganiza objetos. Equipo se equipa/desequipa con clic. [Hechizos](docs/SPELLS.md) · [Recuperación](docs/RECOVERY.md).
 
-HUD propio azul noche/marfil/dorado, consola inferior, barras y casilleros propios; todas las ventanas, incluida clases/presets, usan el mismo tema. Pociones e iconos SVG originales, props detallados y lava exterior de escala fija. Efectos originales para los 39 hechizos disponibles y meditación compacta azul/dorada. Se conservan anclaje, seguimiento, flecha/sangre/audio y reglas. Personajes, equipo y skins mantienen animaciones AO20. [Identidad visual y límites](docs/VISUAL_IDENTITY.md).
+HUD propio azul noche/marfil/dorado, consola superior, minimapa ampliado y barras de maná/vida sobre Menú/Desconectar; todas las ventanas, incluida clases/presets, usan el mismo tema. Pociones e iconos SVG originales, props detallados y lava exterior de escala fija. Efectos de los 39 hechizos con silueta AO20 conservada, halo/partículas suaves e iconos individuales y meditación compacta azul/dorada. Se conservan anclaje, seguimiento, flecha/sangre/audio y reglas. Personajes, equipo y skins mantienen animaciones AO20. [Identidad visual y límites](docs/VISUAL_IDENTITY.md).
+
+Menú → Controles y atajos permite cambiar teclas y restaurarlas, guardadas por perfil local en el dispositivo/navegador. Clic derecho sobre un macro vacía ese acceso de la clase, sin perderlo al cambiar preset. Lanzar seleccionado usa L por defecto; CTRL mantiene el golpe/arco. Abrir Menú o una ventana de opciones pausa de forma autoritativa sólo la práctica individual contra bot (también reloj, estados y recargas); cerrar reanuda. El PvP humano continúa. Los 42 espacios de inventario se conservan con menos filas visibles y desplazamiento.
 
 La cámara sigue al personaje y el zoom 1×/2× mantiene escala de píxel entera. Base de diseño 1280×800 y revisión en cuatro resoluciones. La consola sólo muestra eventos propios; el servidor omite maná rival y costes privados. [Interfaz](docs/COMBAT_UI.md) · [Movimiento](docs/MOVEMENT.md).
 

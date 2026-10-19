@@ -9,6 +9,7 @@ var selected_spell_id := 25
 var aimed_spell_id := 0
 var aimed_attack := false
 var _preset_revision := -1
+var _bindings_profile := "local"
 var bindings: Array[int] = []
 var session_active := false
 var input_blocked := false
@@ -24,8 +25,10 @@ var class_id := ClassCatalog.DEFAULT_CLASS
 
 
 func _ready() -> void:
+	_bindings_profile = InputBindings.profile_id
 	bindings.assign(ClassCatalog.get_profile(class_id).bindings)
 	_load_bindings()
+	InputBindings.changed.connect(_on_controls_changed)
 	SpellNetwork.server_capabilities_received.connect(_on_capabilities)
 	SpellNetwork.spell_resolved.connect(_on_spell_resolved)
 	SpellNetwork.spell_rejected.connect(_on_spell_rejected)
@@ -121,51 +124,64 @@ func cancel_targeting() -> void:
 func assign_hotkey(slot: int, id: int) -> void:
 	if slot < 0 or slot >= bindings.size() or not ClassCatalog.can_cast(class_id, id):
 		return
+	var previous := bindings[slot]
 	bindings[slot] = id
-	var config := ConfigFile.new()
-	config.load(BINDINGS_FILE)
-	config.set_value("meta", "version", ClassCatalog.MACRO_VERSION)
-	config.set_value("class:%d" % class_id, "version", ClassCatalog.MACRO_VERSION)
-	for index in range(bindings.size()):
-		config.set_value("class:%d" % class_id, str(index), bindings[index])
-	config.save(BINDINGS_FILE)
+	if not _save_bindings():
+		bindings[slot] = previous
+		return
 	feedback.emit("Acceso %d: %s." % [(slot + 1) % 10, SpellCatalog.get_spell(id).name], "system")
 	changed.emit()
+
+
+func clear_hotkey(slot: int) -> void:
+	if slot < 0 or slot >= bindings.size(): return
+	var previous := bindings[slot]
+	bindings[slot] = 0
+	if not _save_bindings():
+		bindings[slot] = previous
+		return
+	changed.emit()
+
+
+func _save_bindings() -> bool:
+	var config := ConfigFile.new()
+	config.load(BINDINGS_FILE)
+	var section := "profile:%s:class:%d" % [InputBindings.profile_id,class_id]
+	config.set_value(section,"version",ClassCatalog.MACRO_VERSION)
+	for index in range(bindings.size()): config.set_value(section,str(index),bindings[index])
+	if config.save(BINDINGS_FILE) != OK:
+		feedback.emit("No se pudo guardar el acceso. Revisá el almacenamiento del navegador.","system")
+		return false
+	return true
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if input_blocked or not session_active or not event is InputEventKey or not event.pressed or event.echo:
 		return
 	var focus := get_viewport().gui_get_focus_owner()
-	if focus is LineEdit or focus is TextEdit:
-		return
-	if event.keycode == KEY_SPACE and not event.alt_pressed and not event.meta_pressed:
+	if focus is LineEdit or focus is TextEdit: return
+	if InputBindings.matches(event,"use_selected"):
 		RecoveryNetwork.begin_using_selected()
-		get_viewport().set_input_as_handled()
-		return
-	if event.keycode == KEY_CTRL:
+	elif InputBindings.matches(event,"basic_attack"):
 		aim_basic_attack()
-		get_viewport().set_input_as_handled()
-		return
-	if event.keycode == KEY_ESCAPE and (aimed_spell_id != 0 or aimed_attack):
+	elif InputBindings.matches(event,"launch_spell"):
+		aim_selected()
+	elif InputBindings.matches(event,"menu") and (aimed_spell_id != 0 or aimed_attack):
 		cancel_targeting()
-		get_viewport().set_input_as_handled()
-	elif not event.ctrl_pressed and not event.alt_pressed and not event.meta_pressed:
-		var recovery_action := {KEY_M: "meditate", KEY_Q: "health_potion", KEY_E: "mana_potion"}
-		if recovery_action.has(event.keycode):
-			if recovery_action[event.keycode] == "meditate":
-				cancel_targeting()
-			RecoveryNetwork.request_action(recovery_action[event.keycode])
-			get_viewport().set_input_as_handled()
-			return
-		var index := -1
-		if event.keycode >= KEY_1 and event.keycode <= KEY_9:
-			index = event.keycode - KEY_1
-		elif event.keycode == KEY_0:
-			index = 9
-		if index >= 0:
-			aim_hotkey(index)
-			get_viewport().set_input_as_handled()
+	else:
+		for action in ["meditate","health_potion","mana_potion"]:
+			if InputBindings.matches(event,action):
+				if action == "meditate": cancel_targeting()
+				RecoveryNetwork.request_action(action)
+				get_viewport().set_input_as_handled()
+				return
+		for index in range(10):
+			if InputBindings.matches(event,InputBindings.macro_action(index)):
+				aim_hotkey(index)
+				get_viewport().set_input_as_handled()
+				return
+		return
+	get_viewport().set_input_as_handled()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -264,9 +280,25 @@ func apply_class(id: int, preset_revision: int = -1) -> void:
 
 func _load_bindings() -> void:
 	var config := ConfigFile.new()
-	if config.load(BINDINGS_FILE) != OK or int(config.get_value("class:%d" % class_id, "version", 0)) != ClassCatalog.MACRO_VERSION:
-		return
+	if config.load(BINDINGS_FILE) != OK: return
+	var section := "profile:%s:class:%d" % [InputBindings.profile_id,class_id]
+	var migrated := false
+	if not config.has_section(section):
+		# Migrate existing local per-class assignments, including explicitly empty slots.
+		section = "class:%d" % class_id
+		migrated = InputBindings.profile_id == "local" and config.has_section(section)
+		if not migrated: return
 	for index in range(bindings.size()):
-		var id := int(config.get_value("class:%d" % class_id, str(index), bindings[index]))
-		if id in [0, ClassCatalog.ATTACK_BINDING] or ClassCatalog.can_cast(class_id, id):
+		var id := int(config.get_value(section,str(index),bindings[index]))
+		if id == 0 or (id == ClassCatalog.ATTACK_BINDING and ClassCatalog.get_profile(class_id).bindings.has(id)) or ClassCatalog.can_cast(class_id,id):
 			bindings[index] = id
+	if migrated: _save_bindings()
+
+
+func _on_controls_changed() -> void:
+	if _bindings_profile != InputBindings.profile_id:
+		_bindings_profile = InputBindings.profile_id
+		bindings.assign(ClassCatalog.get_profile(class_id).bindings)
+		_load_bindings()
+		cancel_targeting()
+	changed.emit()

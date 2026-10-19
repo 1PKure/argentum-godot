@@ -8,6 +8,15 @@ var membership: Dictionary = {}
 var _next_id := 1
 var _last_request: Dictionary = {}
 var _last_command: Dictionary = {}
+var _last_pause_request: Dictionary = {}
+
+# Separate from rate-limited lobby edits: opening then closing a modal must resume immediately.
+func pause(peer_id: int, value: bool, request: int, now: int = -1) -> Dictionary:
+	if request <= int(_last_pause_request.get(peer_id,0)): return ArenaLobbyRoom.error("La solicitud ya fue procesada.")
+	_last_pause_request[peer_id] = request
+	var room := room_for(peer_id)
+	if room == null: return ArenaLobbyRoom.error("Entrá primero a una sala.")
+	return room.set_paused(peer_id,value,now)
 
 func room_for(peer_id: int) -> ArenaLobbyRoom:
 	return rooms.get(int(membership.get(peer_id,0)))
@@ -80,6 +89,7 @@ func disconnect_peer(peer_id: int) -> void:
 	leave(peer_id)
 	_last_request.erase(peer_id)
 	_last_command.erase(peer_id)
+	_last_pause_request.erase(peer_id)
 
 func dispose() -> void:
 	for room: ArenaLobbyRoom in rooms.values(): room.dispose()

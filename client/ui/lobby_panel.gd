@@ -108,7 +108,9 @@ func _refresh() -> void:
 	_create_button.disabled = not LobbyNetwork.available or LobbyNetwork.pending
 	_room_content.visible = not room.is_empty()
 	_message.text = _feedback if not _feedback.is_empty() else ("Conectando con el directorio de salas…" if not LobbyNetwork.available else "")
-	for child in _rooms.get_children(): child.queue_free()
+	for child in _rooms.get_children():
+		_rooms.remove_child(child)
+		child.queue_free()
 	for entry: Dictionary in LobbyNetwork.rooms:
 		var row := HBoxContainer.new()
 		_rooms.add_child(row)
@@ -118,7 +120,9 @@ func _refresh() -> void:
 		var button := _button(row,"Unirse",func() -> void: LobbyNetwork.command("join",{"room_id":int(entry.id)}))
 		button.disabled = LobbyNetwork.pending or int(entry.occupancy) >= 2 or str(entry.phase) in ["countdown","fighting"]
 	if LobbyNetwork.rooms.is_empty(): _label(_rooms,"Todavía no hay salas. Creá la primera.",14)
-	for child in _room_content.get_children(): child.queue_free()
+	for child in _room_content.get_children():
+		_room_content.remove_child(child)
+		child.queue_free()
 	if room.is_empty():
 		_countdown.clear()
 		return

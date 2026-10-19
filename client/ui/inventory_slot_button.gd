@@ -62,8 +62,7 @@ func configure(index: int, inventory: ArenaInventoryLayout) -> void:
 	elif not action.is_empty():
 		var potion := RecoveryRules.get_potion(action)
 		icon = ArenaIcons.potion(action)
-		tooltip_text = "%s · Provisión de arena ilimitada\nClic: seleccionar y beber · Espacio: usar seleccionada
-Arrastrá con botón derecho para mover o intercambiar" % potion.get("name", "Poción")
+		tooltip_text = "%s · Provisión de arena ilimitada\nClic: seleccionar y beber · %s: usar seleccionada\nArrastrá con botón derecho para mover o intercambiar" % [potion.get("name", "Poción"),InputBindings.label_for("use_selected")]
 
 
 func _on_pressed() -> void:

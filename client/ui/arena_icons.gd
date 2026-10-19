@@ -15,15 +15,8 @@ static func spell(id: int, class_id: int = 1) -> Texture2D:
 	if id == ClassCatalog.ATTACK_BINDING: return named("bow" if class_id == 8 else "sword")
 	var data := SpellCatalog.get_spell(id)
 	if data.is_empty(): return null
-	var text := str(data.name).to_lower()
-	if id == 25 or "inmov" in text: return named("paralyze")
-	if id == 27 or "remover" in text or "curar veneno" in text: return named("remove")
-	if str(data.effect) == "healing": return named("heal")
-	if "apocal" in text: return named("apocalypse")
-	if "descarga" in text or "rayo" in text or "eléctr" in text: return named("lightning")
-	if "fuego" in text or "llama" in text or "aliento" in text: return named("fire")
-	if "hielo" in text or "frío" in text: return named("ice")
-	if "veneno" in text or "putref" in text: return named("poison")
-	if "prote" in text or "fuerza" in text or "resisten" in text: return named("shield")
-	if "luz" in text or "resuc" in text: return named("light")
+	# Distinct silhouettes retain each spell's own visual identity, including
+	# spells from the same family. Potions keep their approved artwork.
+	var key := "spell_%d" % id
+	if ResourceLoader.exists(ROOT + key + ".svg"): return named(key)
 	return named("magic")

@@ -31,3 +31,7 @@ Protocolo de red **17**: actualizar cliente y dedicado juntos. El lanzador `.cmd
 Pendiente de revisión humana: navegador Windows con dos pestañas/dispositivos, latencia real y valoración visual. No se modifica el hosting ni su audiencia.
 
 `tests/run_lobby_native.py` usa un PCK exportado y dos clientes renderizados para probar clics de Crear/Unirse/Listo, preset/skins, cierre de modales al empezar, WASD, macro+objetivo, pociones con apuntado y salida/reentrada. Requiere `--godot`, `--pck` y Xvfb en Linux (`--xvfb`/`--library-path` opcionales). La ejecución local final pasó 34 comprobaciones.
+
+## Pausa individual
+
+Menú/Controles pausa sólo la sala con un humano y bot. El servidor usa un reloj lógico por sala, rechaza acciones durante la pausa y preserva recargas/estados al reanudar. PvP y otras salas no se detienen. Ver [Controles](CONTROLS.md).

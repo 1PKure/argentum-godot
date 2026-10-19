@@ -3,5 +3,11 @@
     "source": "User attachment: Arrow hit 2.wav",
     "sha256": "a0eb5fb1bcbf65291f62ee701d465bec66a8a95aa10dc2b76da8297c91877ed0",
     "conversion": "none; original PCM stereo, 16-bit, 48000 Hz"
+  },
+  "melee_hit.wav": {
+    "source": "Original procedural sound: tools/generate_melee_audio.py",
+    "sha256": "69ee9e7a3bf8a313dba5b5c8869bdad9c4a5192a60cfcac2091e4690442db244",
+    "format": "PCM mono 16-bit 44100 Hz, 270 ms",
+    "use": "Confirmed melee damage; rounded body contact and soft blade scrape."
   }
 }

@@ -5,6 +5,7 @@ var lobbies := ArenaLobbyDirectory.new()
 func _ready() -> void:
 	print("Starting Argentum lobby server...")
 	LobbyNetwork.command_requested.connect(_on_lobby_command)
+	LobbyNetwork.pause_requested.connect(_on_pause_requested)
 	LobbyNetwork.status_requested.connect(_send_lobby_state)
 	ArenaNetwork.selection_requested.connect(_on_arena_selection)
 	ArenaNetwork.status_requested.connect(func(peer_id: int) -> void:
@@ -13,7 +14,7 @@ func _ready() -> void:
 	)
 	Skins.skin_requested.connect(func(peer_id: int, class_id: int, id: String, wins: int) -> void:
 		var room := lobbies.room_for(peer_id)
-		if room == null: return
+		if room == null or room.paused: return
 		var result := room.registry.try_select_skin(peer_id,id,wins,class_id)
 		if result.ok: _stats(room,result.state)
 	)
@@ -94,6 +95,12 @@ func _on_lobby_command(peer_id: int, operation: String, payload: Dictionary, req
 		_broadcast_lobby_states()
 	LobbyNetwork.send_result(peer_id,request,result)
 
+func _on_pause_requested(peer_id: int, value: bool, request: int) -> void:
+	var result := lobbies.pause(peer_id,value,request)
+	var room := lobbies.room_for(peer_id)
+	if result.ok and room != null: _publish_room(room,false)
+	LobbyNetwork.send_pause_result(peer_id,request,result)
+
 func _bind_room(room: ArenaLobbyRoom) -> void:
 	if room.registry.basic_attack_resolved.is_connected(PlayerNetwork.send_basic_attack_result): return
 	room.registry.basic_attack_resolved.connect(PlayerNetwork.send_basic_attack_result)
@@ -127,33 +134,33 @@ func _moved(room: ArenaLobbyRoom, state: Dictionary) -> void:
 
 func _on_move_requested(peer_id: int, direction: int) -> void:
 	var room := lobbies.room_for(peer_id)
-	if room == null or room.phase != "fighting": return
-	var player := room.registry.try_move_player(peer_id,direction)
+	if room == null or room.paused or room.phase != "fighting": return
+	var player := room.registry.try_move_player(peer_id,direction,room.game_time())
 	if player != null: _moved(room,player.to_dictionary())
 
 func _on_basic_attack_requested(peer_id: int) -> void:
 	var room := lobbies.room_for(peer_id)
-	if room == null or room.phase != "fighting": return
+	if room == null or room.paused or room.phase != "fighting": return
 	var attacker := room.registry.get_player(peer_id)
 	var meditating := attacker.is_meditating
-	var target := room.registry.try_basic_attack(peer_id)
+	var target := room.registry.try_basic_attack(peer_id,room.game_time())
 	if meditating and not attacker.is_meditating: _stats(room,attacker.to_dictionary())
 	if target != null: _stats(room,target.to_dictionary())
 	if room.settle_round(): _publish_room(room,false); _broadcast_lobby_states()
 
 func _on_spell_cast_requested(peer_id: int, spell_id: int, target: Vector2i, request: int) -> void:
 	var room := lobbies.room_for(peer_id)
-	if room == null or room.phase != "fighting":
+	if room == null or room.paused or room.phase != "fighting":
 		SpellNetwork.send_rejection(peer_id,request,"La ronda todavía no comenzó.")
 		return
-	_publish_cast(room,peer_id,request,room.registry.try_cast_spell(peer_id,spell_id,target,request))
+	_publish_cast(room,peer_id,request,room.registry.try_cast_spell(peer_id,spell_id,target,request,room.game_time()))
 
 func _on_shot_requested(peer_id: int, target: Vector2i, request: int) -> void:
 	var room := lobbies.room_for(peer_id)
-	if room == null or room.phase != "fighting":
+	if room == null or room.paused or room.phase != "fighting":
 		SpellNetwork.send_rejection(peer_id,request,"La ronda todavía no comenzó.")
 		return
-	_publish_cast(room,peer_id,request,room.registry.try_ranged_attack(peer_id,target,request))
+	_publish_cast(room,peer_id,request,room.registry.try_ranged_attack(peer_id,target,request,room.game_time()))
 
 func _publish_cast(room: ArenaLobbyRoom, peer_id: int, request: int, result: Dictionary) -> void:
 	if not result.ok:
@@ -170,13 +177,13 @@ func _on_recovery_action_requested(peer_id: int, action: String, request: int, s
 		RecoveryNetwork.send_rejection(peer_id,request,"Entrá primero a una sala.")
 		return
 	var changing_class := action.begins_with("class:")
-	if (changing_class and room.phase not in ["waiting","result"]) or (not changing_class and room.phase != "fighting"):
+	if room.paused or (changing_class and room.phase not in ["waiting","result"]) or (not changing_class and room.phase != "fighting"):
 		RecoveryNetwork.send_rejection(peer_id,request,"Esta acción no está disponible durante esta fase.")
 		return
 	if action == "respawn":
 		RecoveryNetwork.send_rejection(peer_id,request,"Marcá Listo para la próxima ronda.")
 		return
-	var result := room.registry.try_recovery_action(peer_id,action,request,-1,source)
+	var result := room.registry.try_recovery_action(peer_id,action,request,room.game_time(),source)
 	if not result.ok:
 		RecoveryNetwork.send_rejection(peer_id,request,str(result.message),int(result.get("remaining_msec",0)))
 		return
@@ -191,11 +198,11 @@ func _on_recovery_action_requested(peer_id: int, action: String, request: int, s
 
 func _on_inventory_move(peer_id: int, source: int, destination: int, item_id: int, revision: int, request: int) -> void:
 	var room := lobbies.room_for(peer_id)
-	if room != null: _inventory_result(room,peer_id,room.registry.try_inventory_move(peer_id,source,destination,item_id,revision,request))
+	if room != null and not room.paused: _inventory_result(room,peer_id,room.registry.try_inventory_move(peer_id,source,destination,item_id,revision,request))
 
 func _on_inventory_use(peer_id: int, slot: int, item_id: int, revision: int, request: int) -> void:
 	var room := lobbies.room_for(peer_id)
-	if room != null: _inventory_result(room,peer_id,room.registry.try_inventory_use(peer_id,slot,item_id,revision,request))
+	if room != null and not room.paused: _inventory_result(room,peer_id,room.registry.try_inventory_use(peer_id,slot,item_id,revision,request))
 
 func _inventory_result(room: ArenaLobbyRoom, peer_id: int, result: Dictionary) -> void:
 	if not result.ok: InventoryNetwork.send_rejection(peer_id,str(result.message))
@@ -222,7 +229,7 @@ func _on_arena_selection(peer_id: int, id: String, revision: int, request: int) 
 		if room.phase not in ["waiting","result"]:
 			result = ArenaLobbyRoom.error("La arena se elige antes de comenzar la ronda.")
 		else:
-			result = room.arena.change(peer_id,id,revision,request)
+			result = room.arena.change(peer_id,id,revision,request,room.game_time())
 			if result.ok:
 				# ArenaSession may recreate a prior practice bot. Lobby Ready owns
 				# the next countdown, so retain its configuration without an entity.

@@ -2,6 +2,7 @@ class_name SpellSlotButton
 extends Button
 
 signal spell_dropped(slot: int, dropped_spell_id: int)
+signal clear_requested(slot: int)
 
 var spell_id := 0
 var hotkey_slot := -1
@@ -28,7 +29,7 @@ func configure(id: int, slot: int = -1, profile_id: int = 1) -> void:
 		text = ""
 
 		icon = ArenaIcons.spell(id,class_id)
-		tooltip_text = "Disparar · CTRL / 3 → clic en un rival" if class_id == 8 else "Golpear · CTRL / 3"
+		tooltip_text = "Disparar · %s → clic en un rival" % InputBindings.label_for("basic_attack") if class_id == 8 else "Golpear · %s" % InputBindings.label_for("basic_attack")
 	elif not spell.is_empty():
 		text = "%s\n%d maná%s" % [spell.name, spell.mana, " · Pendiente" if not SpellCatalog.is_available(id) else ""] if slot < 0 else ""
 		tooltip_text = "%s\n%s\n%d maná · Arrastrá el hechizo a un acceso para asignarlo." % [spell.name, spell.description, spell.mana]
@@ -54,7 +55,12 @@ func configure(id: int, slot: int = -1, profile_id: int = 1) -> void:
 			_badge.add_theme_constant_override("shadow_offset_y", 1)
 			add_child(_badge)
 			_badge.position = Vector2(4, 1)
-		_badge.text = str((slot + 1) % 10)
+			_badge.custom_minimum_size.x = 42
+			_badge.size.x = 42
+			_badge.clip_text = true
+		_badge.text = InputBindings.label_for(InputBindings.macro_action(slot))
+		_badge.add_theme_font_size_override("font_size",8 if _badge.text.length() > 5 else 11)
+		tooltip_text += "\n%s · Clic derecho: quitar del acceso." % _badge.text
 		if _role_badge == null:
 			_role_badge = Label.new()
 			_role_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -98,3 +104,9 @@ func _can_drop_data(_position: Vector2, data: Variant) -> bool:
 
 func _drop_data(_position: Vector2, data: Variant) -> void:
 	spell_dropped.emit(hotkey_slot, int(data.spell_id))
+
+
+func _gui_input(event: InputEvent) -> void:
+	if hotkey_slot >= 0 and event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
+		accept_event()
+		clear_requested.emit(hotkey_slot)

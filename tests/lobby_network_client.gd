@@ -43,7 +43,7 @@ func _run() -> void:
 	root.get_node("SpellNetwork").spell_resolved.connect(func(data: Dictionary) -> void: fx.append(int(data.caster_id)))
 	main = load("res://client/scenes/client_main.tscn").instantiate()
 	root.add_child(main)
-	_check(await _wait(func() -> bool: return net.available),"protocol17 capabilities")
+	_check(await _wait(func() -> bool: return net.available),"protocol18 capabilities")
 	_check(net.room.is_empty() and main._world._avatars.is_empty(),"connect enters browser without a player in global world")
 	if role == "S":
 		await _solo(net)
@@ -130,6 +130,22 @@ func _solo(net: Node) -> void:
 	_check(str(bot_network.state.round_id)==str(net.room.round_id),"room and bot share authoritative round ID")
 	_check(await _wait(func() -> bool: return str(net.room.phase)=="fighting" and str(bot_network.state.phase)=="active"),"solo countdown enters active bot round")
 	_check(main._local_input.is_processing() and main._hud._players.size()==2,"player and bot playable")
+	net.request_pause(true)
+	_check(await _wait(func() -> bool: return net.is_paused() and not net.pause_pending),"server confirms solo bot pause")
+	_check(not net.gameplay_active(),"pause blocks gameplay")
+	await create_timer(0.1).timeout
+	var observed := received.size()
+	root.get_node("PlayerNetwork").request_move(MovementRules.Direction.EAST)
+	root.get_node("PlayerNetwork").request_basic_attack()
+	root.get_node("RecoveryNetwork").request_action("red")
+	await create_timer(1.5).timeout
+	_check(received.size() == observed,"server freezes bot and rejects player actions while paused")
+	net.request_pause(false)
+	_check(await _wait(func() -> bool: return not net.is_paused() and not net.pause_pending),"server confirms resume")
+	_check(net.gameplay_active(),"resume restores gameplay")
+	net.request_pause(true)
+	net.request_pause(false)
+	_check(await _wait(func() -> bool: return not net.is_paused() and not net.pause_pending),"rapid open close does not leave bot paused")
 	await create_timer(1.0).timeout
 	main._spell_controller.aim_spell(25)
 	main._spell_controller.pending_request = 999

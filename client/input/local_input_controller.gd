@@ -47,6 +47,9 @@ func _send_move_request(direction: int) -> void:
 
 
 func _get_input_direction() -> int:
+	var focus := get_viewport().gui_get_focus_owner()
+	if focus is LineEdit or focus is TextEdit:
+		return -1
 	if Input.is_action_pressed("move_up"):
 		return MovementRules.Direction.NORTH
 

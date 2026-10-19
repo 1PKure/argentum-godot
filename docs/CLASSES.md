@@ -30,7 +30,7 @@ Una categoría no disponible queda vacía. Guerrero y Cazador tienen ataque fís
 
 ## Arco y equipo
 
-**Cazador: CTRL o 3 → cursor → clic sobre un rival.** Preparar o cancelar no dispara ni consume recursos. Esc/clic derecho cancela; WASD permite moverse apuntando. El servidor comprueba rival vivo, arco y flechas equipados, alcance de ocho casillas en cualquier dirección, obstáculos y el intervalo propio de flechas de 1200 ms (AO20 `IntervaloFlechasCazadores`), separado del golpe de 550 ms. Un cliente no puede reutilizar el golpe frontal para disparar sin objetivo. Cada confirmación crea una flecha visual usando el recurso original de munición y reproduce `assets/argentum/custom/audio/arrow_hit.wav` al llegar al objetivo; un disparo rechazado no genera audio de impacto. Las flechas son ilimitadas durante estas pruebas. Guerrero y las otras clases conservan el golpe frontal con CTRL.
+**Cazador: CTRL o 3 → cursor → clic sobre un rival.** Preparar o cancelar no dispara ni consume recursos. Esc/clic derecho cancela; WASD permite moverse apuntando. El servidor comprueba rival vivo, arco y flechas equipados, alcance de ocho casillas en cualquier dirección, obstáculos y el intervalo propio de flechas de 1200 ms (AO20 `IntervaloFlechasCazadores`), separado del golpe de 1200 ms. Un cliente no puede reutilizar el golpe frontal para disparar sin objetivo. Cada confirmación crea una flecha visual usando el recurso original de munición y reproduce `assets/argentum/custom/audio/arrow_hit.wav` al llegar al objetivo; un disparo rechazado no genera audio de impacto. Las flechas son ilimitadas durante estas pruebas. Guerrero y las otras clases conservan el golpe frontal con CTRL.
 
 El inventario de 42 casilleros contiene provisión roja, azul sólo para clases con maná y todos los objetos del preset: armadura, arma, casco, escudo, accesorio y munición cuando correspondan.
 
@@ -84,7 +84,7 @@ Referencia de los nueve presets: **humano, nivel 50, constitución 20, inteligen
 
 La consola muestra hechizos lanzados por vos o dirigidos a vos, golpes en los que participás, muerte propia y recuperación propia. No registra curaciones, pociones, cambio de preset o gasto de maná de terceros. El resultado confirmado del hechizo/golpe reemplaza los mensajes repetidos por cada cambio de barra. Los controles están en Menú y tooltips; no ocupan permanentemente el HUD.
 
-El servidor omite **current_mana** del rival en snapshots, movimiento y estadísticas, y omite **mana_cost** de los eventos enviados a otros jugadores. El rival no dibuja barra de maná. Las confirmaciones de recuperación se envían sólo al dueño; la meditación visible sigue sincronizada mediante estado público. Vida, clase y equipo visible siguen siendo públicos para las pruebas. Se requiere protocolo **17** y reinicio del dedicado.
+El servidor omite **current_mana** del rival en snapshots, movimiento y estadísticas, y omite **mana_cost** de los eventos enviados a otros jugadores. El rival no dibuja barra de maná. Las confirmaciones de recuperación se envían sólo al dueño; la meditación visible sigue sincronizada mediante estado público. Vida, clase y equipo visible siguen siendo públicos para las pruebas. Se requiere protocolo **18** y reinicio del dedicado.
 
 El Mago permite explorar las 38 magias concedibles; otros presets restringen sus listas y costes al maná de la clase. La entrada 247 Disparo de NPC no se concede como magia: el arco tiene su propia acción física.
 

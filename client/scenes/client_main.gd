@@ -20,6 +20,7 @@ func _ready() -> void:
 	_local_input.set_process(false)
 	_hud.mount_world(_world)
 	_hud.disconnect_requested.connect(_leave_lobby)
+	_hud.connection_disconnect_requested.connect(_disconnect_from_arena)
 	_lobby_panel = LobbyPanel.new()
 	add_child(_lobby_panel)
 	_lobby_panel.disconnect_requested.connect(_disconnect_from_arena)
@@ -139,6 +140,9 @@ func _leave_lobby() -> void:
 
 func _on_lobby_changed() -> void:
 	if _spell_controller == null: return
+	var round_paused := bool(LobbyNetwork.room.get("paused",false))
+	_world.set_game_paused(round_paused)
+	_hud.set_round_paused(round_paused)
 	var room_id := int(LobbyNetwork.room.get("id",0))
 	if room_id != _lobby_id:
 		_lobby_id = room_id
@@ -156,6 +160,7 @@ func _on_lobby_changed() -> void:
 		_hud._skins_panel.close_panel()
 		_hud._bot_panel.close_panel()
 		_hud._arena_panel.close_panel()
+		_hud._controls_panel.close_panel()
 		_hud._release_text_focus()
 	_lobby_phase = phase
 	var blocked := not LobbyNetwork.gameplay_active() or _hud.is_gameplay_blocked()

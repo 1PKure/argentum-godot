@@ -8,7 +8,7 @@ import subprocess
 import tempfile
 import time
 
-parser = argparse.ArgumentParser(description="Rendered two-client lobby/input regression against an exported Godot PCK.")
+parser = argparse.ArgumentParser(description="Rendered lobby/input and solo bot pause regression against an exported Godot PCK.")
 parser.add_argument("--godot", default="godot")
 parser.add_argument("--pck", required=True)
 parser.add_argument("--xvfb", default=shutil.which("Xvfb") or "Xvfb")
@@ -50,21 +50,22 @@ try:
         if 'Argentum server ready.' in (output/'server.log').read_text(): break
         if server.poll() is not None: raise RuntimeError('Dedicated startup failed')
         time.sleep(.05)
-    clients=[]
-    for role in ['host','guest']:
-        client=spawn(role,[str(binary),'--path',str(repo),'--main-pack',str(pack),'--audio-driver','Dummy','--rendering-method','gl_compatibility','--log-file',str(output/('engine-'+role+'.log')),'--script',str(repo/'tests/lobby_native_client.gd'),'--','--no-auto-server','--lobby-role='+role,'--lobby-markers='+str(output)])
-        clients.append((role,client))
-        time.sleep(.3)
-    for role,client in clients:
-        try: code=client.wait(timeout=80)
-        except subprocess.TimeoutExpired: code=-1
-        path=output/(role+'-result.json')
-        result=json.loads(path.read_text()) if path.exists() else {}
-        log=(output/(role+'.log')).read_text()
-        print(role,'exit',code,'result',result)
-        if code!=0 or result.get('failures',-1)!=0 or 'ERROR:' in log or 'FAIL [' in log:
-            failed=True
-            print(log[-14000:])
+    for roles in [('host','guest'),('solo',)]:
+        clients=[]
+        for role in roles:
+            client=spawn(role,[str(binary),'--path',str(repo),'--main-pack',str(pack),'--audio-driver','Dummy','--rendering-method','gl_compatibility','--log-file',str(output/('engine-'+role+'.log')),'--script',str(repo/'tests/lobby_native_client.gd'),'--','--no-auto-server','--lobby-role='+role,'--lobby-markers='+str(output)])
+            clients.append((role,client))
+            time.sleep(.3)
+        for role,client in clients:
+            try: code=client.wait(timeout=100)
+            except subprocess.TimeoutExpired: code=-1
+            path=output/(role+'-result.json')
+            result=json.loads(path.read_text()) if path.exists() else {}
+            log=(output/(role+'.log')).read_text()
+            print(role,'exit',code,'result',result)
+            if code!=0 or result.get('failures',-1)!=0 or 'ERROR:' in log or 'FAIL [' in log:
+                failed=True
+                print(log[-14000:])
     server_log=(output/'server.log').read_text()
     if 'ERROR:' in server_log:
         failed=True

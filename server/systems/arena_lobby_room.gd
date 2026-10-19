@@ -18,6 +18,35 @@ var bot_enabled := false
 var bot_class := ClassCatalog.DEFAULT_CLASS
 var starts_at := 0
 var countdown := 0
+var paused := false
+var _pause_started := 0
+var _paused_total := 0
+
+# All gameplay timestamps live on this room clock, including new round resets.
+func game_time(wall_time: int = -1) -> int:
+	if wall_time < 0: wall_time = Time.get_ticks_msec()
+	return (_pause_started if paused else wall_time) - _paused_total
+
+func can_pause(peer_id: int) -> bool:
+	return members.size() == 1 and members[0] == peer_id and bot_enabled and phase in ["countdown", "fighting"]
+
+func set_paused(peer_id: int, value: bool, wall_time: int = -1) -> Dictionary:
+	if not can_pause(peer_id): return error("Sólo se puede pausar una partida individual contra el bot.")
+	if wall_time < 0: wall_time = Time.get_ticks_msec()
+	if paused == value: return {"ok":true}
+	if value:
+		_pause_started = wall_time
+		paused = true
+	else:
+		_paused_total += maxi(0, wall_time - _pause_started)
+		paused = false
+	revision += 1
+	return {"ok":true}
+
+func _clear_pause() -> void:
+	if paused:
+		_paused_total += maxi(0, Time.get_ticks_msec() - _pause_started)
+	paused = false
 
 func _init(room_id: int, room_title: String, arena_id: String) -> void:
 	id = room_id
@@ -51,6 +80,7 @@ func remove_member(peer_id: int) -> void:
 		winner_id = 0 # A disconnect never grants a bot skin reward or a competitive win.
 
 func invalidate_ready() -> void:
+	_clear_pause()
 	ready.clear()
 	phase = "waiting"
 	winner_id = 0
@@ -68,6 +98,7 @@ func state() -> Dictionary:
 		players.append({"peer_id":peer_id,"name":player.display_name,"class_id":player.class_id,"ready":bool(ready.get(peer_id,false))})
 	return {"id":id,"title":title,"arena_id":registry.get_arena_id(),"owner_id":members[0] if not members.is_empty() else 0,
 		"members":players,"phase":phase,"revision":revision,"bot_enabled":bot_enabled,"bot_class":bot_class,
+		"paused":paused,"can_pause":members.size() == 1 and bot_enabled and phase in ["countdown","fighting"],
 		"round_id":round_id,"countdown":countdown,"winner_id":winner_id,"result_text":result_text}
 
 func listing() -> Dictionary:
@@ -79,7 +110,7 @@ func set_ready(peer_id: int, value: bool, expected_revision: int, now: int = -1)
 	if bool(arena.status().transitioning): return error("Esperá a que termine el cambio de arena.")
 	if members.size() < 2 and not bot_enabled: return error("Esperá un rival o activá el bot.")
 	ready[peer_id] = value
-	if value and _all_ready(): start_round(Time.get_ticks_msec() if now < 0 else now)
+	if value and _all_ready(): start_round(game_time(now))
 	return {"ok":true}
 
 func _all_ready() -> bool:
@@ -129,7 +160,8 @@ func settle_round() -> bool:
 	return true
 
 func tick(now: int = -1) -> Dictionary:
-	if now < 0: now = Time.get_ticks_msec()
+	if paused: return {"changed":false,"actions":[],"players":[]}
+	now = game_time(now)
 	var before := state()
 	var actions: Array[Dictionary] = []
 	var changed_players: Array = []

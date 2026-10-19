@@ -9,7 +9,7 @@ const DEBUG_MANA_COST := 10
 
 const BASIC_ATTACK_DAMAGE := 10
 const BASIC_ATTACK_RANGE_TILES := 1
-const BASIC_ATTACK_COOLDOWN_MSEC := 550 # Arena tuning; previous: 600 ms.
+const BASIC_ATTACK_COOLDOWN_MSEC := 1200 # Same authoritative interval as arrows.
 const RANGED_ATTACK_COOLDOWN_MSEC := 1200 # AO20 IntervaloFlechasCazadores; separate from melee.
 
 

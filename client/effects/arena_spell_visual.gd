@@ -1,6 +1,7 @@
 class_name ArenaSpellVisual
 extends Node2D
-## Original arena VFX. Local (0, 0) is always the recipient's feet.
+## AO20 silhouettes remain the main animation; original accents add light and motion.
+## Local (0, 0) is always the recipient's feet.
 ## These are presentation only: a burst never delays or reapplies a server hit.
 
 var family := "arcane"
@@ -8,6 +9,32 @@ var spell_id := 0
 var lifetime := 1.15
 var _age := 0.0
 var _power := 1.0
+var _source: AnimatedSprite2D
+var _source_glow: AnimatedSprite2D
+var _source_duration := 0.0
+var source_fx_id := 0
+static var _main_shader: Shader
+static var _halo_shader: Shader
+
+# Remove the black key used by some original AO sheets without editing them.
+# A restrained additive copy softens the light around the original silhouette.
+const SOURCE_SHADER := """shader_type canvas_item;
+varying vec4 vertex_tint;
+void vertex() { vertex_tint = COLOR; }
+void fragment() {
+ vec4 tex = texture(TEXTURE, UV);
+ float light = max(tex.r, max(tex.g, tex.b));
+ COLOR = vec4(tex.rgb * 1.05, tex.a * smoothstep(0.015, 0.10, light)) * vertex_tint;
+}"""
+const HALO_SHADER := """shader_type canvas_item;
+render_mode blend_add;
+varying vec4 vertex_tint;
+void vertex() { vertex_tint = COLOR; }
+void fragment() {
+ vec4 tex = texture(TEXTURE, UV);
+ float light = max(tex.r, max(tex.g, tex.b));
+ COLOR = vec4(tex.rgb, tex.a * smoothstep(0.08, 0.40, light) * 0.19) * vertex_tint;
+}"""
 
 const ELECTRIC := Color("75cfff")
 const WHITE := Color("f4fcff")
@@ -24,7 +51,47 @@ func configure(spell: Dictionary) -> void:
 	set_meta("modern_fx", true)
 	set_meta("foot_anchored", true)
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	_configure_source(spell)
 	queue_redraw()
+
+
+func _configure_source(spell: Dictionary) -> void:
+	source_fx_id = int(spell.get("fx_id", 0))
+	# Preserve the catalogue animation whenever one exists. Minor heal is the
+	# original documented fallback; missing animations keep their semantic VFX.
+	if source_fx_id <= 0 and family == "healing": source_fx_id = 9
+	if source_fx_id <= 0: return
+	var resources := (Engine.get_main_loop() as SceneTree).root.get_node_or_null("AOResources")
+	if resources == null: return
+	_source = resources.create_fx_sprite(source_fx_id, false, true)
+	if _source == null: return
+	var frames := _source.sprite_frames
+	_source_duration = frames.get_frame_count("default") / frames.get_animation_speed("default")
+	lifetime = clampf(_source_duration, 0.95, 1.65) + 0.18
+	if family == "apocalypse": lifetime = maxf(lifetime, 1.5)
+	var size := 1.65 if family == "apocalypse" else 1.5
+	_source.scale = Vector2.ONE * size
+	_source.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	if _main_shader == null:
+		_main_shader = Shader.new()
+		_main_shader.code = SOURCE_SHADER
+		_halo_shader = Shader.new()
+		_halo_shader.code = HALO_SHADER
+	var material := ShaderMaterial.new()
+	material.shader = _main_shader
+	_source.material = material
+	_source_glow = AnimatedSprite2D.new()
+	_source_glow.sprite_frames = frames
+	_source_glow.scale = Vector2.ONE * size * 1.045
+	_source_glow.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	var halo_material := ShaderMaterial.new()
+	halo_material.shader = _halo_shader
+	_source_glow.material = halo_material
+	add_child(_source_glow)
+	add_child(_source)
+	set_meta("source_fx_id", source_fx_id)
+	set_meta("source_identity_preserved", true)
+	set_age(0.0)
 
 
 static func family_for_spell(spell: Dictionary) -> String:
@@ -46,6 +113,15 @@ static func family_for_spell(spell: Dictionary) -> String:
 
 func set_age(seconds: float) -> void:
 	_age = maxf(0.0, seconds)
+	if _source != null:
+		var duration := lifetime - 0.18
+		var fraction := clampf(_age / duration, 0.0, 0.9999)
+		_source.frame = mini(int(fraction * _source.sprite_frames.get_frame_count("default")), _source.sprite_frames.get_frame_count("default") - 1)
+		_source_glow.frame = _source.frame
+		_source_glow.offset = _source.offset
+		var alpha := clampf((lifetime - _age) / 0.22, 0.0, 1.0)
+		_source.modulate.a = alpha
+		_source_glow.modulate.a = alpha
 	queue_redraw()
 
 
@@ -53,6 +129,9 @@ func _draw() -> void:
 	var p := clampf(_age / lifetime, 0.0, 1.0)
 	var fade := minf(1.0, _age / 0.035) * clampf((1.0 - p) / 0.32, 0.0, 1.0)
 	if fade <= 0.0: return
+	if _source != null:
+		_source_accents(fade, p)
+		return
 	match family:
 		"electric": _electric(fade, p)
 		"apocalypse": _apocalypse(fade, p)
@@ -66,6 +145,27 @@ func _draw() -> void:
 		"poison": _poison(fade, p)
 		"holy": _holy(fade, p)
 		_: _arcane(fade, p)
+
+
+func _source_accents(a: float, p: float) -> void:
+	# Keep enhancements subordinate to the AO artwork: a readable source shape
+	# with its own palette, not a generic ring/column replacing every spell.
+	match family:
+		"apocalypse":
+			_ring(Vector2.ZERO, 35.0 + p * 73.0, 0.32, Color("ff8d3d"), a * (1.0 - p) * 0.65, 1.6)
+			_sparks(Color("ffbb67"), a * 0.48, p, 12, 65.0, 140.0)
+		"electric":
+			# The original cloud and branching bolts are the focal point.
+			_sparks(ELECTRIC, a * 0.42, p, 7, 34.0, 83.0)
+		"fire":
+			_sparks(Color("ffb46a"), a * 0.42, p, 9, 46.0, 106.0)
+		"healing", "restoration":
+			_sparks(GREEN, a * 0.40, p, 7, 30.0, 90.0)
+		"paralysis", "roots":
+			_sparks(VIOLET if family == "paralysis" else GREEN, a * 0.25, p, 5, 23.0, 61.0)
+		"void":
+			_ring(Vector2.ZERO, 35.0 * (1.0 - p) + 6.0, 0.30, VIOLET, a * 0.42, 1.1)
+		_: _sparks(GOLD if family == "holy" else ELECTRIC, a * 0.3, p, 5, 27.0, 59.0)
 
 
 func _electric(a: float, p: float) -> void:
@@ -193,6 +293,42 @@ func _roots(a: float, p: float) -> void:
 
 
 func _void(a: float, p: float) -> void:
+	if spell_id == 55:
+		# Lamento is a spectral apparition, not the same vortex as Implosion.
+		var center := Vector2(0, -52 - sin(p * PI) * 17)
+		var face := PackedVector2Array()
+		for i in range(25):
+			var angle := PI + i * PI / 24.0
+			face.append(center + Vector2(cos(angle) * 19, sin(angle) * 25))
+		face.append(center + Vector2(14, 23))
+		face.append(center + Vector2(5, 15))
+		face.append(center + Vector2(0, 25))
+		face.append(center + Vector2(-7, 15))
+		face.append(center + Vector2(-15, 24))
+		draw_colored_polygon(face, Color(VIOLET, a * 0.19))
+		_glow_line(face, VIOLET, 1.2, a * 0.8)
+		for side in [-1.0, 1.0]:
+			_glow_line(PackedVector2Array([center + Vector2(side * 12, -7), center + Vector2(side * 5, -3)]), WHITE, 1.4, a)
+		_ring(center + Vector2(0, 8), 4, 1.7, VIOLET, a, 1.6)
+		for i in range(3):
+			_ring(center + Vector2(0, 8), 17 + p * (20 + i * 16), 0.85, VIOLET, a * (1-p) * 0.38, 1)
+		return
+	if spell_id == 131:
+		var gate := PackedVector2Array()
+		for i in range(49):
+			var angle := i * TAU / 48.0
+			gate.append(Vector2(cos(angle) * (23 + p * 9), -40 + sin(angle) * 37))
+		_glow_line(gate, VIOLET, 1.6, a)
+		_sparks(VIOLET, a * 0.8, p, 10, 31, 74)
+		return
+	if spell_id == 122:
+		var at := Vector2(0, -47)
+		_ring(at, 18, 1.1, VIOLET, a, 1.8)
+		for side in [-1.0, 1.0]:
+			_star(at + Vector2(side * 7, -2), 3, WHITE, a)
+		_glow_line(PackedVector2Array([at + Vector2(-9, 10), at + Vector2(-7, 20), at + Vector2(7, 20), at + Vector2(9, 10)]), VIOLET, 1.8, a)
+		_sparks(VIOLET, a * 0.5, p, 7, 25, 79)
+		return
 	var center := Vector2(0, -32)
 	var radius := 28.0 * sin(p * PI) + 7.0
 	# Converging dark-violet orbits distinguish implosion from a fire explosion.

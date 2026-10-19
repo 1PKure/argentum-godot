@@ -54,9 +54,9 @@ func _test_attacks() -> void:
 	var registry = f.registry
 	var target: PlayerState = f.target
 	_check(registry.try_basic_attack(901, 10000) == target and target.current_health == 362, "First mage attack applies the equipped armor profile")
-	_check(registry.try_basic_attack(901, 10549) == null and target.current_health == 362, "Physical attack rejects one millisecond before 550 ms")
-	_check(registry.try_basic_attack(901, 10550) == target and target.current_health == 361, "Physical attack is accepted exactly at the new 550 ms boundary")
-	_check(f.attacker.current_mana == 2000, "Faster physical attacks never consume mana")
+	_check(registry.try_basic_attack(901, 11199) == null and target.current_health == 362, "Physical attack rejects one millisecond before 1200 ms")
+	_check(registry.try_basic_attack(901, 11200) == target and target.current_health == 361, "Physical attack is accepted exactly at the new 1200 ms boundary")
+	_check(f.attacker.current_mana == 2000, "Physical attacks never consume mana")
 
 
 func _test_arrows() -> void:
