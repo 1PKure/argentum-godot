@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="112" height="160" viewBox="0 0 112 160">
+  <defs><linearGradient id="bark" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#68523b"/><stop offset=".4" stop-color="#8a7150"/><stop offset="1" stop-color="#352f28"/></linearGradient><linearGradient id="needles" x1="0" y1="0" x2="1" y2=".8"><stop stop-color="#76916b"/><stop offset=".35" stop-color="#476d50"/><stop offset="1" stop-color="#1f3d32"/></linearGradient><linearGradient id="bough" x1="0" y1="0" x2=".4" y2="1"><stop stop-color="#597d54"/><stop offset="1" stop-color="#263f33"/></linearGradient><radialGradient id="shadow"><stop stop-color="#111f18" stop-opacity=".5"/><stop offset="1" stop-color="#111f18" stop-opacity="0"/></radialGradient></defs>
+  <ellipse cx="57" cy="151" rx="48" ry="8" fill="url(#shadow)"/>
+  <path d="m45 150 4-41h15l2 42 8 4-15 1-5-3-11 2Z" fill="url(#bark)"/>
+  <path d="m52 116 1 31-4 5m10-33 1 30m-8-13 6-7" stroke="#ae8e61" opacity=".45" fill="none"/>
+  <path d="m56 34 16 25 7 24 24 28-9-1 14 20-17-2 5 9-18-3-6 6-17-7-16 6-8-4-17 2 4-8H5l16-20-9 2 21-29 5-24Z" fill="#233d2e"/>
+  <path d="m54 43 17 23 5 19 22 24-16-5 17 22-23-4-3 10-19-7-17 7-3-7-20 5 14-22-7 3 17-24 4-20Z" fill="url(#bough)"/>
+  <path d="m56 24 14 26 5 18 17 23-13-2 9 15-21-5-12 5-13-5-19 6 10-16-9 2 17-24 5-23Z" fill="#254734"/>
+  <path d="m54 30 13 23 4 16 13 19-14-4 10 13-17-4-9 6-10-6-13 6 10-18-8 4 13-23Z" fill="url(#needles)"/>
+  <path d="m56 4 8 19 4 18 11 19-13-3 5 10-14-5-12 6 5-11-12 5 12-24 1-13Z" fill="#294b35"/>
+  <path d="m55 8 4 18 4 16 9 13-10-3 3 8-9-4-10 6 8-19-8 8 9-24Z" fill="url(#needles)"/>
+  <g fill="none" stroke="#91a373" stroke-width="1.3" opacity=".6"><path d="m54 18-1 13-4 10m6-2-5 13m-2 11-4 9-5 5m12-7-5 15-8 4m5 3-4 11-9 7m20-12-5 15-7 3m-10 1-5 8m34-76 3 5m6 23 7 7m-6 19 8 6m-7 18 11 6"/></g>
+  <g fill="#162f26" opacity=".65"><path d="m63 42 5 11-7-3Zm3 33 6 11-11-5Zm10 32 11 12-15-5ZM46 111l-8 15 14-8Zm9-44-5 20 7-10Z"/></g>
+</svg>

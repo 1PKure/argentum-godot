@@ -55,19 +55,19 @@ func _test_effects() -> void:
 	var target_avatar = world._avatars[2]
 	caster_avatar.set_process(false)
 	target_avatar.set_process(false)
-	var med: AnimatedSprite2D = caster_avatar._meditation_fx
+	var med: ArenaMeditationVisual = caster_avatar._meditation_fx
 	_check(med != null and med.visible and med.z_index > caster_avatar.get_node("PlayerVisual").z_index, "Meditation renders in front of the character")
-	_check(med.scale.is_equal_approx(Vector2.ONE * 1.05), "Meditation is thirty percent smaller than its previous size")
+	_check(med.scale.is_equal_approx(Vector2.ONE * 1.05), "Meditation keeps its accepted compact scale")
 	_check(med.modulate.a < 1.0, "Continuous meditation leaves the character visible through its effect")
 	_check(caster_avatar._name_label.z_index > med.z_index and caster_avatar._status_bars.z_index > med.z_index, "Name and health/mana bars remain above meditation")
 	_check(caster_avatar._name_label.position.y > caster_avatar._status_bars.position.y + PlayerStatusBars.HEALTH_BAR_HEIGHT + PlayerStatusBars.BAR_GAP + PlayerStatusBars.MANA_BAR_HEIGHT and caster_avatar._name_label.text == caster.display_name, "Clean character name sits below both resource bars, away from incantations")
-	_check(_frame_bottom_is_anchored(med), "Meditation's frame bottom is anchored to the feet")
-	_check(not med.has_meta("visible_bottoms") and is_equal_approx(med.modulate.a, 0.72), "Accepted meditation layout and opacity are unchanged")
+	_check(med.position == caster_avatar.EFFECT_FOOT_POSITION and med.get_meta("foot_anchored", false), "Meditation is anchored at the feet without frame-dependent offsets")
+	_check(med.get_meta("modern_fx", false) and med.modulate.a < 1.0, "Original compact meditation aura leaves the avatar readable")
 	world._on_spell_resolved({"spell_id": 13, "amount": 20, "words": "EN COR SANCTIS", "caster_id": 1, "target_id": 2, "origin_x": 4, "origin_y": 5, "target_x": 7, "target_y": 5})
 	var effect = world._spell_effects[-1]
 	effect.set_process(false)
-	_check(effect._sprite != null and not effect._sprite.sprite_frames.get_animation_loop("default"), "Healing uses a single original AO animation")
-	_check(_visible_base_is_anchored(effect._sprite), "Healing FX grounds its actual pixels rather than transparent canvas")
+	_check(effect._sprite != null and effect._sprite.family == "healing", "Healing uses the original open-ribbon and spark burst")
+	_check(effect._sprite.get_meta("foot_anchored", false), "Healing uses a foot origin without a transparent sprite margin")
 	_check(effect.process_priority > target_avatar.process_priority and effect.process_priority < world.process_priority, "Effects follow interpolation before the camera moves")
 	var initial_target: Vector2 = target_avatar.position
 	target_avatar.apply_server_position(Vector2i(8, 5), initial_target + Vector2(48, 0))
@@ -80,16 +80,14 @@ func _test_effects() -> void:
 	_check(is_equal_approx(effect._text.position.x + 80, target_avatar.position.x), "Floating result follows the target horizontally")
 	_check(is_equal_approx(effect._text.position.y, target_avatar.position.y - 85 - 0.06 * 24), "Floating result follows the target and keeps its upward animation")
 	_check(effect._sprite.position.is_equal_approx(target_avatar.position + Vector2(0, 30)), "Healing graphic stays on the moving character's feet")
-	effect._sprite.pause()
-	effect._sprite.frame = effect._sprite.sprite_frames.get_frame_count("default") - 1
-	_check(effect._sprite.offset.y > -48 and _visible_base_is_anchored(effect._sprite), "The final healing pillar compensates its transparent bottom margin")
+	effect._sprite.set_age(0.95)
+	_check(effect._sprite.position.is_equal_approx(target_avatar.position + caster_avatar.EFFECT_FOOT_POSITION), "The late healing burst keeps the same grounded origin")
 	await _capture("spell-feet-healing.png")
 	world._on_spell_resolved({"spell_id": 53, "amount": 95, "words": "Rahma Nañarak O Al", "caster_id": 1, "target_id": 2, "origin_x": 4, "origin_y": 5, "target_x": 8, "target_y": 5})
 	var apocalypse = world._spell_effects[-1]
 	apocalypse.set_process(false)
-	apocalypse._sprite.pause()
-	apocalypse._sprite.frame = mini(7, apocalypse._sprite.sprite_frames.get_frame_count("default") - 1)
-	_check(_visible_base_is_anchored(apocalypse._sprite), "Apocalypse also rests its visible graphic on the feet")
+	apocalypse._sprite.set_age(0.32)
+	_check(apocalypse._sprite.family == "apocalypse" and apocalypse._sprite.position.is_equal_approx(target_avatar.position + caster_avatar.EFFECT_FOOT_POSITION), "Apocalypse has a distinct ember-column burst anchored to the feet")
 	effect.visible = false
 	await _capture("spell-feet-apocalypse.png")
 	world._on_spell_resolved({"action": "shot", "spell_id": 247, "amount": 190, "words": "", "caster_id": 1, "target_id": 2, "origin_x": 4, "origin_y": 5, "target_x": 8, "target_y": 5})
@@ -116,22 +114,18 @@ func _test_effects() -> void:
 	world._on_player_spawned(target.to_dictionary())
 	effect._process(0.0)
 	_check(not effect._sprite.visible, "Old effects cannot attach to a newly spawned avatar reusing the peer ID")
+	effect._process(effect._sprite.lifetime)
+	_check(is_zero_approx(effect.modulate.a) and effect._lifetime >= effect._audio.stream.get_length(), "Short visual burst fades while its original spell audio can finish")
+	effect._process(effect._lifetime)
+	_check(effect.is_queued_for_deletion(), "A completed burst releases itself after its audio tail")
+	caster.is_meditating = false
+	caster_avatar.apply_server_stats(caster)
+	_check(not med.visible and not med.is_processing(), "Server-confirmed meditation stop hides its aura and stops idle redraws")
 	world.clear_session()
 	await process_frame
 	_check(world._spell_effects.is_empty(), "Disconnect clears attached effects as well as avatars")
 	world.queue_free()
 	await process_frame
-
-
-func _frame_bottom_is_anchored(sprite: AnimatedSprite2D) -> bool:
-	var texture := sprite.sprite_frames.get_frame_texture(sprite.animation, sprite.frame)
-	return is_zero_approx(sprite.offset.y + texture.get_height() * 0.5)
-
-
-func _visible_base_is_anchored(sprite: AnimatedSprite2D) -> bool:
-	var texture := sprite.sprite_frames.get_frame_texture(sprite.animation, sprite.frame)
-	var used := texture.get_image().get_used_rect()
-	return not used.has_area() or is_zero_approx(sprite.offset.y - texture.get_height() * 0.5 + used.end.y)
 
 
 func _capture(filename: String) -> void:

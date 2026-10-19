@@ -1,6 +1,7 @@
 class_name ClassPresetPanel
 extends CanvasLayer
 
+const PRESENTATION := preload("res://client/ui/arena_presentation_theme.gd")
 signal opened_changed(opened: bool)
 var selector: OptionButton
 var apply_button: Button
@@ -16,18 +17,20 @@ var _request_generation := 0
 func _ready() -> void:
 	layer = 15
 	var overlay := ColorRect.new()
-	overlay.color = Color(0.02, 0.025, 0.02, 0.85)
+	overlay.color = Color(0.015,0.025,0.04,0.86)
 	add_child(overlay)
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var center := CenterContainer.new()
 	add_child(center)
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var panel := PanelContainer.new()
+	panel.theme = PRESENTATION.create_theme()
 	panel.custom_minimum_size = Vector2(550, 0)
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color("151812")
-	style.border_color = Color("756441")
+	style.bg_color = PRESENTATION.PANEL
+	style.border_color = PRESENTATION.BORDER
 	style.set_border_width_all(1)
+	style.set_corner_radius_all(12)
 	panel.add_theme_stylebox_override("panel", style)
 	center.add_child(panel)
 	var margin := MarginContainer.new()
@@ -38,11 +41,14 @@ func _ready() -> void:
 	content.add_theme_constant_override("separation", 12)
 	margin.add_child(content)
 	var title := Label.new()
-	title.text = "Clases y presets de arena"
+	title.text = "Clases y presets"
+	title.add_theme_color_override("font_color",PRESENTATION.IVORY)
 	title.add_theme_font_size_override("font_size", 23)
 	content.add_child(title)
 	selector = OptionButton.new()
 	selector.name = "ClassSelector"
+	selector.custom_minimum_size.y = 38
+	selector.get_popup().theme = PRESENTATION.create_theme()
 	selector.focus_mode = Control.FOCUS_NONE
 	for id: int in ClassCatalog.all_ids():
 		selector.add_item(str(ClassCatalog.get_profile(id).name), id)
@@ -77,11 +83,15 @@ func _ready() -> void:
 	content.add_child(buttons)
 	var close := Button.new()
 	close.text = "Volver"
+	close.custom_minimum_size.y = 36
+	PRESENTATION.secondary(close)
 	close.focus_mode = Control.FOCUS_NONE
 	close.pressed.connect(close_panel)
 	buttons.add_child(close)
 	apply_button = Button.new()
 	apply_button.name = "ApplyClass"
+	apply_button.custom_minimum_size.y = 36
+	PRESENTATION.primary(apply_button)
 	apply_button.text = "Usar este preset"
 	apply_button.focus_mode = Control.FOCUS_NONE
 	apply_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL

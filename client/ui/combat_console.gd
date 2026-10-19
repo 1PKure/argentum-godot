@@ -5,7 +5,7 @@ signal message_added(entry: Dictionary)
 
 const MAX_MESSAGES := 200
 const CHANNEL_COLORS := {
-	"system": Color("d9c9a7"),
+	"system": Color("aab3c2"),
 	"damage": Color("ff9992"),
 	"healing": Color("9de5a5"),
 	"mana": Color("9bc9ff"),
@@ -21,7 +21,7 @@ func _ready() -> void:
 	focus_mode = Control.FOCUS_NONE
 	selection_enabled = true
 	scroll_following = true
-	add_theme_font_size_override("normal_font_size", 13)
+	add_theme_font_size_override("normal_font_size", 14)
 	# Scrollbars must not capture movement or attack keys after a click.
 	get_v_scroll_bar().focus_mode = Control.FOCUS_NONE
 

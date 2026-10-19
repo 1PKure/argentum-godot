@@ -9,7 +9,7 @@ See [the first Web test guide](docs/WEB_TEST.md) for local testing, export instr
 
 ## AO20 combat interface
 
-The AO20 frame includes inventory/spell panels, synchronized health/mana, arena minimap and a bounded combat console. The book imports all 213 original AO20 entries and enables 39 spells with implemented PvP rules: select → Launch → target click, or a numeric hotkey → target click. Drag spells onto the hotkey bar to reassign them. Escape/right click cancels aiming; WASD stays active and CTRL remains a physical attack without a mana cost.
+The arena HUD includes inventory/spell panels, synchronized health/mana, arena minimap and a bounded combat console. The book imports all 213 original AO20 entries and enables 39 spells with implemented PvP rules: select → Launch → target click, or a numeric hotkey → target click. Drag spells onto the hotkey bar to reassign them. Escape/right click cancels aiming; WASD stays active and CTRL remains a physical attack without a mana cost.
 
 Use the same branch for the dedicated server and restart it after updating. `tools/Start-PrivateWebTest.cmd` imports the project before launching WSS. The spell protocol checks server support with protocol 16; player updates now redact enemy mana and physical hits use participant-only feedback.
 
@@ -64,3 +64,7 @@ The compact HUD footer keeps health/mana, status and Menu. Meditation/potion/Use
 **Menú → Arenas** permite al anfitrión cambiar entre Bosque, Desierto, Lava y Sala de Duelos. El servidor sincroniza escenario y reinicio, conserva clase/skin y reinicia la cuenta del bot sin premiar rondas interrumpidas. Cliente y dedicado usan protocolo **16**. Sigue siendo una arena compartida por servidor: las salas aisladas y Listo corresponden al próximo PR.
 
 Ver [escenarios y pasos de prueba](docs/ARENAS.md) y [orden de los siguientes PR](docs/ROADMAP.md).
+
+## Identidad visual propia
+
+HUD y ventanas unificados en dorado/marfil y azul noche, iconos/pociones SVG originales, props detallados y lava exterior corregida. Magia y meditación usan efectos originales por familias; personajes/equipo y reglas de combate se conservan. Ver [alcance y validación visual](docs/VISUAL_IDENTITY.md).

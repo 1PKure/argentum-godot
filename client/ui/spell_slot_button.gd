@@ -19,21 +19,23 @@ func configure(id: int, slot: int = -1, profile_id: int = 1) -> void:
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	expand_icon = true
 	clip_text = true
-	add_theme_font_size_override("font_size", 12)
-	add_theme_constant_override("icon_max_width", 28)
+	add_theme_font_size_override("font_size", 13)
+	for state: String in ["font_color","font_hover_color","font_pressed_color","font_focus_color"]:
+		add_theme_color_override(state,Color("f3f0e8"))
+	add_theme_constant_override("icon_max_width", 34)
 	var spell := SpellCatalog.get_spell(id)
 	if id == ClassCatalog.ATTACK_BINDING:
 		text = ""
-		var profile := ClassCatalog.get_profile(class_id)
-		icon = AOResources.get_equipment_icon(int(profile.weapon))
+
+		icon = ArenaIcons.spell(id,class_id)
 		tooltip_text = "Disparar · CTRL / 3 → clic en un rival" if class_id == 8 else "Golpear · CTRL / 3"
 	elif not spell.is_empty():
 		text = "%s\n%d maná%s" % [spell.name, spell.mana, " · Pendiente" if not SpellCatalog.is_available(id) else ""] if slot < 0 else ""
 		tooltip_text = "%s\n%s\n%d maná · Arrastrá el hechizo a un acceso para asignarlo." % [spell.name, spell.description, spell.mana]
 		# The DAT's minor-heal icon points to a blank cell in the public atlas.
 		# Use its existing blue healing icon without modifying the source data.
-		var icon_grh := SpellCatalog.display_icon_grh(id)
-		icon = AOResources.get_icon_texture(icon_grh) if icon_grh > 0 else null
+
+		icon = ArenaIcons.spell(id,class_id)
 		if not SpellCatalog.is_available(id):
 			tooltip_text += "\n" + str(spell.unavailable_reason)
 	else:
@@ -51,7 +53,7 @@ func configure(id: int, slot: int = -1, profile_id: int = 1) -> void:
 			_badge.add_theme_constant_override("shadow_offset_x", 1)
 			_badge.add_theme_constant_override("shadow_offset_y", 1)
 			add_child(_badge)
-			_badge.position = Vector2(1, -3)
+			_badge.position = Vector2(4, 1)
 		_badge.text = str((slot + 1) % 10)
 		if _role_badge == null:
 			_role_badge = Label.new()
@@ -60,7 +62,7 @@ func configure(id: int, slot: int = -1, profile_id: int = 1) -> void:
 			_role_badge.add_theme_color_override("font_shadow_color", Color.BLACK)
 			_role_badge.add_theme_constant_override("shadow_offset_x", 1)
 			_role_badge.add_theme_constant_override("shadow_offset_y", 1)
-			_role_badge.position = Vector2(1, 24)
+			_role_badge.position = Vector2(4, 40)
 			add_child(_role_badge)
 		_role_badge.text = ""
 		if slot < 4 and not spell.is_empty():
@@ -68,13 +70,15 @@ func configure(id: int, slot: int = -1, profile_id: int = 1) -> void:
 		if id == ClassCatalog.ATTACK_BINDING:
 			_role_badge.text = "ARCO" if class_id == 8 else "GOLPE"
 	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color("181813")
-	normal.border_color = Color("534a36")
+	normal.bg_color = Color("101a28")
+	normal.set_corner_radius_all(7)
+	normal.set_content_margin_all(6)
+	normal.border_color = Color("344357")
 	normal.set_border_width_all(1)
 	add_theme_stylebox_override("normal", normal)
 	var selected := normal.duplicate() as StyleBoxFlat
 	selected.border_color = Color("d3b878")
-	selected.bg_color = Color("302a1e")
+	selected.bg_color = Color("29394d")
 	add_theme_stylebox_override("pressed", selected)
 	add_theme_stylebox_override("hover", selected)
 

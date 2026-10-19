@@ -15,12 +15,15 @@ var potion_selected := false
 func _ready() -> void:
 	focus_mode = Control.FOCUS_NONE
 	expand_icon = true
-	add_theme_constant_override("icon_max_width", 28)
+	add_theme_constant_override("icon_max_width", 34)
 	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color.TRANSPARENT
+	normal.bg_color = Color("101a28")
+	normal.border_color = Color("2f4054")
+	normal.set_border_width_all(1)
+	normal.set_corner_radius_all(7)
 	add_theme_stylebox_override("normal", normal)
 	var hover := normal.duplicate() as StyleBoxFlat
-	hover.bg_color = Color(0.7, 0.6, 0.3, 0.15)
+	hover.bg_color = Color("26364b")
 	add_theme_stylebox_override("hover", hover)
 	var selected := hover.duplicate() as StyleBoxFlat
 	selected.border_color = Color("b59b61")
@@ -52,13 +55,13 @@ func configure(index: int, inventory: ArenaInventoryLayout) -> void:
 			_equipped_badge.add_theme_color_override("font_shadow_color", Color.BLACK)
 			_equipped_badge.add_theme_constant_override("shadow_offset_x", 1)
 			_equipped_badge.add_theme_constant_override("shadow_offset_y", 1)
-			_equipped_badge.position = Vector2(23, 18)
+			_equipped_badge.position = Vector2(29, 25)
 			_equipped_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			add_child(_equipped_badge)
 		_equipped_badge.visible = equipped
 	elif not action.is_empty():
 		var potion := RecoveryRules.get_potion(action)
-		icon = AOResources.get_icon_texture(int(potion.get("icon_grh", 0)))
+		icon = ArenaIcons.potion(action)
 		tooltip_text = "%s · Provisión de arena ilimitada\nClic: seleccionar y beber · Espacio: usar seleccionada
 Arrastrá con botón derecho para mover o intercambiar" % potion.get("name", "Poción")
 

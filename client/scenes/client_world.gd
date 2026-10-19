@@ -207,6 +207,7 @@ func _create_arena_props() -> void:
 
 func _create_scenery(kind: String, cell: Vector2i) -> void:
 	var prop := ArenaScenery.new()
+	prop.z_index = -2
 	add_child(prop)
 	prop.setup(kind,_grid_to_world(cell),VISUAL_SCALE,cell.x+cell.y)
 	_arena_props.append(prop)
@@ -236,6 +237,7 @@ func _create_prop(
 	grid_position: Vector2i
 ) -> void:
 	var prop := AOProp.new()
+	prop.z_index = -2
 
 	add_child(
 		prop

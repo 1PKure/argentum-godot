@@ -18,7 +18,7 @@ const HUMAN_HEAD_COUNT := 41
 const EFFECT_FOOT_POSITION := Vector2(0, 30)
 const EFFECT_Z_INDEX := 30
 const OVERHEAD_Z_INDEX := 40
-const MEDITATION_SCALE := 1.05 # 30% smaller than the previous 1.5 scale.
+const MEDITATION_SCALE := 1.05
 
 const STATUS_BARS_POSITION := Vector2(
 	-22.0,
@@ -52,7 +52,7 @@ var is_alive: bool
 
 var _name_label: Label
 var _status_bars: PlayerStatusBars
-var _meditation_fx: AnimatedSprite2D
+var _meditation_fx: ArenaMeditationVisual
 var _is_meditating := false
 var _effect_labels: Array[String] = []
 
@@ -202,16 +202,12 @@ func _apply_effect_presentation(state: PlayerState) -> void:
 	_is_meditating = state.is_meditating
 	_effect_labels.assign(state.active_effects)
 	if _is_meditating and _meditation_fx == null:
-		# Public MeditationLevelMax uses FX120; lower-level FX153 is missing
-		# from the same public FX table, so this test profile uses the valid FX.
-		_meditation_fx = AOResources.create_fx_sprite(120)
-		if _meditation_fx != null:
-			_meditation_fx.scale = Vector2.ONE * MEDITATION_SCALE
-			_meditation_fx.position = EFFECT_FOOT_POSITION + Vector2(_meditation_fx.get_meta("source_offset", Vector2.ZERO)) * MEDITATION_SCALE
-			_meditation_fx.z_index = EFFECT_Z_INDEX
-			_meditation_fx.modulate.a = 0.72
-			add_child(_meditation_fx)
-			_meditation_fx.play()
+		_meditation_fx = ArenaMeditationVisual.new()
+		_meditation_fx.scale = Vector2.ONE * MEDITATION_SCALE
+		_meditation_fx.position = EFFECT_FOOT_POSITION
+		_meditation_fx.z_index = EFFECT_Z_INDEX
+		_meditation_fx.modulate.a = 0.85
+		add_child(_meditation_fx)
 	if _meditation_fx != null:
 		_meditation_fx.visible = _is_meditating and state.is_alive
 

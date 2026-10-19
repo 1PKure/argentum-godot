@@ -1,10 +1,10 @@
-# Interfaz de combate AO20
+# Interfaz de combate de la arena
 
-El HUD conserva recursos originales de AO20, consola, Inventario/Hechizos, minimapa y barras confirmadas de vida/maná. La base de diseño actual es 1280×800. Ocupa todo el viewport con controles a escala uniforme y amplía el área de juego en ventanas más anchas; no requiere 1920×1080.
+El HUD usa paneles originales de Godot en azul noche, marfil y dorado, consola, Inventario/Hechizos, minimapa y barras confirmadas de vida/maná. Las pociones e iconos de hechizos usan SVG propios. La base de diseño actual es 1280×800. Ocupa todo el viewport con controles a escala uniforme y amplía el área de juego en ventanas más anchas; no requiere 1920×1080.
 
 La cámara sigue al avatar interpolado dentro de game_area. No mueve el HUD. El exterior decorativo oscurecido evita franjas negras al seguir al jugador cerca del borde; la línea marca los límites autoritativos originales de 20×12 y no agrega casillas caminables.
 
-Los FX de hechizos se anclan por su base visible a los pies, descontando el margen transparente de cada cuadro y se dibujan por delante del cuerpo. El impacto y el resultado flotante siguen al objetivo interpolado; las palabras siguen al lanzador. Son referencias a esos avatares concretos: desconectar o reutilizar un ID no deja un efecto atado a otro personaje. El nombre y las barras se mantienen encima de la meditación, reducida un 30% y con opacidad 72% para dejar visible el avatar.
+Los nuevos FX vectoriales de hechizos se anclan por su origen visible a los pies y se dibujan por delante del cuerpo. El impacto y el resultado flotante siguen al objetivo interpolado; las palabras siguen al lanzador. Son referencias a esos avatares concretos: desconectar o reutilizar un ID no deja un efecto atado a otro personaje. El nombre y las barras se mantienen encima de la meditación compacta azul/dorada, abierta para dejar visible el avatar.
 
 El inventario muestra provisiones y todas las piezas del preset. Arrastrar mueve/intercambia; clic equipa/desequipa o usa una poción. El servidor valida objetos y revisiones; la marca E identifica el equipo actual. El orden dura la sesión y se reconstruye al cambiar de preset. Q/E mantienen sus acciones. Ver [CLASSES.md](CLASSES.md).
 
@@ -41,3 +41,5 @@ Se retiraron los cuatro botones Meditar, Vida, Maná y Usar. El pie muestra recu
 ## Arenas
 
 **Menú → Arenas** abre los cuatro escenarios. El primer humano conectado puede elegir; el resto observa. El cambio reinicia la práctica para todos. Ver [ARENAS.md](ARENAS.md).
+
+Ver [identidad visual y alcance de esta revisión](VISUAL_IDENTITY.md).

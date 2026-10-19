@@ -49,6 +49,7 @@ func setup(
 		add_child(_lava_background)
 	_lava_background.position = _world_origin - Vector2.ONE * VISUAL_PADDING_TILES * _tile_size
 	_lava_background.size = Vector2(_grid_columns + 2 * VISUAL_PADDING_TILES,_grid_rows + 2 * VISUAL_PADDING_TILES) * _tile_size
+	(_lava_background.material as ShaderMaterial).set_shader_parameter("surface_size", _lava_background.size)
 	_lava_background.visible = _arena_id == ArenaData.LAVA
 	queue_redraw()
 

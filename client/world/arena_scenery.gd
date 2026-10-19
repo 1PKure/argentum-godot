@@ -1,53 +1,64 @@
 class_name ArenaScenery
 extends Node2D
 
+const SCENERY := {
+	"cactus": {"texture": preload("res://assets/arena/scenery/cactus.svg"), "size": Vector2(28, 42)},
+	"rock": {"texture": preload("res://assets/arena/scenery/rock.svg"), "size": Vector2(32, 25)},
+	"pillar": {"texture": preload("res://assets/arena/scenery/pillar.svg"), "size": Vector2(29, 45)},
+	"basalt": {"texture": preload("res://assets/arena/scenery/basalt.svg"), "size": Vector2(32, 38)},
+	"torch": {"texture": preload("res://assets/arena/scenery/torch.svg"), "size": Vector2(25, 44)},
+	"ember": {"texture": preload("res://assets/arena/scenery/ember.svg"), "size": Vector2(30, 34)},
+	"tree": {"texture": preload("res://assets/arena/scenery/pine.svg"), "size": Vector2(48, 68)},
+}
+
 var kind := "rock"
 var variant := 0
+var _flame_clock := 0.0
 
 func setup(value: String, at: Vector2, visual_scale: float, seed_value: int = 0) -> void:
-	kind = value
+	kind = value if SCENERY.has(value) else "rock"
 	variant = seed_value
 	position = at
 	scale = Vector2.ONE * visual_scale
-	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	set_process(kind in ["torch","ember"])
+	# Native SVGs are rasterised at twice their display size, retaining the
+	# small bevels and silhouettes without widening the collision footprint.
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	_flame_clock = float(posmod(seed_value, 19)) * 0.47
+	set_process(kind in ["torch", "ember"])
 	queue_redraw()
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	_flame_clock += delta
 	queue_redraw()
 
 func _draw() -> void:
-	draw_ellipse_shadow()
-	match kind:
-		"cactus":
-			draw_rect(Rect2(-4,-33,8,33),Color("3e6840"))
-			draw_rect(Rect2(-12,-23,8,5),Color("4f7848"))
-			draw_rect(Rect2(-12,-30,4,12),Color("4f7848"))
-			draw_rect(Rect2(4,-18,9,5),Color("355535"))
-			draw_rect(Rect2(9,-27,4,14),Color("355535"))
-			draw_line(Vector2(-1,-31),Vector2(-1,-2),Color("97aa65"),2)
-		"pillar","basalt":
-			var base := Color("757d88") if kind == "pillar" else Color("403b49")
-			draw_rect(Rect2(-8,-35,16,35),base)
-			draw_rect(Rect2(-11,-37,22,5),base.lightened(0.14))
-			draw_rect(Rect2(-10,-4,20,5),base.darkened(0.14))
-			draw_line(Vector2(-5,-30),Vector2(-5,-6),base.lightened(0.16),2)
-			draw_line(Vector2(5,-30),Vector2(5,-6),base.darkened(0.22),2)
-		"torch","ember":
-			draw_rect(Rect2(-3,-20,6,20),Color("44372e"))
-			var flicker := sin(Time.get_ticks_msec()*0.008 + variant)*1.3
-			draw_circle(Vector2(0,-24),12,Color(1,0.45,0.12,0.07))
-			draw_colored_polygon(PackedVector2Array([Vector2(-7,-19),Vector2(-3,-29-flicker),Vector2(0,-24),Vector2(3,-32+flicker),Vector2(8,-19)]),Color("e47d26"))
-			draw_colored_polygon(PackedVector2Array([Vector2(-3,-19),Vector2(0,-28),Vector2(4,-19)]),Color("ffcf72"))
-		"tree":
-			draw_rect(Rect2(-3,-25,6,25),Color("58412d"))
-			draw_colored_polygon(PackedVector2Array([Vector2(-17,-10),Vector2(0,-46),Vector2(17,-10)]),Color("294b32"))
-			draw_colored_polygon(PackedVector2Array([Vector2(-12,-24),Vector2(0,-49),Vector2(12,-24)]),Color("3e6441"))
-		_:
-			draw_colored_polygon(PackedVector2Array([Vector2(-13,-2),Vector2(-10,-13),Vector2(2,-18),Vector2(14,-8),Vector2(10,1)]),Color("8d8063"))
-			draw_colored_polygon(PackedVector2Array([Vector2(-10,-13),Vector2(2,-18),Vector2(7,-12),Vector2(-2,-9)]),Color("a89a79"))
+	var definition: Dictionary = SCENERY[kind]
+	var size: Vector2 = definition.size
+	draw_texture_rect(definition.texture, Rect2(Vector2(-size.x * 0.5, -size.y + 2), size), false)
+	if kind == "torch" or kind == "ember":
+		var base_y := -size.y * (0.69 if kind == "torch" else 0.66) + 2
+		_draw_flame(Vector2(0, base_y), 1.0 if kind == "torch" else 1.15)
 
-func draw_ellipse_shadow() -> void:
-	draw_set_transform(Vector2.ZERO,0,Vector2(1,0.35))
-	draw_circle(Vector2.ZERO,13,Color(0,0,0,0.2))
-	draw_set_transform(Vector2.ZERO)
+func _draw_flame(at: Vector2, strength: float) -> void:
+	var lean := sin(_flame_clock * 2.6) * 0.75
+	var lift := 0.45 * sin(_flame_clock * 4.1)
+	draw_circle(at + Vector2(0, -4), 10 * strength, Color(1, 0.55, 0.16, 0.035))
+	draw_circle(at + Vector2(0, -4), 6 * strength, Color(1, 0.65, 0.2, 0.065))
+	var points := PackedVector2Array([
+		Vector2(-4.5, 0), Vector2(-5, -2), Vector2(-4.3, -5), Vector2(-2.3, -7),
+		Vector2(-1.6, -10), Vector2(lean, -8), Vector2(1.3 + lean, -14 + lift),
+		Vector2(3 + lean, -10), Vector2(3, -7), Vector2(4.5, -5),
+		Vector2(5, -2), Vector2(3, 0.5), Vector2(0, 1),
+	])
+	for index in points.size():
+		points[index] = at + points[index] * strength
+	draw_colored_polygon(points, Color("d68537"))
+	points = PackedVector2Array([
+		Vector2(-2.7, 0), Vector2(-3, -3), Vector2(-1, -6),
+		Vector2(lean * 0.5, -10 + lift * 0.5), Vector2(1.1, -6),
+		Vector2(3, -3), Vector2(2, 0.3),
+	])
+	for index in points.size():
+		points[index] = at + points[index] * strength
+	draw_colored_polygon(points, Color("f3bd68"))
+	draw_circle(at + Vector2(0, -1.5), 1.8 * strength, Color("f9e2a2"))

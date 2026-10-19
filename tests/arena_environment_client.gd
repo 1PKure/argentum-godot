@@ -60,7 +60,7 @@ func _actor() -> void:
 		await _wait_for(func() -> bool: return str(network.state.arena_id) == id and not network.pending)
 		await _wait_for(func() -> bool: return not bool(network.state.transitioning))
 		await create_timer(0.2).timeout
-		_check(main._world._arena_id == id and hud._minimap.arena_id == id and hud._position_label.text.contains(ArenaData.get_display_name(id)),"%s matches world, minimap and HUD" % id)
+		_check(main._world._arena_id == id and hud._minimap.arena_id == id and hud._session_title.text.contains(ArenaData.get_display_name(id).to_upper()),"%s matches world, minimap and HUD" % id)
 		var player: PlayerState = hud._players[local_id]
 		_check(player.grid_position == Vector2i(4,5) and player.current_health == player.max_health and player.current_mana == player.max_mana and player.class_id == original_class and player.skin_id == skin,"%s reset restores resources/spawn and preserves class/skin" % id)
 		_check(not is_instance_valid(old_avatar) and main._world._avatars.size() == 2 and main._world._spell_effects.is_empty(),"%s replaces old avatars and effects" % id)

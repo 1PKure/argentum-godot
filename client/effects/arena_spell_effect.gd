@@ -8,7 +8,7 @@ var origin_avatar: Node2D
 var target_avatar: Node2D
 var _elapsed := 0.0
 var _lifetime := 1.1
-var _sprite: AnimatedSprite2D
+var _sprite: ArenaSpellVisual
 var _text: Label
 var _words: Label
 var _audio: AudioStreamPlayer
@@ -31,7 +31,6 @@ func _ready() -> void:
 	process_priority = 50
 	var spell := SpellCatalog.get_spell(int(event.spell_id))
 	_is_shot = event.get("action", "") == "shot"
-	var fx_id := 0 if _is_shot else int(spell.fx_id)
 	if _is_shot:
 		_lifetime = 0.65
 		_projectile = Sprite2D.new()
@@ -39,17 +38,11 @@ func _ready() -> void:
 		_projectile.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		_projectile.scale = Vector2.ONE * ClientWorld.VISUAL_SCALE
 		add_child(_projectile)
-	# Minor heal has no FXgrh in the DAT; reuse AO20's healing visual.
-	if fx_id == 0 and spell.effect == "healing":
-		fx_id = 9
-	if fx_id > 0:
-		_sprite = AOResources.create_fx_sprite(fx_id, false, true)
-		if _sprite != null:
-			var frames := _sprite.sprite_frames
-			_lifetime = maxf(_lifetime, frames.get_frame_count("default") / frames.get_animation_speed("default"))
-			_sprite.scale = Vector2.ONE * ClientWorld.VISUAL_SCALE
-			add_child(_sprite)
-			_sprite.play()
+	else:
+		_sprite = ArenaSpellVisual.new()
+		_sprite.configure(spell)
+		_lifetime = _sprite.lifetime
+		add_child(_sprite)
 	var value := ("+" if spell.effect == "healing" else "−") + str(event.amount)
 	if spell.effect in ["status", "periodic"]:
 		value = str(event.get("status_message", spell.name))
@@ -72,12 +65,17 @@ func _ready() -> void:
 		if _is_shot:
 			_lifetime = maxf(_lifetime, SHOT_TRAVEL_SECONDS + _audio.stream.get_length() + 0.05)
 		else:
+			# Keep the original sound tail even when the new visual burst is shorter.
+			# Visual opacity uses its own duration, so this never leaves text or FX behind.
+			_lifetime = maxf(_lifetime, _audio.stream.get_length() + 0.05)
 			_audio.play()
 
 
 func _process(delta: float) -> void:
 	_elapsed += delta
 	_update_anchors()
+	if _sprite != null and _elapsed < _sprite.lifetime + 0.1:
+		_sprite.set_age(_elapsed)
 	if _is_shot and not _shot_sound_played and _elapsed >= SHOT_TRAVEL_SECONDS:
 		_shot_sound_played = true
 		if is_instance_valid(target_avatar) and not target_avatar.is_queued_for_deletion():
@@ -90,7 +88,7 @@ func _process(delta: float) -> void:
 		_blood_age = maxf(0.0, _elapsed - SHOT_TRAVEL_SECONDS)
 		_blood_active = _blood_age < BLOOD_SECONDS and is_instance_valid(target_avatar) and not target_avatar.is_queued_for_deletion()
 		queue_redraw()
-	var fade_start := _lifetime - 0.4
+	var fade_start := (_lifetime if _is_shot else _sprite.lifetime) - 0.4
 	if _elapsed > fade_start:
 		modulate.a = maxf(0.0, 1.0 - (_elapsed - fade_start) / 0.4)
 	if _elapsed >= _lifetime:
@@ -126,10 +124,7 @@ func _update_anchors() -> void:
 	if _sprite != null:
 		_sprite.visible = has_target
 		if has_target:
-			# Ground the visible artwork, rather than its transparent canvas or the
-			# original renderer's vertical offset. Meditation keeps its own layout.
-			var source_offset: Vector2 = _sprite.get_meta("source_offset", Vector2.ZERO)
-			_sprite.position = target + PlayerAvatar.EFFECT_FOOT_POSITION + Vector2(source_offset.x * ClientWorld.VISUAL_SCALE, 0)
+			_sprite.position = target + PlayerAvatar.EFFECT_FOOT_POSITION
 	if not has_origin and not has_target:
 		queue_free()
 

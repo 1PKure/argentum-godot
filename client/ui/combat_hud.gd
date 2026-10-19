@@ -4,6 +4,7 @@ extends Control
 signal disconnect_requested
 signal modal_changed(blocked: bool)
 
+const PALETTE := preload("res://client/ui/arena_presentation_theme.gd")
 const ART := "res://assets/argentum/interface/ao20/"
 const DESIGN_SIZE := Vector2(1280, 800)
 const WORLD_RECT := Rect2(8, 152, 736, 608)
@@ -19,8 +20,8 @@ var _connection_label: Label
 var _position_label: Label
 var _health_label: Label
 var _mana_label: Label
-var _health_bar: TextureProgressBar
-var _mana_bar: TextureProgressBar
+var _health_bar: ProgressBar
+var _mana_bar: ProgressBar
 var _minimap: ArenaMinimap
 var _inventory_panel: Control
 var _spell_panel: Control
@@ -29,17 +30,17 @@ var _menu_card: PanelContainer
 var _menu_close_button: Button
 var _menu_disconnect_button: Button
 var _menu_credits: Label
-var _inventory_button: TextureButton
-var _spell_button: TextureButton
+var _inventory_button: Button
+var _spell_button: Button
 var _spell_controller: SpellTargetingController
 var _spell_buttons: Dictionary[int, SpellSlotButton] = {}
 var _hotkey_buttons: Array[SpellSlotButton] = []
-var _launch_button: TextureButton
+var _launch_button: Button
 var _spell_status: Label
 var _controls_hint: Label
-var _header_art: NinePatchRect
-var _world_art: NinePatchRect
-var _side_art: NinePatchRect
+var _header_art: Panel
+var _world_art: Panel
+var _side_art: Panel
 var _filter_buttons: Array[Button] = []
 var _session_title: Label
 var _spell_search: LineEdit
@@ -70,6 +71,11 @@ var _book_class_id := -1
 var _inventory_revision := -1
 var _inventory_peer := 0
 var _pixel_scale := 1
+var _brand: Label
+var _brand_detail: Label
+var _console_back: Panel
+var _macro_back: Panel
+var _console_title: Label
 
 
 func _ready() -> void:
@@ -257,74 +263,71 @@ func show_spells() -> void:
 
 
 func _build_interface() -> void:
+	theme = PALETTE.create_theme()
 	var backdrop := ColorRect.new()
-	backdrop.color = Color("090b09")
+	backdrop.color = PALETTE.BACKGROUND
 	backdrop.z_index = -30
 	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(backdrop)
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_frame = _control(self, "AO20Frame", Rect2(Vector2.ZERO, DESIGN_SIZE))
-	_frame.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	_header_art = _frame_patch(Rect2(0, 0, 752, 152), 150, 110, 32, 8)
-	_world_art = _frame_patch(Rect2(0, 152, 752, 616), 8, 8, 0, 60)
-	_side_art = _frame_patch(Rect2(752, 0, 272, 768), 0, 0, 160, 270)
-	game_area = _control(_frame, "GameArea", WORLD_RECT)
+	_frame = _control(self,"ArenaInterface",Rect2(Vector2.ZERO,DESIGN_SIZE))
+	_header_art = _surface(_frame,PALETTE.PANEL,PALETTE.BORDER)
+	_world_art = _surface(_frame,Color("0b1119"),PALETTE.BORDER)
+	_side_art = _surface(_frame,PALETTE.PANEL,PALETTE.BORDER)
+	_console_back = _surface(_frame,PALETTE.PANEL,PALETTE.BORDER)
+	_macro_back = _surface(_frame,PALETTE.PANEL,PALETTE.BORDER)
+	_brand = _label(_frame,"ARGENTUM",Rect2(32,20,200,30),24)
+	_brand.add_theme_color_override("font_color",PALETTE.IVORY)
+	_brand_detail = _label(_frame,"A R E N A   /   P V P",Rect2(34,49,200,18),10)
+	_brand_detail.add_theme_color_override("font_color",PALETTE.GOLD)
+	_session_title = _label(_frame,"DUELO DE PRÁCTICA",Rect2(270,32,340,25),14)
+	_session_title.add_theme_color_override("font_color",PALETTE.MUTED)
+	game_area = _control(_frame,"GameArea",WORLD_RECT)
 	game_area.clip_contents = true
 	console = CombatConsole.new()
 	console.name = "CombatConsole"
 	_frame.add_child(console)
+	_console_title = _label(_frame,"REGISTRO",Rect2(),11)
+	_console_title.add_theme_color_override("font_color",PALETTE.GOLD)
 	var filter_group := ButtonGroup.new()
 	for index in range(3):
-		var button := _text_button(_frame, ["Todo", "Combate", "Sistema"][index], Rect2(150 + index * 75, 4, 73, 23))
+		var button := _text_button(_frame,["Todo","Combate","Sistema"][index],Rect2())
 		button.toggle_mode = true
 		button.button_group = filter_group
 		button.button_pressed = index == 0
-		button.pressed.connect(console.set_channel_filter.bind(["all", "combat", "system"][index]))
+		button.pressed.connect(console.set_channel_filter.bind(["all","combat","system"][index]))
 		_filter_buttons.append(button)
-	_session_title = _label(_frame, "Arena PvP", Rect2(385, 5, 245, 22), 13)
-	_controls_hint = _label(_frame, "", Rect2(20, 123, 700, 22), 13)
+	_controls_hint = _label(_frame,"",Rect2(),13)
+	_controls_hint.add_theme_color_override("font_color",PALETTE.IVORY)
 	_minimap = ArenaMinimap.new()
 	_frame.add_child(_minimap)
-	_minimap.size = Vector2(91, 91)
-	_name_label = _label(_frame, "Sin personaje", Rect2(0, 40, 237, 25), 15)
-	_position_label = _label(_frame, "Bosque", Rect2(0, 68, 230, 22), 13)
-	_connection_label = _label(_frame, "Sin conexión", Rect2(0, 96, 235, 22), 13)
-	_status_label = _label(_frame, "", Rect2(0, 124, 235, 30), 12)
+	_minimap.size = Vector2(72,64)
+	_name_label = _label(_frame,"Sin personaje",Rect2(),17)
+	_position_label = _label(_frame,"Bosque",Rect2(),13)
+	_position_label.add_theme_color_override("font_color",PALETTE.MUTED)
+	_connection_label = _label(_frame,"Sin conexión",Rect2(),12)
+	_connection_label.add_theme_color_override("font_color",PALETTE.GOLD)
+	_status_label = _label(_frame,"",Rect2(),12)
 	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status_label.max_lines_visible = 2
 	_status_label.z_index = 1
 	_status_label.clip_text = true
-	_status_label.mouse_filter = Control.MOUSE_FILTER_PASS
-	_inventory_panel = _control(_frame, "InventoryPanel", Rect2(0, 192, 240, 400))
-	var inventory_art := _picture(_inventory_panel, "es_centroinventario.png", Rect2(0, 0, 240, 400))
-	var inventory_atlas := AtlasTexture.new()
-	inventory_atlas.atlas = inventory_art.texture
-	inventory_atlas.region = Rect2(0, 32, 247, 293)
-	inventory_art.texture = inventory_atlas
+	_inventory_panel = _control(_frame,"InventoryPanel",Rect2())
 	_inventory_panel.clip_contents = true
-	_spell_panel = _control(_frame, "SpellPanel", Rect2(0, 192, 240, 400))
+	_spell_panel = _control(_frame,"SpellPanel",Rect2())
 	_spell_panel.clip_contents = true
-	var spell_background := ColorRect.new()
-	spell_background.color = Color("171612")
-	spell_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_spell_panel.add_child(spell_background)
-	spell_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_inventory_button = _art_button(_frame, "inventory", Rect2(0, 162, 122, 28))
+	_inventory_button = _text_button(_frame,"Inventario",Rect2())
 	_inventory_button.toggle_mode = true
-	_inventory_button.texture_normal = load(ART + "es_boton-inventory-off.png")
-	_inventory_button.texture_pressed = load(ART + "es_boton-inventory-default.png")
 	_inventory_button.pressed.connect(show_inventory)
-	_spell_button = _art_button(_frame, "hechizos", Rect2(0, 162, 122, 28))
+	_spell_button = _text_button(_frame,"Hechizos",Rect2())
 	_spell_button.toggle_mode = true
-	_spell_button.texture_normal = load(ART + "es_boton-hechizos-off.png")
-	_spell_button.texture_pressed = load(ART + "es_boton-hechizos-default.png")
 	_spell_button.pressed.connect(show_spells)
 	for index in range(42):
 		var slot := InventorySlotButton.new()
 		_inventory_panel.add_child(slot)
-		slot.position = Vector2(10 + (index % 6) * 36, 16 + (index / 6) * 36)
-		slot.size = Vector2(34, 34)
-		slot.configure(index, _inventory_layout)
+		slot.position = Vector2(4+(index%6)*44,8+(index/6)*44)
+		slot.size = Vector2(40,40)
+		slot.configure(index,_inventory_layout)
 		slot.item_used.connect(_use_inventory_item)
 		slot.item_dropped.connect(_move_inventory_item)
 		slot.move_started.connect(_begin_inventory_move)
@@ -332,70 +335,61 @@ func _build_interface() -> void:
 	_spell_search = LineEdit.new()
 	_spell_search.placeholder_text = "Buscar hechizo…"
 	_spell_panel.add_child(_spell_search)
-	_spell_search.position = Vector2(10, 8)
-	_spell_search.size = Vector2(220, 28)
+	_spell_search.position = Vector2(0,4)
+	_spell_search.size = Vector2(264,34)
 	_spell_search.text_changed.connect(func(_value: String) -> void: _filter_spellbook())
 	_spell_search.text_submitted.connect(func(_value: String) -> void: _spell_search.release_focus())
 	_show_catalog = CheckButton.new()
 	_show_catalog.text = "Catálogo completo"
 	_show_catalog.focus_mode = Control.FOCUS_NONE
-	_show_catalog.add_theme_font_size_override("font_size", 12)
+	_show_catalog.add_theme_font_size_override("font_size",12)
 	_spell_panel.add_child(_show_catalog)
-	_show_catalog.position = Vector2(8, 39)
-	_show_catalog.size = Vector2(224, 28)
+	_show_catalog.position = Vector2(0,42)
+	_show_catalog.size = Vector2(264,28)
 	_show_catalog.toggled.connect(func(_value: bool) -> void: _filter_spellbook())
 	_spell_scroll = ScrollContainer.new()
 	_spell_panel.add_child(_spell_scroll)
-	_spell_scroll.position = Vector2(10, 74)
-	_spell_scroll.size = Vector2(222, 230)
+	_spell_scroll.position = Vector2(0,78)
 	_spell_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_spell_scroll.get_v_scroll_bar().focus_mode = Control.FOCUS_NONE
 	_spell_list = VBoxContainer.new()
 	_spell_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_spell_list.add_theme_constant_override("separation", 3)
+	_spell_list.add_theme_constant_override("separation",6)
 	_spell_scroll.add_child(_spell_list)
 	for id: int in SpellCatalog.all_ids():
 		var entry := SpellSlotButton.new()
 		entry.configure(id)
 		_spell_list.add_child(entry)
-		entry.custom_minimum_size = Vector2(200, 47)
+		entry.custom_minimum_size = Vector2(244,54)
 		entry.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		entry.pressed.connect(_on_spell_selected.bind(id))
 		_spell_buttons[id] = entry
-	_spell_status = _label(_spell_panel, "", Rect2(10, 308, 220, 46), 11)
+	_spell_status = _label(_spell_panel,"",Rect2(),12)
 	_spell_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_spell_status.max_lines_visible = 2
 	_spell_status.clip_text = true
 	_spell_status.mouse_filter = Control.MOUSE_FILTER_PASS
-	_launch_button = _art_button(_spell_panel, "lanzar", Rect2(0, 360, 161, 39))
+	_launch_button = _text_button(_spell_panel,"Lanzar",Rect2())
 	_launch_button.name = "LaunchButton"
 	_launch_button.disabled = true
-	_launch_button.tooltip_text = "Lanzar el hechizo seleccionado: después elegí un objetivo."
+	PALETTE.primary(_launch_button)
+	_launch_button.tooltip_text = "Elegí un hechizo y después un objetivo."
 	_launch_button.pressed.connect(_on_launch_pressed)
-	_bottom_back = Panel.new()
-	_bottom_back.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var bottom_style := StyleBoxFlat.new()
-	bottom_style.bg_color = Color("181612")
-	bottom_style.border_color = Color("534a36")
-	bottom_style.set_border_width_all(1)
-	_bottom_back.add_theme_stylebox_override("panel", bottom_style)
-	_frame.add_child(_bottom_back)
-	_health_bar = _resource_bar("es_barradevida.png", Vector2.ZERO)
-	_mana_bar = _resource_bar("es_barrademana.png", Vector2.ZERO)
-	_health_label = _label(_frame, "—", Rect2(0, 0, 216, 22), 14)
-	_mana_label = _label(_frame, "—", Rect2(0, 0, 216, 22), 14)
+	_bottom_back = _surface(_frame,Color("121b28"),PALETTE.BORDER)
+	_health_bar = _resource_bar(Color("d65d70"))
+	_mana_bar = _resource_bar(Color("65a5df"))
+	_health_label = _label(_frame,"—",Rect2(),13)
+	_mana_label = _label(_frame,"—",Rect2(),13)
 	_health_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_mana_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_build_menu()
-	_menu_button = _text_button(_frame, "", Rect2(0, 0, 126, 27))
-	_menu_button.text = "Menú"
+	_menu_button = _text_button(_frame,"Menú",Rect2())
 	_menu_button.pressed.connect(func() -> void: set_menu_opened(not _menu_panel.visible))
-	_close_button = _text_button(_frame, "", Rect2(0, 2, 24, 25))
+	_close_button = _text_button(_frame,"×",Rect2())
+	_close_button.tooltip_text = "Desconectarse"
 	_close_button.pressed.connect(disconnect_requested.emit)
 	for index in range(4):
-		var reserved := _text_button(_frame, "", Rect2(0, 2, 65, 25))
-		reserved.tooltip_text = "Opción no disponible en esta arena."
-		_reserved_buttons.append(reserved)
+		_reserved_buttons.append(_text_button(_frame,"",Rect2()))
 	_class_panel = ClassPresetPanel.new()
 	add_child(_class_panel)
 	_class_panel.opened_changed.connect(func(_opened: bool) -> void: _notify_modal_state())
@@ -421,24 +415,12 @@ func _build_interface() -> void:
 	_reserved_buttons[3].pressed.connect(_open_skins)
 	_reserved_buttons[0].text = "Clases"
 	_reserved_buttons[0].tooltip_text = "Ver y elegir clases, equipo y estadísticas."
-	for style_name: String in ["normal", "hover", "pressed", "disabled"]:
-		var class_style := StyleBoxFlat.new()
-		class_style.bg_color = Color("242118") if style_name in ["hover", "pressed"] else Color("171612")
-		class_style.border_color = Color("756441")
-		class_style.set_border_width_all(1)
-		_reserved_buttons[0].add_theme_stylebox_override(style_name, class_style)
 	_reserved_buttons[0].pressed.connect(_open_classes)
 	_reserved_buttons[2].text = "Bot"
 	_reserved_buttons[2].tooltip_text = "Práctica con bot"
 	_reserved_buttons[2].pressed.connect(_open_bot)
-	for style_name: String in ["normal", "hover", "pressed", "disabled"]:
-		_reserved_buttons[3].add_theme_stylebox_override(style_name, _reserved_buttons[0].get_theme_stylebox(style_name))
-	for style_name: String in ["normal", "hover", "pressed", "disabled"]:
-		_reserved_buttons[2].add_theme_stylebox_override(style_name, _reserved_buttons[0].get_theme_stylebox(style_name))
 	_reserved_buttons[1].text = "Zoom 1×"
 	_reserved_buttons[1].tooltip_text = "Acercar / alejar el mundo"
-	for style_name: String in ["normal", "hover", "pressed"]:
-		_reserved_buttons[1].add_theme_stylebox_override(style_name, _reserved_buttons[0].get_theme_stylebox(style_name))
 	_reserved_buttons[1].pressed.connect(func() -> void:
 		_pixel_scale = 1 if _pixel_scale == 2 else 2
 		_reserved_buttons[1].text = "Zoom %d×" % _pixel_scale
@@ -448,7 +430,7 @@ func _build_interface() -> void:
 		var macro := SpellSlotButton.new()
 		macro.configure(0, index)
 		_frame.add_child(macro)
-		macro.size = Vector2(38, 38)
+		macro.size = Vector2(48, 52)
 		macro.pressed.connect(_on_hotkey_pressed.bind(index))
 		macro.spell_dropped.connect(_on_hotkey_assigned)
 		_hotkey_buttons.append(macro)
@@ -480,9 +462,10 @@ func _build_menu() -> void:
 	_menu_card.custom_minimum_size.x = 440
 	_menu_card.mouse_filter = Control.MOUSE_FILTER_STOP
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color("171511")
-	style.border_color = Color("756441")
+	style.bg_color = PALETTE.PANEL
+	style.border_color = PALETTE.BORDER
 	style.set_border_width_all(1)
+	style.set_corner_radius_all(12)
 	style.set_content_margin_all(22)
 	_menu_card.add_theme_stylebox_override("panel", style)
 	center.add_child(_menu_card)
@@ -596,11 +579,9 @@ func _input(event: InputEvent) -> void:
 
 
 func _layout_footer_actions() -> void:
-	if _frame == null or _menu_button == null:
-		return
-	var side_x := _frame.size.x - 272.0
-	_menu_button.position = Vector2(side_x + 20, _frame.size.y - 34)
-	_menu_button.size = Vector2(232, 27)
+	if _frame == null or _menu_button == null: return
+	_menu_button.position = Vector2(_frame.size.x-296,_frame.size.y-58)
+	_menu_button.size = Vector2(264,34)
 
 
 func _frame_patch(region: Rect2, left: int, right: int, top: int, bottom: int) -> NinePatchRect:
@@ -686,53 +667,75 @@ func _update_recovery_controls() -> void:
 func _fit_interface() -> void:
 	_cancel_inventory_move()
 	var available := get_viewport_rect().size
-	var factor := minf(available.x / DESIGN_SIZE.x, available.y / DESIGN_SIZE.y)
-	_frame.scale = Vector2.ONE * factor
+	var factor := minf(available.x/DESIGN_SIZE.x,available.y/DESIGN_SIZE.y)
+	_frame.scale = Vector2.ONE*factor
 	_frame.position = Vector2.ZERO
-	_frame.size = available / maxf(factor, 0.01)
-	var side_x := _frame.size.x - 272.0
+	_frame.size = available/maxf(factor,0.01)
+	var width := _frame.size.x
 	var height := _frame.size.y
-	_header_art.position = Vector2.ZERO
-	_header_art.size = Vector2(side_x, 152)
-	_world_art.position = Vector2(0, 152)
-	_world_art.size = Vector2(side_x, height - 152)
-	_side_art.position = Vector2(side_x, 0)
-	_side_art.size = Vector2(272, height)
-	game_area.position = Vector2(8, 152)
-	game_area.size = Vector2(side_x - 16, height - 214)
-	console.position = Vector2(16, 35)
-	console.size = Vector2(side_x - 143, 82)
-	_minimap.position = Vector2(side_x - 110, 43)
-	_controls_hint.size.x = side_x - 40
-	_name_label.position = Vector2(side_x + 20, 40)
-	_position_label.position = Vector2(side_x + 20, 68)
-	_connection_label.position = Vector2(side_x + 20, 96)
-	_status_label.position = Vector2(side_x + 20, height - 66)
-	_status_label.size = Vector2(232, 28)
-	_inventory_button.position = Vector2(side_x + 16, 162)
-	_spell_button.position = Vector2(side_x + 138, 162)
-	for panel: Control in [_inventory_panel, _spell_panel]:
-		panel.position = Vector2(side_x + 16, 192)
-		panel.size = Vector2(240, height - 374)
-	_spell_scroll.size.y = _spell_panel.size.y - 166
-	_spell_status.position.y = _spell_panel.size.y - 83
-	_spell_status.size = Vector2(220, 34)
-	_launch_button.position.y = _spell_panel.size.y - 41
-	_health_bar.position = Vector2(side_x + 32, height - 124)
-	_mana_bar.position = Vector2(side_x + 32, height - 96)
-	_health_label.position = _health_bar.position + Vector2(0, -3)
-	_mana_label.position = _mana_bar.position + Vector2(0, -3)
+	var side_x := width-312.0
+	_header_art.position = Vector2(16,12)
+	_header_art.size = Vector2(width-32,64)
+	_world_art.position = Vector2(16,88)
+	_world_art.size = Vector2(side_x-32,height-348)
+	_side_art.position = Vector2(side_x,88)
+	_side_art.size = Vector2(296,height-104)
+	game_area.position = _world_art.position+Vector2(2,2)
+	game_area.size = _world_art.size-Vector2(4,4)
+	_console_back.position = Vector2(16,height-152)
+	_console_back.size = Vector2(side_x-32,136)
+	_console_title.position = Vector2(32,height-142)
+	_console_title.size = Vector2(100,25)
+	for index in range(3):
+		_filter_buttons[index].position = Vector2(144+index*82,height-144)
+		_filter_buttons[index].size = Vector2(78,27)
+	console.position = Vector2(32,height-108)
+	console.size = Vector2(side_x-64,78)
+	_controls_hint.position = Vector2(32,height-253)
+	_controls_hint.size = Vector2(side_x-64,22)
+	_macro_back.position = Vector2((side_x-556)*0.5,height-224)
+	_macro_back.size = Vector2(556,60)
+	for index in range(_hotkey_buttons.size()):
+		_hotkey_buttons[index].position = _macro_back.position+Vector2(10+index*54,4)
+	_minimap.position = Vector2(side_x+204,108)
+	_name_label.position = Vector2(side_x+16,106)
+	_name_label.size = Vector2(180,25)
+	_position_label.position = Vector2(side_x+16,134)
+	_position_label.size = Vector2(180,25)
+	_connection_label.position = Vector2(side_x+16,159)
+	_connection_label.size = Vector2(180,22)
+	_health_bar.position = Vector2(side_x+16,190)
+	_health_bar.size = Vector2(264,23)
+	_mana_bar.position = Vector2(side_x+16,221)
+	_mana_bar.size = Vector2(264,23)
+	_health_label.position = _health_bar.position
+	_health_label.size = _health_bar.size
+	_mana_label.position = _mana_bar.position
+	_mana_label.size = _mana_bar.size
+	_inventory_button.position = Vector2(side_x+16,258)
+	_spell_button.position = Vector2(side_x+152,258)
+	_inventory_button.size = Vector2(128,34)
+	_spell_button.size = Vector2(128,34)
+	for panel: Control in [_inventory_panel,_spell_panel]:
+		panel.position = Vector2(side_x+16,302)
+		panel.size = Vector2(264,height-414)
+	_spell_scroll.size = Vector2(264,_spell_panel.size.y-166)
+	_spell_status.position = Vector2(0,_spell_panel.size.y-80)
+	_spell_status.size = Vector2(264,34)
+	_launch_button.position = Vector2(0,_spell_panel.size.y-40)
+	_launch_button.size = Vector2(264,38)
+	_bottom_back.position = Vector2(side_x+8,height-104)
+	_bottom_back.size = Vector2(280,80)
+	_status_label.position = Vector2(side_x+16,height-98)
+	_status_label.size = Vector2(264,28)
 	_menu_panel.position = Vector2.ZERO
 	_menu_panel.size = _frame.size
 	_layout_footer_actions()
-	_bottom_back.position = Vector2(side_x + 8, height - 188)
-	_bottom_back.size = Vector2(256, 188)
-	_close_button.position.x = _frame.size.x - 26
-	for index in range(_reserved_buttons.size()):
-		_reserved_buttons[index].position.x = side_x + 8 + index * 58
-		_reserved_buttons[index].size.x = 56
-	for index in range(_hotkey_buttons.size()):
-		_hotkey_buttons[index].position = Vector2((side_x - 410) * 0.5 + index * 41, height - 49)
+	_close_button.position = Vector2(width-56,27)
+	_close_button.size = Vector2(28,32)
+	for index in range(4):
+		_reserved_buttons[index].position = Vector2(width-382+index*80,27)
+		_reserved_buttons[index].size = Vector2(76,32)
 	if _world != null:
 		_world.resize_viewport(game_area.size)
 		_update_pixel_scale()
@@ -797,7 +800,9 @@ func _update_local_stats() -> void:
 	_mana_bar.value = state.current_mana if state != null else 0
 	_health_label.text = "%d / %d" % [state.current_health, state.max_health] if state != null else "—"
 	_mana_label.text = "%d / %d" % [state.current_mana, state.max_mana] if state != null else "—"
-	_position_label.text = "%s · %s %d, %d" % [ClassCatalog.get_profile(state.class_id).name, ArenaData.get_display_name(str(ArenaNetwork.state.get("arena_id",ArenaData.DEFAULT_ARENA_ID))),state.grid_position.x,state.grid_position.y] if state != null else ArenaData.get_display_name(str(ArenaNetwork.state.get("arena_id",ArenaData.DEFAULT_ARENA_ID)))
+	_position_label.text = str(ClassCatalog.get_profile(state.class_id).name) if state != null else "Elegí tu clase"
+	_session_title.text = ArenaData.get_display_name(str(ArenaNetwork.state.get("arena_id",ArenaData.DEFAULT_ARENA_ID))).to_upper() + "  /  PVP"
+	_position_label.tooltip_text = "Casilla %d, %d" % [state.grid_position.x,state.grid_position.y] if state != null else ""
 	if state != null and (state.inventory_revision != _inventory_revision or state.peer_id != _inventory_peer):
 		_inventory_revision = state.inventory_revision
 		_inventory_peer = state.peer_id
@@ -887,7 +892,7 @@ func _label(parent: Node, text_value: String, rect: Rect2, font_size: int) -> La
 	label.text = text_value
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", Color("e2d8bc"))
+	label.add_theme_color_override("font_color", PALETTE.IVORY)
 	label.add_theme_color_override("font_shadow_color", Color.BLACK)
 	label.add_theme_constant_override("shadow_offset_x", 1)
 	label.add_theme_constant_override("shadow_offset_y", 1)
@@ -902,21 +907,9 @@ func _text_button(parent: Node, text_value: String, rect: Rect2) -> Button:
 	var button := Button.new()
 	button.text = text_value
 	button.focus_mode = Control.FOCUS_NONE
-	button.add_theme_font_size_override("font_size", 12)
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(0.07, 0.065, 0.045, 0.3) if text_value != "" else Color.TRANSPARENT
-	normal.border_color = Color(0.35, 0.31, 0.23, 0.6)
-	if text_value != "":
-		normal.set_border_width_all(1)
-	button.add_theme_stylebox_override("normal", normal)
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.bg_color = Color(0.7, 0.6, 0.3, 0.15)
-	button.add_theme_stylebox_override("hover", hover)
-	var pressed := normal.duplicate() as StyleBoxFlat
-	pressed.bg_color = Color(0.7, 0.6, 0.3, 0.3)
-	pressed.border_color = Color("b59b61")
-	pressed.set_border_width_all(1)
-	button.add_theme_stylebox_override("pressed", pressed)
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	button.add_theme_font_size_override("font_size",13)
+	PALETTE.secondary(button)
 	parent.add_child(button)
 	button.position = rect.position
 	button.size = rect.size
@@ -935,13 +928,21 @@ func _art_button(parent: Node, art_name: String, rect: Rect2) -> TextureButton:
 	return button
 
 
-func _resource_bar(filename: String, at: Vector2) -> TextureProgressBar:
-	var bar := TextureProgressBar.new()
-	bar.texture_progress = load(ART + filename)
+func _surface(parent: Node, fill: Color, border: Color) -> Panel:
+	var panel := Panel.new()
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.z_index = -20
+	panel.add_theme_stylebox_override("panel",PALETTE.box(fill,border,10))
+	parent.add_child(panel)
+	return panel
+
+func _resource_bar(color: Color) -> ProgressBar:
+	var bar := ProgressBar.new()
+	bar.show_percentage = false
 	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bar.add_theme_stylebox_override("background",PALETTE.box(Color("0d141e"),Color("2a384a"),6))
+	bar.add_theme_stylebox_override("fill",PALETTE.box(color,color.lightened(0.15),6))
 	_frame.add_child(bar)
-	bar.position = at
-	bar.size = Vector2(216, 16)
 	return bar
 
 

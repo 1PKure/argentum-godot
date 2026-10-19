@@ -43,7 +43,7 @@ func _ready() -> void:
 	for id: String in ArenaData.IDS:
 		var panel := PanelContainer.new()
 		panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		panel.add_theme_stylebox_override("panel",Palette.box(Palette.BACKGROUND,Color("414858")))
+		panel.add_theme_stylebox_override("panel",Palette.box(Palette.BACKGROUND,Palette.BORDER))
 		grid.add_child(panel)
 		var column := VBoxContainer.new()
 		column.add_theme_constant_override("separation",5)
@@ -55,6 +55,7 @@ func _ready() -> void:
 		preview.arena_id = id
 		column.add_child(preview)
 		var button := Button.new()
+		button.focus_mode = Control.FOCUS_NONE
 		button.custom_minimum_size.y = 30
 		button.tooltip_text = str(ArenaData.get_definition(id).description)
 		button.pressed.connect(ArenaNetwork.select_arena.bind(id))
@@ -71,6 +72,7 @@ func _ready() -> void:
 	message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(message)
 	close_button = Button.new()
+	close_button.focus_mode = Control.FOCUS_NONE
 	close_button.text = "Volver"
 	close_button.custom_minimum_size.y = 32
 	close_button.pressed.connect(close_panel)
