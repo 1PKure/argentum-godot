@@ -43,7 +43,7 @@ func _run() -> void:
 	await create_timer(0.35).timeout
 	drinks.clear()
 	_key(KEY_SPACE, true, true)
-	await create_timer(1.1).timeout
+	await _until(Time.get_ticks_msec() + 1000)
 	_key(KEY_SPACE, false)
 	await create_timer(0.15).timeout
 	var single_count := drinks.size()
@@ -55,12 +55,13 @@ func _run() -> void:
 	await _spend(100)
 	await create_timer(0.35).timeout
 	drinks.clear()
+	var combination_started := Time.get_ticks_msec()
 	_key(KEY_SPACE, true)
-	await create_timer(0.21).timeout
+	await _until(combination_started+210)
 	await _click(hud._inventory_slots[1])
-	await create_timer(0.4).timeout
+	await _until(combination_started+610)
 	await _click(hud._inventory_slots[1])
-	await create_timer(0.45).timeout
+	await _until(combination_started+1000)
 	_key(KEY_SPACE, false)
 	await create_timer(0.15).timeout
 	print("Potion rhythm: Space=%d; click+Space=%d" % [single_count, drinks.size()])
@@ -246,3 +247,9 @@ func _finish() -> void:
 	await process_frame
 	print("Potion Use checks: %d; failures: %d" % [checks, failures])
 	quit(1 if failures else 0)
+
+# Equal one-second observation windows avoid frame-dependent 1.1 s endpoints
+# crossing the fifth 280 ms use tick during native software rendering.
+func _until(deadline: int) -> void:
+	while Time.get_ticks_msec() < deadline:
+		await process_frame
