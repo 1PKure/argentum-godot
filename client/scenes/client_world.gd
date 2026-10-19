@@ -34,7 +34,8 @@ var _arena_id: String = (
 var _avatars: Dictionary[int, PlayerAvatar] = {}
 
 var _arena_ground: ArenaGround
-var _arena_props: Array[AOProp] = []
+var _arena_props: Array[Node2D] = []
+var _arena_revision := -1
 var _spell_effects: Array[Node2D] = []
 
 var _viewport_size := Vector2.ZERO
@@ -47,6 +48,7 @@ func _ready() -> void:
 	process_priority = 100
 	y_sort_enabled = true
 	SpellNetwork.spell_resolved.connect(_on_spell_resolved)
+	ArenaNetwork.changed.connect(_on_arena_state)
 
 	_create_arena_ground()
 	_create_arena_props()
@@ -190,6 +192,44 @@ func _create_arena_props() -> void:
 			grid_position
 		)
 
+	var definition := ArenaData.get_definition(_arena_id)
+	if definition.props.is_empty():
+		for cell: Vector2i in definition.blocked_cells:
+			_create_scenery(str(definition.obstacle_kind),cell)
+	var index := 0
+	for cell: Vector2i in definition.decorations:
+		var kind := str(definition.obstacle_kind)
+		if _arena_id == ArenaData.DUEL_ROOM: kind = "torch"
+		elif _arena_id == ArenaData.LAVA: kind = "ember"
+		elif _arena_id == ArenaData.DESERT and index % 2 == 0: kind = "rock"
+		_create_scenery(kind,cell)
+		index += 1
+
+func _create_scenery(kind: String, cell: Vector2i) -> void:
+	var prop := ArenaScenery.new()
+	add_child(prop)
+	prop.setup(kind,_grid_to_world(cell),VISUAL_SCALE,cell.x+cell.y)
+	_arena_props.append(prop)
+
+func _on_arena_state() -> void:
+	if ArenaNetwork.state.is_empty():
+		_arena_revision = -1
+		return
+	var revision := int(ArenaNetwork.state.revision)
+	if revision == _arena_revision: return
+	_arena_revision = revision
+	set_arena(str(ArenaNetwork.state.arena_id))
+
+func set_arena(id: String) -> void:
+	if not ArenaData.is_implemented(id): return
+	clear_session()
+	_arena_id = id
+	for prop: Node2D in _arena_props:
+		remove_child(prop)
+		prop.queue_free()
+	_arena_props.clear()
+	_arena_ground.setup(_arena_id,GRID_COLUMNS,GRID_ROWS,TILE_SIZE,WORLD_ORIGIN)
+	_create_arena_props()
 
 func _create_prop(
 	grh_id: int,

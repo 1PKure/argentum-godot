@@ -52,6 +52,7 @@ func _connect_to_server(server_url: String) -> void:
 
 	var error: Error = NetworkManager.start_client(server_url)
 	if error != OK:
+		ArenaNetwork.clear_session()
 		NetworkManager.stop()
 		_connection_panel.show_connection(
 			"No se pudo iniciar la conexión. Revisá la dirección. Error: %s" % error,
@@ -61,6 +62,7 @@ func _connect_to_server(server_url: String) -> void:
 
 func _cancel_connection() -> void:
 	_spell_controller.end_session()
+	ArenaNetwork.clear_session()
 	NetworkManager.stop()
 	_connection_panel.show_connection("Conexión cancelada. Podés volver a intentar.")
 
@@ -68,6 +70,7 @@ func _cancel_connection() -> void:
 func _disconnect_from_arena() -> void:
 	_local_input.set_process(false)
 	_spell_controller.end_session()
+	ArenaNetwork.clear_session()
 	NetworkManager.stop()
 	_world.clear_session()
 	_hud.end_session("Te desconectaste de la arena.")

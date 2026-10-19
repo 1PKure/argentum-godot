@@ -5,11 +5,15 @@ extends Node
 )
 
 var practice_bot: ArenaPracticeBot
+var arena_session: ArenaSession
 
 
 func _ready() -> void:
 	print("Starting Argentum server...")
 	practice_bot = ArenaPracticeBot.new(player_registry)
+	arena_session = ArenaSession.new(player_registry,practice_bot)
+	ArenaNetwork.selection_requested.connect(_on_arena_selection)
+	ArenaNetwork.status_requested.connect(func(peer_id: int) -> void: ArenaNetwork.send_state(peer_id,arena_session.status()))
 	practice_bot.reset_world.connect(_on_practice_reset)
 	practice_bot.removed.connect(_on_bot_removed)
 	practice_bot.status_changed.connect(_broadcast_bot_status)
@@ -67,6 +71,7 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
+	if arena_session.tick(): _broadcast_arena_state()
 	for player: PlayerState in player_registry.advance_runtime():
 		PlayerNetwork.broadcast_player_stats_updated(player.to_dictionary())
 	for action: Dictionary in practice_bot.tick():
@@ -103,6 +108,8 @@ func _on_peer_connected(
 		)
 	)
 
+	arena_session.peer_joined()
+	_broadcast_arena_state()
 	_send_new_player_to_existing_clients(
 		peer_id,
 		player
@@ -123,6 +130,7 @@ func _on_peer_disconnected(
 	):
 		return
 
+	arena_session.peer_left(peer_id)
 	practice_bot.peer_left(peer_id)
 	player_registry.remove_player(
 		peer_id
@@ -137,6 +145,7 @@ func _on_peer_disconnected(
 		)
 
 	_broadcast_bot_status(practice_bot.status())
+	_broadcast_arena_state()
 
 func _on_move_requested(
 	peer_id: int,
@@ -285,6 +294,9 @@ func _broadcast_inventory(peer_id: int, result: Dictionary) -> void:
 
 
 func _on_bot_command(peer_id: int, enabled: bool, class_id: int, request_id: int) -> void:
+	if bool(arena_session.status().transitioning):
+		BotNetwork.send_result(peer_id,request_id,{"ok":false,"message":"Esperá a que termine el cambio de arena."})
+		return
 	var result := practice_bot.request(peer_id, enabled, class_id, request_id)
 	BotNetwork.send_result(peer_id, request_id, result)
 
@@ -318,3 +330,16 @@ func _publish_bot_action(action: Dictionary) -> void:
 		"melee":
 			PlayerNetwork.broadcast_player_stats_updated(action.attacker)
 			PlayerNetwork.broadcast_player_stats_updated(action.target)
+
+
+func _on_arena_selection(peer_id: int, id: String, revision: int, request_id: int) -> void:
+	var result := arena_session.change(peer_id,id,revision,request_id)
+	if result.ok:
+		_broadcast_arena_state()
+		_on_practice_reset()
+		_broadcast_bot_status(practice_bot.status())
+	ArenaNetwork.send_result(peer_id,request_id,result)
+
+func _broadcast_arena_state() -> void:
+	for id: int in multiplayer.get_peers():
+		ArenaNetwork.send_state(id,arena_session.status())

@@ -26,6 +26,7 @@ RecoveryNetwork="*res://autoload/recovery_network.gd"
 InventoryNetwork="*res://autoload/inventory_network.gd"
 BotNetwork="*res://autoload/bot_network.gd"
 Skins="*res://autoload/skins.gd"
+ArenaNetwork="*res://autoload/arena_network.gd"
 
 [display]
 

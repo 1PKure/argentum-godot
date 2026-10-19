@@ -57,6 +57,9 @@ var _bottom_back: Panel
 var _class_panel: ClassPresetPanel
 var _bot_panel: BotPracticePanel
 var _skins_panel: SkinsPanel
+var _arena_panel: ArenaSelectionPanel
+var _menu_arenas_button: Button
+var _last_arena_revision := -1
 var _round_countdown: RoundCountdown
 var _last_bot_phase := "idle"
 var _last_bot_owner := 0
@@ -94,6 +97,7 @@ func _ready() -> void:
 	RecoveryNetwork.action_resolved.connect(_on_recovery_event)
 	RecoveryNetwork.selection_changed.connect(_refresh_potion_selection)
 	BotNetwork.changed.connect(_on_bot_status)
+	ArenaNetwork.changed.connect(_on_arena_status)
 	Skins.victory_awarded.connect(func(result: Dictionary) -> void:
 		var class_id := int(result.class_id)
 		for id: String in result.unlocked:
@@ -102,6 +106,7 @@ func _ready() -> void:
 			set_menu_opened(false)
 			_class_panel.close_panel()
 			_skins_panel.close_panel()
+			_arena_panel.close_panel()
 			if _spell_controller != null:
 				_spell_controller.cancel_targeting()
 			_bot_panel.show_collection_result(result)
@@ -227,6 +232,7 @@ func end_session(message: String) -> void:
 	_class_panel.close_panel()
 	_bot_panel.close_panel()
 	_skins_panel.close_panel()
+	_arena_panel.close_panel()
 	_round_countdown.clear()
 	_players.clear()
 	_local_peer_id = 0
@@ -405,6 +411,9 @@ func _build_interface() -> void:
 	_skins_panel = SkinsPanel.new()
 	add_child(_skins_panel)
 	_skins_panel.opened_changed.connect(func(_opened: bool) -> void: _notify_modal_state())
+	_arena_panel = ArenaSelectionPanel.new()
+	add_child(_arena_panel)
+	_arena_panel.opened_changed.connect(func(_opened: bool) -> void: _notify_modal_state())
 	_round_countdown = RoundCountdown.new()
 	game_area.add_child(_round_countdown)
 	_reserved_buttons[3].text = "Skins"
@@ -501,6 +510,9 @@ func _build_menu() -> void:
 	_menu_credits.add_theme_font_size_override("font_size", 12)
 	_menu_credits.modulate = Color("c3b99f")
 	content.add_child(_menu_credits)
+	_menu_arenas_button = _text_button(content,"Arenas",Rect2())
+	_menu_arenas_button.custom_minimum_size.y = 34
+	_menu_arenas_button.pressed.connect(_open_arenas)
 	_stats_button = _text_button(content, "Reaparecer", Rect2())
 	_stats_button.custom_minimum_size.y = 34
 	_stats_button.pressed.connect(func() -> void:
@@ -524,7 +536,7 @@ func _build_menu() -> void:
 
 
 func is_modal_open() -> bool:
-	return _menu_panel.visible or _class_panel.visible or _bot_panel.visible or _skins_panel.visible
+	return _menu_panel.visible or _class_panel.visible or _bot_panel.visible or _skins_panel.visible or _arena_panel.visible
 
 
 func set_menu_opened(opened: bool) -> void:
@@ -572,6 +584,8 @@ func _input(event: InputEvent) -> void:
 	if event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
 		if _menu_panel.visible:
 			set_menu_opened(false)
+		elif _arena_panel.visible:
+			_arena_panel.close_panel()
 		elif _skins_panel.visible:
 			_skins_panel.close_panel()
 		elif _bot_panel.visible:
@@ -783,7 +797,7 @@ func _update_local_stats() -> void:
 	_mana_bar.value = state.current_mana if state != null else 0
 	_health_label.text = "%d / %d" % [state.current_health, state.max_health] if state != null else "—"
 	_mana_label.text = "%d / %d" % [state.current_mana, state.max_mana] if state != null else "—"
-	_position_label.text = "%s · Bosque %d, %d" % [ClassCatalog.get_profile(state.class_id).name, state.grid_position.x, state.grid_position.y] if state != null else "Bosque"
+	_position_label.text = "%s · %s %d, %d" % [ClassCatalog.get_profile(state.class_id).name, ArenaData.get_display_name(str(ArenaNetwork.state.get("arena_id",ArenaData.DEFAULT_ARENA_ID))),state.grid_position.x,state.grid_position.y] if state != null else ArenaData.get_display_name(str(ArenaNetwork.state.get("arena_id",ArenaData.DEFAULT_ARENA_ID)))
 	if state != null and (state.inventory_revision != _inventory_revision or state.peer_id != _inventory_peer):
 		_inventory_revision = state.inventory_revision
 		_inventory_peer = state.peer_id
@@ -967,7 +981,7 @@ func _release_text_focus() -> void:
 
 
 func is_gameplay_blocked() -> bool:
-	return is_modal_open() or (str(BotNetwork.state.get("phase", "")) == "countdown" and int(BotNetwork.state.get("owner_id", 0)) == _local_peer_id and _local_peer_id != 0)
+	return is_modal_open() or bool(ArenaNetwork.state.get("transitioning",false)) or (str(BotNetwork.state.get("phase", "")) == "countdown" and int(BotNetwork.state.get("owner_id", 0)) == _local_peer_id and _local_peer_id != 0)
 
 func _open_skins() -> void:
 	var state: PlayerState = _players.get(_local_peer_id)
@@ -976,3 +990,28 @@ func _open_skins() -> void:
 		_class_panel.close_panel()
 		_bot_panel.close_panel()
 		_skins_panel.open_panel(state.class_id, state.equipped_items)
+
+
+func _open_arenas() -> void:
+	if _spell_controller == null or not _spell_controller.server_ready or not _players.has(_local_peer_id): return
+	set_menu_opened(false)
+	_class_panel.close_panel()
+	_bot_panel.close_panel()
+	_skins_panel.close_panel()
+	_spell_controller.cancel_targeting()
+	_arena_panel.open_panel()
+
+func _on_arena_status() -> void:
+	var state: Dictionary = ArenaNetwork.state
+	if state.is_empty():
+		_last_arena_revision = -1
+		_minimap.arena_id = ArenaData.DEFAULT_ARENA_ID
+	else:
+		var revision := int(state.revision)
+		if _last_arena_revision >= 0 and revision != _last_arena_revision:
+			console.append_message("Arena cambiada: %s." % ArenaData.get_display_name(str(state.arena_id)))
+		_last_arena_revision = revision
+		_minimap.arena_id = str(state.arena_id)
+	_minimap.queue_redraw()
+	_update_local_stats()
+	_notify_modal_state()

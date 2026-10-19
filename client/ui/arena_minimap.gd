@@ -3,6 +3,7 @@ extends Control
 
 var players: Dictionary = {}
 var local_peer_id := 0
+var arena_id := ArenaData.DEFAULT_ARENA_ID
 
 
 func _ready() -> void:
@@ -10,9 +11,9 @@ func _ready() -> void:
 
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Color("101711"))
+	draw_rect(Rect2(Vector2.ZERO, size), ArenaData.get_definition(arena_id).exterior)
 	var cell := size / Vector2(MovementRules.GRID_COLUMNS, MovementRules.GRID_ROWS)
-	for blocked: Vector2i in ArenaData.get_definition(ArenaData.DEFAULT_ARENA_ID).blocked_cells:
+	for blocked: Vector2i in ArenaData.get_definition(arena_id).blocked_cells:
 		draw_rect(Rect2(Vector2(blocked) * cell, cell), Color("6a644d"))
 	for state: PlayerState in players.values():
 		var tint := Color("f7d36d") if state.peer_id == local_peer_id else Color("f08077")

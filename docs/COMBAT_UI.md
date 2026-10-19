@@ -37,3 +37,7 @@ La cabecera suma **Skins**: vistas previas, hitos de victorias y selección de a
 ## Pie compacto
 
 Se retiraron los cuatro botones Meditar, Vida, Maná y Usar. El pie muestra recursos, estados y **Menú**; Reaparecer vive dentro del menú cuando el personaje está muerto. Se conservan M, Q/E, Espacio mantenido, clic en pociones y macros sin cambiar la pestaña o el apuntado. `hud_layout_client.gd` valida menú/reaparición/meditación y cuatro resoluciones; `potion_use_client.gd` valida las pociones seleccionadas desde teclado.
+
+## Arenas
+
+**Menú → Arenas** abre los cuatro escenarios. El primer humano conectado puede elegir; el resto observa. El cambio reinicia la práctica para todos. Ver [ARENAS.md](ARENAS.md).

@@ -5,7 +5,7 @@ Primera IA de práctica, ejecutada por el dedicado. Usa los nueve presets y el b
 ## Probar
 
 1. GitHub Desktop: Fetch origin, elegir `work/arena-practice-bot` y Pull origin.
-2. Cerrar el dedicado anterior y abrir `tools/Start-PrivateWebTest.cmd`. Cliente y servidor requieren la misma revisión: protocolo **15**.
+2. Cerrar el dedicado anterior y abrir `tools/Start-PrivateWebTest.cmd`. Cliente y servidor requieren la misma revisión: protocolo **16**.
 3. Recargar la web privada con Ctrl+F5; WSS sigue precargado.
 4. Con un único jugador humano conectado: **Bot**, elegir clase y **Activar bot**.
 5. Esperar **3 → 2 → 1 → ¡YA!**, con tonos y tween visual. Durante esos tres segundos el servidor bloquea movimiento, ataques, magia y recuperación para ambos personajes. Luego jugar con Lanzar/macros, CTRL, pociones y meditación habituales. El rival se mueve, ataca y se recupera con las mismas funciones autoritativas.
