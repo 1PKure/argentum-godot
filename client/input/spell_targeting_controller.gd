@@ -122,7 +122,7 @@ func cancel_targeting() -> void:
 
 
 func assign_hotkey(slot: int, id: int) -> void:
-	if slot < 0 or slot >= bindings.size() or not ClassCatalog.can_cast(class_id, id):
+	if slot < 0 or slot >= bindings.size() or not ClassCatalog.can_assign_spell(class_id, id):
 		return
 	var previous := bindings[slot]
 	bindings[slot] = id
@@ -290,7 +290,7 @@ func _load_bindings() -> void:
 		if not migrated: return
 	for index in range(bindings.size()):
 		var id := int(config.get_value(section,str(index),bindings[index]))
-		if id == 0 or (id == ClassCatalog.ATTACK_BINDING and ClassCatalog.get_profile(class_id).bindings.has(id)) or ClassCatalog.can_cast(class_id,id):
+		if id == 0 or (id == ClassCatalog.ATTACK_BINDING and ClassCatalog.get_profile(class_id).bindings.has(id)) or ClassCatalog.can_assign_spell(class_id,id):
 			bindings[index] = id
 	if migrated: _save_bindings()
 

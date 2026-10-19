@@ -104,6 +104,7 @@ func _run() -> void:
 	else: await _guest()
 	await _finish()
 func _host() -> void:
+	_check(await _wait(func() -> bool: return _find_button(main._lobby_panel,"Ver preset") != null),"preset action is rendered before clicking")
 	await _capture("lobby-waiting.png")
 	await _click(_find_button(main._lobby_panel,"Ver preset"))
 	_check(hud._class_panel.visible and hud._class_panel.layer > main._lobby_panel.layer,"actual preset click opens modern class window above lobby")
@@ -158,6 +159,17 @@ func _host() -> void:
 	controller.cancel_targeting()
 	await _click(hud._spell_button)
 	_check(hud._spell_panel.visible,"modern spellbook opens by GUI click")
+	_check(hud._spell_search.get_global_rect().end.y <= hud._spell_scroll.get_global_rect().position.y,"search stays above the first spell row")
+	_check(hud._spell_scroll.size.y>=300 and not hud._minimap.visible,"manual-cast book prioritizes at least six rows")
+	_check([1,2,3,12,13,291].all(func(id: int) -> bool: return not hud._spell_buttons.has(id)),"starter spells absent from combat book")
+	var book_casts := spells.size()
+	await _click(hud._spell_buttons[25])
+	await _click(hud._launch_button)
+	_check(controller.aimed_spell_id==25,"book selection plus real Launch prepares target cursor")
+	var book_target = main._world._avatars[opponent]
+	await _mouse(main._world.get_global_transform()*(book_target.position+Vector2(0,-25)))
+	_check(await _wait(func() -> bool: return spells.size()>book_casts),"manual book Launch resolves actual server spell")
+
 	await _capture("combat-spells.png")
 	await _click(hud._menu_button)
 	await _click(hud._menu_disconnect_button)
@@ -192,6 +204,7 @@ func _layout_and_controls() -> void:
 		hud._fit_interface()
 		await process_frame
 		await process_frame
+		_check(hud._mana_bar.get_global_rect().position.y > hud._health_bar.get_global_rect().end.y,"mana always under health %s"%resolution)
 		_check(hud._console_back.get_global_rect().end.y < hud.game_area.get_global_rect().position.y,"console above arena %s"%resolution)
 		_check(hud._health_bar.get_global_rect().end.y < hud._menu_button.get_global_rect().position.y and hud._health_bar.get_global_rect().position.y > hud._inventory_panel.get_global_rect().end.y,"health directly above options %s"%resolution)
 		_check(not hud._disconnect_button.get_global_rect().intersects(hud._menu_button.get_global_rect()) and Rect2(Vector2.ZERO,root.get_visible_rect().size).encloses(hud._disconnect_button.get_global_rect()),"footer disconnect has its own hit area %s"%resolution)
@@ -213,6 +226,7 @@ func _layout_and_controls() -> void:
 	controller.assign_hotkey(0,saved)
 	await _click(hud._menu_button)
 	_check(not net.is_paused(),"human PvP keeps running while menu is open")
+	_check(hud._menu_credits.text.contains("Desarrollado por Mati") and hud._menu_credits.text.contains("Créditos de recursos"),"developer and resource credits are separate")
 	await _click(hud._controls_button)
 	_check(hud._controls_panel.visible and not main._local_input.is_processing(),"Controls opens and blocks gameplay")
 	var bind_button: Control = hud._controls_panel._buttons["use_selected"]

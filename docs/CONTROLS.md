@@ -15,3 +15,7 @@ El botón Desconectar inferior cierra la conexión; Menú → Salir de la sala v
 ## Validación
 
 `controls_bindings_smoke.gd`: conflictos, combinaciones, persistencia, vacíos por clase, captura y tamaños. `bot_pause_smoke.gd`: relojes/estados/recargas y aislamiento. `run_lobby_native.py`: PCK exportado, dos humanos y luego bot, clics reales en controles, atajo Usar, macros, pausa/reanudación y desconexión. `melee_feedback_smoke.gd`: audio sólo al impacto confirmado y limpieza/pausa.
+
+## Libro de combate
+
+La pestaña Hechizos usa más altura para mostrar unas seis entradas y Lanzar; Inventario restaura el minimapa ampliado. Se filtran Dardo/Flecha/Misil básicos, curaciones iniciales y variantes redundantes. Los datos/reglas originales permanecen en el proyecto; la selección y los macros de la arena usan el catálogo de combate. Asesino/Paladín/Bandido priorizan golpe físico enmacro3, Druida Rayo Elemental y las clases con Descarga la conservan. Los huecos guardados no se rellenan automáticamente. Vida siempre arriba de maná.

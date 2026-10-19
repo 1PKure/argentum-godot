@@ -7,6 +7,9 @@ const RANGED_RANGE := 8
 const EQUIPMENT_SLOTS := ["armor", "weapon", "helmet", "shield", "accessory", "ammunition"]
 const ATTACK_BINDING := -1
 const MACRO_VERSION := 2
+# Curated combat presentation. Keep imported DAT/rules intact for reference and
+# regression fixtures; beginner spells no longer appear in the arena book/macros.
+const COMBAT_BOOK_ORDER := [25,27,51,59,31,53,41,113,26,29,350,11,269,242,243,263,112,122,131,141,54,55,56,132,133,28,268,4]
 const PRESET_LEVEL := 50
 const PRESET_STRENGTH := 28 # Arena-ready attribute; explicit PvP tuning, not a racial base.
 const PRESET_CONSTITUTION := 20 # Human: 18 + 2.
@@ -35,6 +38,17 @@ static func get_item(id: int) -> Dictionary:
 static func can_cast(class_id: int, spell_id: int) -> bool:
 	var profile := get_profile(class_id)
 	return not profile.is_empty() and profile.spells.has(spell_id) and SpellCatalog.is_available(spell_id)
+
+
+static func combat_book_ids(class_id: int) -> Array[int]:
+	var result: Array[int] = []
+	for spell_id: int in COMBAT_BOOK_ORDER:
+		if can_cast(class_id,spell_id): result.append(spell_id)
+	return result
+
+
+static func can_assign_spell(class_id: int, spell_id: int) -> bool:
+	return COMBAT_BOOK_ORDER.has(spell_id) and can_cast(class_id,spell_id)
 
 
 static func default_equipment(class_id: int) -> Dictionary:
@@ -136,9 +150,9 @@ static func _ensure_loaded() -> void:
 		entry.spells = spells
 		entry.bindings = [0, 0, ATTACK_BINDING, 0, 0, 0, 0, 0, 0, 0]
 		if mana_factor > 0:
-			entry.bindings = [25, 27, 51 if spells.has(51) else 3, 31, 53, 26, 11, 269 if spells.has(269) else 268, 12, 0]
+			entry.bindings = [25, 27, 51 if spells.has(51) else (59 if spells.has(59) else ATTACK_BINDING), 31, 53 if spells.has(53) else (113 if spells.has(113) else 0), 26, 11, 269 if spells.has(269) else 268, 112 if spells.has(112) else (263 if spells.has(263) else 29), 41 if spells.has(41) else (242 if spells.has(242) else 0)]
 			for index in range(entry.bindings.size()):
-				if not spells.has(entry.bindings[index]):
+				if entry.bindings[index] != ATTACK_BINDING and not spells.has(entry.bindings[index]):
 					entry.bindings[index] = 0
 		entry.damage_modifier = float(balance["MODDANOPROYECTILES" if id == 8 else "MODDANOARMAS"][key])
 		var equipped: Dictionary = {}

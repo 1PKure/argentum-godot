@@ -66,7 +66,7 @@ func _test_effects() -> void:
 	world._on_spell_resolved({"spell_id": 13, "amount": 20, "words": "EN COR SANCTIS", "caster_id": 1, "target_id": 2, "origin_x": 4, "origin_y": 5, "target_x": 7, "target_y": 5})
 	var effect = world._spell_effects[-1]
 	effect.set_process(false)
-	_check(effect._sprite != null and effect._sprite.family == "healing", "Healing retains its AO light animation with subtle accents")
+	_check(effect._sprite != null and effect._sprite.family == "healing", "Healing uses clean modern rising light particles")
 	_check(effect._sprite.get_meta("foot_anchored", false), "Healing uses a foot origin without a transparent sprite margin")
 	_check(effect.process_priority > target_avatar.process_priority and effect.process_priority < world.process_priority, "Effects follow interpolation before the camera moves")
 	var initial_target: Vector2 = target_avatar.position
@@ -87,7 +87,7 @@ func _test_effects() -> void:
 	var apocalypse = world._spell_effects[-1]
 	apocalypse.set_process(false)
 	apocalypse._sprite.set_age(0.32)
-	_check(apocalypse._sprite.family == "apocalypse" and apocalypse._sprite.position.is_equal_approx(target_avatar.position + caster_avatar.EFFECT_FOOT_POSITION), "Apocalypse retains its large explosion anchored to the feet")
+	_check(apocalypse._sprite.family == "apocalypse" and apocalypse._sprite.position.is_equal_approx(target_avatar.position + caster_avatar.EFFECT_FOOT_POSITION), "Apocalypse has a large modern energy-skull explosion anchored to the feet")
 	effect.visible = false
 	await _capture("spell-feet-apocalypse.png")
 	world._on_spell_resolved({"action": "shot", "spell_id": 247, "amount": 190, "words": "", "caster_id": 1, "target_id": 2, "origin_x": 4, "origin_y": 5, "target_x": 8, "target_y": 5})

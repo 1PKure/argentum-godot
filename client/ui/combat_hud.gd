@@ -47,7 +47,6 @@ var _side_art: Panel
 var _filter_buttons: Array[Button] = []
 var _session_title: Label
 var _spell_search: LineEdit
-var _show_catalog: CheckButton
 var _spell_scroll: ScrollContainer
 var _spell_list: VBoxContainer
 var _status_label: Label
@@ -182,6 +181,7 @@ func _update_spell_ui() -> void:
 		_book_class_id = _spell_controller.class_id
 		_filter_spellbook()
 	_spell_status.tooltip_text = _spell_status.text
+	_layout_spellbook()
 	_update_recovery_controls()
 
 
@@ -263,6 +263,7 @@ func show_inventory() -> void:
 	_spell_panel.hide()
 	_inventory_button.button_pressed = true
 	_spell_button.button_pressed = false
+	_fit_interface()
 
 
 func show_spells() -> void:
@@ -271,6 +272,7 @@ func show_spells() -> void:
 	_spell_panel.show()
 	_inventory_button.button_pressed = false
 	_spell_button.button_pressed = true
+	_fit_interface()
 
 
 func _build_interface() -> void:
@@ -355,33 +357,31 @@ func _build_interface() -> void:
 		_inventory_slots.append(slot)
 	_spell_search = LineEdit.new()
 	_spell_search.placeholder_text = "Buscar hechizo…"
+	_spell_search.add_theme_font_size_override("font_size",13)
+	for state: String in ["normal","read_only","focus"]:
+		var search_style := PALETTE.box(Color.TRANSPARENT if state == "focus" else PALETTE.BACKGROUND,PALETTE.GOLD if state == "focus" else PALETTE.BORDER,6)
+		search_style.content_margin_top = 6
+		search_style.content_margin_bottom = 6
+		_spell_search.add_theme_stylebox_override(state,search_style)
 	_spell_panel.add_child(_spell_search)
 	_spell_search.position = Vector2(0,4)
 	_spell_search.size = Vector2(264,34)
 	_spell_search.text_changed.connect(func(_value: String) -> void: _filter_spellbook())
 	_spell_search.text_submitted.connect(func(_value: String) -> void: _spell_search.release_focus())
-	_show_catalog = CheckButton.new()
-	_show_catalog.text = "Catálogo completo"
-	_show_catalog.focus_mode = Control.FOCUS_NONE
-	_show_catalog.add_theme_font_size_override("font_size",12)
-	_spell_panel.add_child(_show_catalog)
-	_show_catalog.position = Vector2(0,42)
-	_show_catalog.size = Vector2(264,28)
-	_show_catalog.toggled.connect(func(_value: bool) -> void: _filter_spellbook())
 	_spell_scroll = ScrollContainer.new()
 	_spell_panel.add_child(_spell_scroll)
-	_spell_scroll.position = Vector2(0,78)
+	_spell_scroll.position = Vector2(0,44)
 	_spell_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_spell_scroll.get_v_scroll_bar().focus_mode = Control.FOCUS_NONE
 	_spell_list = VBoxContainer.new()
 	_spell_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_spell_list.add_theme_constant_override("separation",6)
+	_spell_list.add_theme_constant_override("separation",4)
 	_spell_scroll.add_child(_spell_list)
-	for id: int in SpellCatalog.all_ids():
+	for id: int in ClassCatalog.COMBAT_BOOK_ORDER:
 		var entry := SpellSlotButton.new()
 		entry.configure(id)
 		_spell_list.add_child(entry)
-		entry.custom_minimum_size = Vector2(244,54)
+		entry.custom_minimum_size = Vector2(244,46)
 		entry.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		entry.pressed.connect(_on_spell_selected.bind(id))
 		_spell_buttons[id] = entry
@@ -519,7 +519,7 @@ func _build_menu() -> void:
 	)
 	content.add_child(HSeparator.new())
 	_menu_credits = Label.new()
-	_menu_credits.text = "AO20 · © Noland Studios\nCC BY-NC-ND 4.0\ngithub.com/ao-org/Recursos"
+	_menu_credits.text = "Desarrollado por Mati (1PKure)\n\nCréditos de recursos: AO20 · © Noland Studios\nRecursos de terceros · CC BY-NC-ND 4.0\ngithub.com/ao-org/Recursos\nEsta arena es un proyecto independiente de Mati."
 	_menu_credits.add_theme_font_size_override("font_size", 12)
 	_menu_credits.modulate = Color("c3b99f")
 	content.add_child(_menu_credits)
@@ -670,7 +670,7 @@ func _filter_spellbook() -> void:
 	var query := _spell_search.text.strip_edges().to_lower()
 	for id: int in _spell_buttons:
 		var spell := SpellCatalog.get_spell(id)
-		_spell_buttons[id].visible = (_show_catalog.button_pressed or ClassCatalog.can_cast(_spell_controller.class_id if _spell_controller != null else ClassCatalog.DEFAULT_CLASS, id)) and (query.is_empty() or str(spell.name).to_lower().contains(query) or str(id) == query)
+		_spell_buttons[id].visible = ClassCatalog.can_assign_spell(_spell_controller.class_id if _spell_controller != null else ClassCatalog.DEFAULT_CLASS, id) and (query.is_empty() or str(spell.name).to_lower().contains(query) or str(id) == query)
 	_spell_scroll.scroll_vertical = 0
 
 
@@ -767,27 +767,27 @@ func _fit_interface() -> void:
 	_connection_label.size = Vector2(130,22)
 	_minimap.position = Vector2(side_x+64,174)
 	_minimap.size = Vector2(168,100)
-	_inventory_button.position = Vector2(side_x+16,288)
-	_spell_button.position = Vector2(side_x+152,288)
+	var book_open := _spell_panel.visible
+	_minimap.visible = not book_open
+	var tabs_y := 168.0 if book_open else 288.0
+	_inventory_button.position = Vector2(side_x+16,tabs_y)
+	_spell_button.position = Vector2(side_x+152,tabs_y)
 	_inventory_button.size = Vector2(128,34)
 	_spell_button.size = Vector2(128,34)
 	for panel: Control in [_inventory_panel,_spell_panel]:
-		panel.position = Vector2(side_x+16,332)
+		panel.position = Vector2(side_x+16,208 if book_open else 332)
 		panel.size = Vector2(264,height-524)
 	# Six visible rows instead of seven; all server slots remain scrollable.
 	_inventory_panel.size.y = maxf(128,height-540)
-	_spell_scroll.size = Vector2(264,_spell_panel.size.y-166)
-	_spell_status.position = Vector2(0,_spell_panel.size.y-80)
-	_spell_status.size = Vector2(264,34)
-	_launch_button.position = Vector2(0,_spell_panel.size.y-40)
-	_launch_button.size = Vector2(264,38)
+	_spell_panel.size.y = height-398 if book_open else height-524
+	_layout_spellbook()
 	_bottom_back.position = Vector2(side_x+8,height-176)
 	_bottom_back.size = Vector2(280,152)
 	_status_label.position = Vector2(side_x+16,height-170)
 	_status_label.size = Vector2(264,30)
-	_mana_bar.position = Vector2(side_x+16,height-128)
+	_mana_bar.position = Vector2(side_x+16,height-96)
 	_mana_bar.size = Vector2(264,24)
-	_health_bar.position = Vector2(side_x+16,height-96)
+	_health_bar.position = Vector2(side_x+16,height-128)
 	_health_bar.size = Vector2(264,24)
 	_health_label.position = _health_bar.position
 	_health_label.size = _health_bar.size
@@ -806,6 +806,21 @@ func _fit_interface() -> void:
 	if _world != null:
 		_world.resize_viewport(game_area.size)
 		_update_pixel_scale()
+
+
+func _layout_spellbook() -> void:
+	if _spell_panel == null or _launch_button == null: return
+	var height := _spell_panel.size.y
+	var has_message := not _spell_status.text.is_empty()
+	_spell_status.visible = has_message
+	_spell_search.position = Vector2(0,4)
+	_spell_search.size = Vector2(264,32)
+	_spell_scroll.position = Vector2(0,44)
+	_spell_scroll.size = Vector2(264,maxf(64,height-94-(36 if has_message else 0)))
+	_spell_status.position = Vector2(0,height-80)
+	_spell_status.size = Vector2(264,30)
+	_launch_button.position = Vector2(0,height-40)
+	_launch_button.size = Vector2(264,40)
 
 
 func _on_snapshot_received(players: Array) -> void:

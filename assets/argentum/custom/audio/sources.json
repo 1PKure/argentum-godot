@@ -5,9 +5,13 @@
     "conversion": "none; original PCM stereo, 16-bit, 48000 Hz"
   },
   "melee_hit.wav": {
-    "source": "Original procedural sound: tools/generate_melee_audio.py",
-    "sha256": "69ee9e7a3bf8a313dba5b5c8869bdad9c4a5192a60cfcac2091e4690442db244",
-    "format": "PCM mono 16-bit 44100 Hz, 270 ms",
-    "use": "Confirmed melee damage; rounded body contact and soft blade scrape."
+    "source": "User attachment: Firefly_audio_Short_medieval_melee_hit_on_a_character,_strong_co_variation4.wav",
+    "source_path": "originals/melee_firefly.wav.source",
+    "source_sha256": "fa459580bffd66be4c77a34c242463444439895a7bf994da2dc9ac33903c8b65",
+    "sha256": "37e371af124d8a75c4072aaf436e26616a04e9d973fe22d7464ca663e203b039",
+    "format": "PCM stereo 16-bit 48000 Hz, 513 ms",
+    "processing": "Trim 37 ms leading quiet and tail after 550 ms; gain -3 dB; 3 ms attack/40 ms release fades.",
+    "reproduce": "python tools/prepare_melee_audio.py",
+    "use": "Only confirmed melee impact; preserves the supplied medieval contact sound."
   }
 }

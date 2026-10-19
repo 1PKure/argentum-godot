@@ -4,7 +4,7 @@ Primera pasada propia de presentación, sin cambiar el balance aprobado.
 
 ## Interfaz
 
-HUD original de Godot: paneles azul noche, texto marfil, bordes suaves y acentos dorados; barras de recursos propias, encabezado compacto, consola arriba, minimapa ampliado, vida/maná sobre las opciones inferiores, libro/inventario y accesos separados. Se retira el marco AO20 de la presentación activa; sus archivos y atribuciones se conservan porque otros recursos del prototipo siguen procediendo de AO20.
+HUD original de Godot: paneles azul noche, texto marfil, bordes suaves y acentos dorados; barras de recursos propias, encabezado compacto, consola arriba, minimapa ampliado, vida arriba y maná debajo, sobre las opciones inferiores, libro/inventario y accesos separados. Se retira el marco AO20 de la presentación activa; sus archivos y atribuciones se conservan porque otros recursos del prototipo siguen procediendo de AO20.
 
 Todas las ventanas usan `arena_presentation_theme.gd`: conexión, menú, controles/atajos, clases/presets, bot, skins y escenarios. El selector de clases incluye el mismo tratamiento de panel, tipografía, desplegable y acciones. Las opciones de combate conservan el foco de teclado para movimiento/macros; escribir en el buscador conserva su comportamiento.
 
@@ -18,9 +18,11 @@ Lava exterior usa roca oscura con grietas finas de escala fija del mundo y brill
 
 ## Magia y meditación
 
-`ArenaSpellVisual` conserva las animaciones y las siluetas AO20 disponibles como capa principal (23 FX), sin editar sus hojas originales. Apocalipsis usa de nuevo su gran explosión/cráneo naranja y Descarga su nube/rayos azules; un halo sutil, acentos y partículas suavizan la presentación. Los hechizos sin FX de catálogo mantienen un efecto semántico propio. `ArenaMeditationVisual` mantiene la meditación compacta azul/dorada aprobada.
+`ArenaSpellVisual` dibuja y anima los39 conceptos con código nuevo; ninguna animación/hoja AO20 se muestra como capa principal. La referencia conserva el concepto: Descarga tiene dos esferas eléctricas que convergen, Tormenta abre fuego/partículas y Apocalipsis una gran explosión con silueta de cráneo. Los demás efectos tienen variantes propias de curación, control, raíces, implosión y protección. La meditación compacta azul/dorada aprobada se conserva.
 
-Se conservan anclaje a pies, seguimiento interpolado, palabras del lanzador y separación de barras/nombre. El servidor aplica las mismas reglas, costes, daños y recargas. El efecto visual no aplica ni retrasa daño. Flecha, sangre y sonido de impacto aprobados permanecen; las colas de audio pueden terminar después de apagar los gráficos.
+Al abrir Hechizos, la columna da prioridad al libro y su botón Lanzar; al volver a Inventario restaura el minimapa ampliado. Se retira el catálogo completo de la UI y se muestran únicamente las opciones de combate legales de la clase, en orden útil. Los datos DAT/reglas importados permanecen para referencia; no se cambian costes ni daños. Los macros guardados conservan huecos y asignaciones válidas; los básicos retirados vuelven al valor de combate del preset.
+
+Se conservan anclaje a pies, seguimiento interpolado, palabras del lanzador y separación de barras/nombre. El servidor aplica las mismas reglas, costes, daños y recargas. El efecto visual no aplica ni retrasa daño. Flecha y sangre aprobadas permanecen. El golpe usa el audio Firefly aportado por Mati, con recorte de silencio/cola y atenuación; las colas de audio pueden terminar después de apagar los gráficos.
 
 ## Validación
 

@@ -16,7 +16,7 @@ func _run() -> void:
 	_check(world._melee_audio.is_empty(),"unrelated room has no impact sound")
 	world._on_melee_resolved({"caster_id":7,"target_id":8,"amount":10})
 	_check(world._melee_audio.size()==1 and world._melee_audio[0].playing,"confirmed melee hit plays sound")
-	_check(world.MELEE_IMPACT_SOUND.get_length()>0.2 and world.MELEE_IMPACT_SOUND.get_length()<0.4,"contact has a short bounded duration")
+	_check(world.MELEE_IMPACT_SOUND.get_length()>0.45 and world.MELEE_IMPACT_SOUND.get_length()<0.6,"contact has a short bounded duration")
 	world.set_game_paused(true)
 	_check(world.process_mode==Node.PROCESS_MODE_DISABLED and world._melee_audio[0].stream_paused,"bot pause freezes world and impact audio")
 	world.set_game_paused(false)
