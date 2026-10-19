@@ -58,6 +58,15 @@ func end_session() -> void:
 	BotNetwork.clear_session()
 
 
+func reset_round_input() -> void:
+	# Keep the connection/protocol negotiation, discard targeting from the previous room.
+	_generation += 1
+	pending_request = 0
+	_preset_revision = -1
+	_alive = true
+	cancel_targeting()
+
+
 func select_spell(id: int) -> void:
 	if SpellCatalog.get_spell(id).is_empty():
 		return

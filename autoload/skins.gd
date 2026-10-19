@@ -9,6 +9,7 @@ var _has_player_state := false
 func _ready() -> void:
 	progress.restore()
 	PlayerNetwork.snapshot_received.connect(func(players: Array) -> void:
+		if players.is_empty(): _has_player_state = false
 		for data: Dictionary in players:
 			_apply_player_class(data)
 	)

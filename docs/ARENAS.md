@@ -23,11 +23,11 @@ Los cuatro escenarios conservan límites de 20×12, dos spawns (4,5 y 15,5), un 
 
 ## Alcance
 
-**Todavía existe una arena compartida por servidor.** Cambiarla afecta a todos. Crear/Unirse, capacidad de dos, Listo, aislamiento entre salas, resultado PvP y revancha van en el siguiente PR. El catálogo se reutilizará para elegir arena al crear el lobby; aquí la selección se prueba desde dentro.
+Cada sala tiene su propia arena y registro. El directorio permite Crear/Unirse, dos plazas, Listo, cuenta, resultado y revancha. La selección inicial usa este catálogo; cambiar escenario después requiere ser anfitrión y estar en preparación/resultado. Ver [LOBBIES.md](LOBBIES.md).
 
 `ArenaSession` agrupa registro, bot, revisión y transición. El servidor valida pertenencia, anfitrión, escenario, revisión, nonce y tiempo. Los rechazos no reinician personajes. Publica el estado del mapa antes del snapshot; el cliente elimina avatares/efectos anteriores y reconstruye suelo, props y jugadores. La transición conserva cualquier bloqueo más largo del bot.
 
-En la etapa siguiente cada sala deberá tener su propio PlayerRegistry/ArenaPracticeBot/ArenaSession y limitar snapshots, movimiento, daño, efectos y resultados a sus participantes.
+Cada sala tiene su propio PlayerRegistry/ArenaPracticeBot/ArenaSession y limita snapshots, movimiento, daño, efectos y resultados a sus participantes.
 
 ## Validación reproducible
 

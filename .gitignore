@@ -18,3 +18,7 @@ mono_crash.*.json
 # Exported builds
 /builds/
 
+
+# Python QA runners
+__pycache__/
+*.py[cod]

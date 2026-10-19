@@ -505,7 +505,7 @@ func _build_menu() -> void:
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 12)
 	content.add_child(actions)
-	_menu_disconnect_button = _text_button(actions, "Desconectarse", Rect2())
+	_menu_disconnect_button = _text_button(actions, "Salir de la sala", Rect2())
 	_menu_close_button = _text_button(actions, "Volver", Rect2())
 	for button: Button in [_menu_disconnect_button, _menu_close_button]:
 		button.custom_minimum_size.y = 34
@@ -982,7 +982,7 @@ func _release_text_focus() -> void:
 
 
 func is_gameplay_blocked() -> bool:
-	return is_modal_open() or bool(ArenaNetwork.state.get("transitioning",false)) or (str(BotNetwork.state.get("phase", "")) == "countdown" and int(BotNetwork.state.get("owner_id", 0)) == _local_peer_id and _local_peer_id != 0)
+	return not LobbyNetwork.gameplay_active() or is_modal_open() or bool(ArenaNetwork.state.get("transitioning",false)) or (str(BotNetwork.state.get("phase", "")) == "countdown" and int(BotNetwork.state.get("owner_id", 0)) == _local_peer_id and _local_peer_id != 0)
 
 func _open_skins() -> void:
 	var state: PlayerState = _players.get(_local_peer_id)

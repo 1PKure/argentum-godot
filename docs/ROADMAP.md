@@ -4,10 +4,10 @@ Alpha incluye clases/presets, combate manual/macros, pociones/meditación, cáma
 
 | Orden | Objetivo | Resultado comprobable |
 | --- | --- | --- |
-| 1 | Escenarios | Bosque, Desierto, Lava y Sala de Duelos; selección sincronizada y reinicio válido. Rama `work/arena-environments`. |
-| 2 | Lobbies 1v1 | Después de conectar: Crear/Unirse, nombre y capacidad de dos, arena al crear y cambio por anfitrión, clase, Listo de ambos, cuenta y duelo. Salas aisladas. |
-| 3 | Interfaz propia | Presentación, lista de salas y HUD con base dorado/blanco, jerarquía limpia, controles, inventario/libro/macros, consola y opciones coherentes. |
-| 4 | Efectos y gráficos | Renovar Descarga, Tormenta, fuego y curaciones primero; luego todos los demás. Conservar lectura, anclaje y tiempos; unificar escenarios, personajes y equipo. |
+| 1 | Escenarios (implementado) | Bosque, Desierto, Lava y Sala de Duelos; selección sincronizada y reinicio válido. Rama `work/arena-environments`. |
+| 2 | Lobbies 1v1 (en revisión) | Después de conectar: Crear/Unirse, nombre y capacidad de dos, arena al crear y cambio por anfitrión, clase, Listo de ambos, cuenta y duelo. Salas aisladas. |
+| 3 | Interfaz propia (primera pasada implementada) | Presentación, lista de salas y HUD con base dorado/blanco, jerarquía limpia, controles, inventario/libro/macros, consola y opciones coherentes. |
+| 4 | Efectos y gráficos (magia/meditación implementadas) | Renovar Descarga, Tormenta, fuego y curaciones primero; luego todos los demás. Conservar lectura, anclaje y tiempos; unificar escenarios, personajes y equipo. |
 
 ## Incluir con los lobbies
 

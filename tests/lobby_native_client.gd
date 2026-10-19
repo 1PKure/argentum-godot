@@ -1,0 +1,190 @@
+extends SceneTree
+var main: Node
+var hud: Control
+var net: Node
+var controller: Node
+var role := "host"
+var directory := ""
+var checks := 0
+var failed := 0
+var spells: Array = []
+var drinks: Array = []
+func _initialize() -> void: call_deferred("_run")
+func _check(value: bool, label: String) -> void:
+	checks += 1
+	if not value: failed += 1
+	print(("PASS" if value else "FAIL")+" ["+role+"]: "+label)
+func _wait(predicate: Callable, seconds: float = 15.0) -> bool:
+	await process_frame
+	var deadline := Time.get_ticks_msec()+int(seconds*1000)
+	while Time.get_ticks_msec()<deadline:
+		if predicate.call(): return true
+		await create_timer(0.025).timeout
+	return false
+func _path(name_value: String) -> String: return directory.path_join(name_value)
+func _mark(name_value: String) -> void:
+	var file := FileAccess.open(_path(name_value),FileAccess.WRITE)
+	file.store_string("ok")
+func _find_button(parent: Node, text_value: String) -> Button:
+	if parent is Button and parent.text == text_value and parent.is_visible_in_tree(): return parent
+	for child in parent.get_children():
+		var result := _find_button(child,text_value)
+		if result != null: return result
+	return null
+func _click(button: Control) -> void:
+	if button == null:
+		_check(false,"Required GUI button exists")
+		return
+	await _mouse(button.get_global_rect().get_center())
+func _mouse(point: Vector2) -> void:
+	var motion := InputEventMouseMotion.new()
+	motion.position = point
+	motion.global_position = point
+	Input.parse_input_event(motion)
+	for pressed: bool in [true,false]:
+		var event := InputEventMouseButton.new()
+		event.position = point
+		event.global_position = point
+		event.button_index = MOUSE_BUTTON_LEFT
+		event.pressed = pressed
+		Input.parse_input_event(event)
+		await process_frame
+	await process_frame
+func _key(code: Key, pressed: bool) -> void:
+	var event := InputEventKey.new()
+	event.keycode = code
+	event.physical_keycode = code
+	event.pressed = pressed
+	Input.parse_input_event(event)
+func _tap(code: Key) -> void:
+	_key(code,true)
+	await process_frame
+	_key(code,false)
+	await process_frame
+func _capture(filename: String) -> void:
+	await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png(_path(filename))
+func _run() -> void:
+	for argument: String in OS.get_cmdline_user_args():
+		if argument.begins_with("--lobby-role="): role = argument.trim_prefix("--lobby-role=")
+		if argument.begins_with("--lobby-markers="): directory = argument.trim_prefix("--lobby-markers=")
+	ProjectSettings.set_setting("network/server_url","ws://127.0.0.1:7777")
+	net = root.get_node("LobbyNetwork")
+	root.get_node("SpellNetwork").spell_resolved.connect(func(event: Dictionary) -> void: spells.append(event.duplicate(true)))
+	root.get_node("RecoveryNetwork").action_resolved.connect(func(event: Dictionary) -> void:
+		if str(event.action).ends_with("potion"): drinks.append(event.duplicate(true))
+	)
+	main = load("res://client/scenes/client_main.tscn").instantiate()
+	root.add_child(main)
+	hud = main._hud
+	controller = main._spell_controller
+	_check(await _wait(func() -> bool: return net.available),"exported PCK negotiates protocol17")
+	if not net.available: await _finish(); return
+	if role=="host":
+		await _click(main._lobby_panel._name)
+		main._lobby_panel._name.text = "Native GUI"
+		main._lobby_panel._arena.select(0)
+		await _click(main._lobby_panel._create_button)
+	else:
+		_check(await _wait(func() -> bool: return not net.rooms.is_empty()),"room appears in browser")
+		await _click(_find_button(main._lobby_panel,"Unirse"))
+	_check(await _wait(func() -> bool: return net.room.get("members",[]).size()==2 and not net.pending),"actual Create/Join clicks enter a room")
+	if net.room.is_empty(): await _finish(); return
+	_check(not main._local_input.is_processing(),"waiting room blocks movement")
+	if role=="host": await _host()
+	else: await _guest()
+	await _finish()
+func _host() -> void:
+	await _capture("lobby-waiting.png")
+	await _click(_find_button(main._lobby_panel,"Ver preset"))
+	_check(hud._class_panel.visible and hud._class_panel.layer > main._lobby_panel.layer,"actual preset click opens modern class window above lobby")
+	await _capture("lobby-presets.png")
+	await _click(_find_button(hud._class_panel,"Volver"))
+	await _click(_find_button(main._lobby_panel,"Listo"))
+	_check(await _wait(func() -> bool:
+		for member: Dictionary in net.room.members:
+			if int(member.peer_id)==root.multiplayer.get_unique_id(): return bool(member.ready)
+		return false
+	),"actual Listo click marks host ready")
+	await _click(_find_button(main._lobby_panel,"Skins"))
+	_check(hud._skins_panel.visible and hud._skins_panel.layer > main._lobby_panel.layer,"actual Skins click opens collection above lobby")
+	_mark("host-skins-open")
+	_check(await _wait(func() -> bool: return str(net.room.phase)=="countdown"),"guest ready starts countdown")
+	_check(not hud._skins_panel.visible and not main._local_input.is_processing(),"countdown closes Skins and blocks input")
+	_check(await _wait(func() -> bool: return str(net.room.phase)=="fighting"),"countdown reaches real combat")
+	await create_timer(0.7).timeout
+	_check(main._local_input.is_processing() and not controller.input_blocked,"actual gameplay input is active after Ya")
+	var local_id := root.multiplayer.get_unique_id()
+	var old_cell: Vector2i = hud._players[local_id].grid_position
+	_key(KEY_D,true)
+	await create_timer(0.32).timeout
+	_key(KEY_D,false)
+	await create_timer(0.2).timeout
+	_check(hud._players[local_id].grid_position.x > old_cell.x,"WASD changes authoritative player position")
+	var opponent := 0
+	for member: Dictionary in net.room.members:
+		if int(member.peer_id)!=local_id: opponent = int(member.peer_id)
+	await _tap(KEY_1)
+	_check(controller.aimed_spell_id==controller.bindings[0] and controller.aimed_spell_id>0,"macro1 prepares an actual targeting cursor")
+	var mana_before: int = hud._players[local_id].current_mana
+	var avatar = main._world._avatars[opponent]
+	await _mouse(main._world.get_global_transform()*(avatar.position+Vector2(0,-25)))
+	_check(await _wait(func() -> bool: return not spells.is_empty()),"world click resolves a real spell on server")
+	_check(hud._players[local_id].current_mana < mana_before,"spell spends authoritative mana")
+	await _tap(KEY_1)
+	var aimed: int = controller.aimed_spell_id
+	var mana_spent: int = hud._players[local_id].current_mana
+	await _click(hud._inventory_slots[1])
+	_check(await _wait(func() -> bool: return hud._players[local_id].current_mana > mana_spent),"inventory blue click drinks potion")
+	_check(controller.aimed_spell_id==aimed and hud._inventory_panel.visible,"inventory potion preserves macro cursor and inventory tab")
+	drinks.clear()
+	_key(KEY_SPACE,true)
+	await create_timer(0.8).timeout
+	_key(KEY_SPACE,false)
+	await create_timer(0.2).timeout
+	_check(drinks.size()>=1 and drinks.any(func(event: Dictionary) -> bool: return str(event.source)=="use"),"Space uses selected blue while macro remains prepared")
+	_check(controller.aimed_spell_id==aimed and not root.get_node("RecoveryNetwork").using_selected,"release stops drinking and preserves spell cursor")
+	await _capture("combat-modern.png")
+	await _tap(KEY_ESCAPE)
+	await _click(hud._spell_button)
+	_check(hud._spell_panel.visible,"modern spellbook opens by GUI click")
+	await _capture("combat-spells.png")
+	await _click(hud._menu_button)
+	await _click(hud._menu_disconnect_button)
+	_check(await _wait(func() -> bool: return net.room.is_empty() and not net.pending),"Menu Exit Room returns to browser")
+	_check(root.get_node("NetworkManager").is_network_connected() and main._world._avatars.is_empty(),"leaving room preserves connection and clears world")
+	await create_timer(0.2).timeout
+	main._lobby_panel._name.text = "Second room"
+	main._lobby_panel._arena.select(ArenaData.IDS.find("desert"))
+	await _click(main._lobby_panel._create_button)
+	_check(await _wait(func() -> bool: return str(net.room.get("arena_id",""))=="desert" and not net.pending),"GUI creates a different arena on same connection")
+	_check(int(root.get_node("ArenaNetwork").state.revision)==0 and main._world._arena_id=="desert","new map loads even with same revisionzero")
+	_mark("host-second-room")
+	_check(await _wait(func() -> bool: return FileAccess.file_exists(_path("guest-done"))),"remaining guest confirms own room unchanged")
+	await _click(_find_button(main._lobby_panel,"Salir de la sala"))
+	await _wait(func() -> bool: return net.room.is_empty() and not net.pending)
+	_mark("host-done")
+func _guest() -> void:
+	_check(await _wait(func() -> bool: return FileAccess.file_exists(_path("host-skins-open"))),"host reviews Skins before round")
+	await _click(_find_button(main._lobby_panel,"Listo"))
+	_check(await _wait(func() -> bool: return str(net.room.phase)=="fighting"),"guest GUI Listo completes countdown")
+	_check(await _wait(func() -> bool: return not spells.is_empty()),"guest receives host macro spell")
+	_check(await _wait(func() -> bool: return FileAccess.file_exists(_path("host-second-room")),25),"host creates second room")
+	_check(str(net.room.arena_id)=="forest" and main._world._arena_id=="forest" and net.room.members.size()==1,"host departure leaves guest in original map")
+	_check(int(net.room.owner_id)==root.multiplayer.get_unique_id(),"guest inherits host after departure")
+	_mark("guest-done")
+	await _wait(func() -> bool: return FileAccess.file_exists(_path("host-done")))
+func _finish() -> void:
+	var file := FileAccess.open(_path(role+"-result.json"),FileAccess.WRITE)
+	file.store_string(JSON.stringify({"role":role,"checks":checks,"failures":failed}))
+	file.close()
+	print("Native lobby checks [%s]: %d; failures: %d" % [role,checks,failed])
+	_key(KEY_D,false)
+	_key(KEY_SPACE,false)
+	if main!=null:
+		main.queue_free()
+		await process_frame
+	await create_timer(0.3 if role=="guest" else 0.0).timeout
+	root.get_node("NetworkManager").stop()
+	await create_timer(3.1).timeout
+	quit(1 if failed else 0)
