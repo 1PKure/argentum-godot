@@ -241,6 +241,7 @@ func _draw_themed_floor() -> void:
 	var area := Rect2(_world_origin,Vector2(_grid_columns,_grid_rows)*_tile_size)
 	if _arena_id != ArenaData.LAVA:
 		draw_rect(Rect2(_world_origin - Vector2.ONE*VISUAL_PADDING_TILES*_tile_size,Vector2(_grid_columns+2*VISUAL_PADDING_TILES,_grid_rows+2*VISUAL_PADDING_TILES)*_tile_size),definition.exterior)
+	_draw_exterior(area)
 	for y in range(_grid_rows):
 		for x in range(_grid_columns):
 			var at := _world_origin + Vector2(x,y)*_tile_size
@@ -260,3 +261,54 @@ func _draw_themed_floor() -> void:
 		var center := area.get_center()
 		draw_arc(center,64,0,TAU,64,definition.accent,1)
 		draw_polyline(PackedVector2Array([center+Vector2(0,-48),center+Vector2(48,0),center+Vector2(0,48),center+Vector2(-48,0),center+Vector2(0,-48)]),definition.accent,1)
+
+# Decorative only. Draw before the playable floor; bounds and collisions do not
+# change. Coordinates are world anchored so a following camera cannot slide them.
+func _draw_exterior(area: Rect2) -> void:
+	if _arena_id == ArenaData.DESERT:
+		for band in range(-18,32):
+			var points := PackedVector2Array()
+			var shadow := PackedVector2Array()
+			for sample in range(-12,34):
+				var x := float(sample)*_tile_size
+				var y := band*_tile_size*0.80+sin(sample*0.27+band*0.61)*_tile_size*0.40
+				points.append(_world_origin+Vector2(x,y))
+				shadow.append(_world_origin+Vector2(x,y+8))
+			draw_polyline(shadow,Color(0.29,0.22,0.12,0.16),9,true)
+			draw_polyline(points,Color(0.86,0.70,0.41,0.22),3,true)
+		# Sandstone shelves and small wind-scoured stones beyond the arena.
+		for y in range(-7,_grid_rows+8,2):
+			for x in range(-8,_grid_columns+8,3):
+				var at := _world_origin+Vector2(x*_tile_size,y*_tile_size)
+				if area.grow(35).has_point(at): continue
+				var k := float(posmod(x*19+y*7,11))
+				if k < 5: continue
+				var extent := Vector2(22+k,17+k*0.6)
+				draw_texture_rect(preload("res://assets/arena/scenery/rock.svg"),Rect2(at-extent*0.5,extent),false,Color(0.8,0.72,0.56,0.85))
+		draw_rect(area.grow(12),Color("493b28"),false,8)
+		draw_rect(area.grow(5),Color("c2a16a"),false,3)
+	elif _arena_id == ArenaData.DUEL_ROOM:
+		# A paved surrounding hall with masonry tiers, wall recesses and sconces.
+		for y in range(-8,_grid_rows+8):
+			for x in range(-8,_grid_columns+8):
+				var at := _world_origin+Vector2(x,y)*_tile_size
+				if area.has_point(at+Vector2.ONE*24): continue
+				var tile := Rect2(at,Vector2.ONE*_tile_size)
+				var tint := Color("353d47").lightened(posmod(x*7+y*3,5)*0.008)
+				draw_rect(tile,tint)
+				draw_rect(tile.grow(-1),Color("454e59"),false,1)
+		for tier in range(3):
+			var wall := area.grow(46+tier*22)
+			draw_rect(wall,Color("171f29"),false,12)
+			draw_rect(wall.grow(-4),Color("505a66"),false,2)
+		for x in range(1,_grid_columns,3):
+			for y in [-2,_grid_rows+1]:
+				var at := _world_origin+(Vector2(x,y)+Vector2(0.5,0.5))*_tile_size
+				draw_rect(Rect2(at-Vector2(19,23),Vector2(38,46)),Color("141d28"))
+				draw_rect(Rect2(at-Vector2(16,20),Vector2(32,40)),Color("59626b"),false,3)
+				draw_circle(at,26,Color(1,0.68,0.29,0.045))
+				draw_circle(at,13,Color(1,0.70,0.35,0.07))
+				draw_line(at+Vector2(0,13),at,Color("8b744a"),4,true)
+				draw_colored_polygon(PackedVector2Array([at+Vector2(-4,1),at+Vector2(-2,-5),at+Vector2(1,-10),at+Vector2(4,-2),at+Vector2(3,2)]),Color("e9b564"))
+		draw_rect(area.grow(14),Color("101823"),false,12)
+		draw_rect(area.grow(6),Color("8f835f"),false,3)

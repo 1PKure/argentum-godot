@@ -83,16 +83,15 @@ func _run() -> void:
 	root.add_child(main)
 	hud = main._hud
 	controller = main._spell_controller
-	_check(await _wait(func() -> bool: return net.available),"exported PCK negotiates protocol22")
+	_check(await _wait(func() -> bool: return net.available),"exported PCK negotiates protocol23")
 	if not net.available: await _finish(); return
 	var ranking := root.get_node("RankingNetwork")
 	_check(await _wait(func() -> bool: return ranking.registered),"ranking profile registered with dedicated server")
-	await _click(_find_button(main._lobby_panel,"Ranking"))
-	_check(main._lobby_panel._ranking.visible,"Ranking button opens shared-theme panel")
-	_check(main._lobby_panel._ranking._rows.get_child_count() >= 2,"ranking includes header and honorary first place")
-	if role == "host": await _capture("ranking.png")
-	await _click(_find_button(main._lobby_panel._ranking,"Volver"))
-	_check(not main._lobby_panel._ranking.visible,"Volver closes ranking and returns to lobby")
+	main._lobby_panel._nickname.text = ""
+	if role == "host":
+		await _click(main._lobby_panel._create_button)
+		_check(net.room.is_empty() and not main._lobby_panel._feedback.is_empty(),"Create requires an explicit nickname before opening Ranking")
+	main._lobby_panel._nickname.text = "Polish_"+role
 	if role=="solo":
 		await _solo()
 		await _finish()
@@ -107,6 +106,14 @@ func _run() -> void:
 		await _click(_find_button(main._lobby_panel,"Unirse"))
 	_check(await _wait(func() -> bool: return net.room.get("members",[]).size()==2 and not net.pending),"actual Create/Join clicks enter a room")
 	if net.room.is_empty(): await _finish(); return
+	_check(net.room.members.any(func(member: Dictionary) -> bool: return str(member.name)=="Polish_"+role),"Create/Join uses chosen nickname without first opening Ranking")
+	await _click(_find_button(main._lobby_panel,"Ranking"))
+	_check(main._lobby_panel._ranking.visible,"Ranking button opens shared-theme panel")
+	_check(main._lobby_panel._ranking._rows.get_child_count() >= 2,"ranking includes header and honorary first place")
+	if role == "host": await _capture("ranking.png")
+	await _click(_find_button(main._lobby_panel._ranking,"Volver"))
+	_check(not main._lobby_panel._ranking.visible,"Volver closes ranking and returns to lobby")
+
 	_check(not main._local_input.is_processing(),"waiting room blocks movement")
 	if role=="host": await _host()
 	else: await _guest()
@@ -235,6 +242,12 @@ func _guest() -> void:
 	await _wait(func() -> bool: return FileAccess.file_exists(_path("host-done")))
 
 func _layout_and_controls() -> void:
+	await _click(hud._menu_button)
+	await _click(hud._volume_sliders.effects)
+	_check(ArenaAudioMix.volume("effects") == hud._volume_sliders.effects.value and ArenaAudioMix.volume("effects") < 100,"real menu slider changes effects volume immediately")
+	await _capture("menu-audio.png")
+	hud._volume_sliders.effects.value = 100
+	await _click(hud._menu_close_button)
 	var input := root.get_node("InputBindings")
 	for resolution: Vector2i in [Vector2i(1280,800),Vector2i(1280,720),Vector2i(1920,1080),Vector2i(800,600)]:
 		root.size = resolution

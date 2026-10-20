@@ -123,3 +123,9 @@ Evasión para golpes/flechas; si no evade, se tira rechazo sólo con escudo lega
 | Bandido | 10% | 10% |
 
 El rechazo es condicional al fallo de evasión; los porcentajes no se suman directamente. Desequipar escudo lleva rechazo a0. Los evitados consumen recarga y se replican con daño0/outcome y texto Esquivó/Bloqueó, sin sangre ni audio de impacto. Descarga51 habilitada en Asesino/Paladín/Bandido con coste460; Bandido necesita pociones para pagar375+460.
+
+## Ajuste de Mago y equipo de la revisión23
+
+Daño mágico del Mago×0.88, aplicado en servidor antes del redondeo y de los modificadores específicos de hechizo. Comparte ajuste con bot de claseMago; Clérigo/Bardo/Druida y demás clases no cambian. Descarga contra Cazador del preset:148–161; vida486, por lo que tres impactos máximos no matan y cuatro mínimos sí, sin pociones/curación entre ellos. La vida/maná/evasión quedan igual.
+
+El Guerrero pasa de Espada del Abismo137(13/17) a Espada de Plata126(13/19), con ícono y animación públicos coherentes. Escudo de Plata2933 conserva sus estadísticas; el inventario usa el frame metálico de su animación83 porque su GrhIndex9631 corresponde a lava en la hoja pública disponible. La tabla de procedencia importada permanece intacta.

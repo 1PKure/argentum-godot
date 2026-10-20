@@ -31,6 +31,7 @@ var _heads: Dictionary = {}
 var _texture_cache: Dictionary = {}
 var _fx_visible_bottoms: Dictionary = {}
 var _equipment_frames: Dictionary = {}
+var _equipment_icons: Dictionary = {}
 
 var _is_loaded := false
 
@@ -463,13 +464,21 @@ func get_equipment_icon(item_id: int) -> Texture2D:
 	var grh := int(ClassCatalog.get_item(item_id).get("GrhIndex", 0))
 	# A newer weapon icon points beyond the public GRH table. Use a frame of
 	# that same item, choosing the correct equipment kind from the original DAT.
-	if item_id == 1719 or (grh > 0 and not _graphics.get("Graphics", {}).has("Grh%d" % grh)):
+	if item_id in [137,1719,2933] or (grh > 0 and not _graphics.get("Graphics", {}).has("Grh%d" % grh)):
 		var item := ClassCatalog.get_item(item_id)
 		var kind: String = {2: "weapon", 16: "shield", 17: "helmet"}.get(int(item.get("ObjType", 0)), "")
 		if kind.is_empty():
 			return null
 		var frames := get_equipment_frames(kind, int(item.get("Anim", 0)))
-		return frames.get_frame_texture("walk_down", 0) if frames != null else null
+		if frames == null: return null
+		if not _equipment_icons.has(item_id):
+			# Public item indexes belong to a different revision: these IDs map
+			# to lava/bats. The equipped DAT frame is the actual same item.
+			var image := frames.get_frame_texture("walk_down",0).get_image()
+			var bounds := image.get_used_rect()
+			if bounds.has_area(): image = image.get_region(bounds)
+			_equipment_icons[item_id] = ImageTexture.create_from_image(image)
+		return _equipment_icons[item_id]
 	return get_icon_texture(grh) if grh > 0 else null
 
 

@@ -18,6 +18,9 @@ var _active := false
 var _feedback := ""
 var _create_button: Button
 var _ranking: RankingPanel
+var _nickname: LineEdit
+var _entering := false
+var _last_profile_nickname := ""
 
 func _ready() -> void:
 	layer = 12
@@ -48,13 +51,18 @@ func _ready() -> void:
 	_content.add_child(_browser)
 	_label(_browser,"Arena PvP",28)
 	_label(_browser,"Creá una sala o elegí un rival. También podés practicar con un bot.",14)
+	_label(_browser,"Tu nick",14)
+	_nickname = LineEdit.new()
+	_nickname.placeholder_text = "Elegí tu nombre de jugador"
+	_nickname.max_length = 20
+	_browser.add_child(_nickname)
 	_name = LineEdit.new()
 	_name.placeholder_text = "Nombre de la sala"
 	_name.max_length = 28
 	_browser.add_child(_name)
 	_arena = _arena_selector(_browser)
 	_create_button = _button(_browser,"Crear sala",func() -> void:
-		LobbyNetwork.command("create",{"title":_name.text,"arena_id":ArenaData.IDS[_arena.selected]})
+		_enter_room("create",{"title":_name.text,"arena_id":ArenaData.IDS[_arena.selected]})
 	)
 	var bar := HBoxContainer.new()
 	_browser.add_child(bar)
@@ -80,6 +88,11 @@ func _ready() -> void:
 		if not available: _feedback = "Versión incompatible o servidor sin respuesta. Actualizá y reiniciá el dedicado junto con la web."
 		_refresh()
 	)
+	RankingNetwork.changed.connect(func() -> void:
+		var previous := _last_profile_nickname
+		_last_profile_nickname = RankingNetwork.nickname
+		if not _entering and not _nickname.has_focus() and (_nickname.text.is_empty() or _nickname.text == previous) and not RankingNetwork.nickname.begins_with("Aventurero_"): _nickname.text = RankingNetwork.nickname
+	)
 	LobbyNetwork.changed.connect(_refresh)
 	ArenaNetwork.changed.connect(_refresh)
 	LobbyNetwork.completed.connect(func(ok: bool, message: String) -> void:
@@ -96,6 +109,8 @@ func open_browser() -> void:
 	_active = true
 	show()
 	_feedback = ""
+	_last_profile_nickname = RankingNetwork.nickname
+	_nickname.text = "" if RankingNetwork.nickname.begins_with("Aventurero_") else RankingNetwork.nickname
 	_refresh()
 
 func close_session() -> void:
@@ -111,7 +126,7 @@ func _refresh() -> void:
 	_surface.visible = phase not in ["countdown","fighting"]
 	if not _surface.visible: _ranking.close()
 	_browser.visible = room.is_empty()
-	_create_button.disabled = not LobbyNetwork.available or LobbyNetwork.pending
+	_create_button.disabled = not LobbyNetwork.available or LobbyNetwork.pending or _entering
 	_room_content.visible = not room.is_empty()
 	_message.text = _feedback if not _feedback.is_empty() else ("Conectando con el directorio de salas…" if not LobbyNetwork.available else "")
 	for child in _rooms.get_children():
@@ -123,8 +138,8 @@ func _refresh() -> void:
 		var text := "%s · %s · %d/2" % [entry.title,ArenaData.get_display_name(str(entry.arena_id)),entry.occupancy]
 		var label := _label(row,text,15)
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var button := _button(row,"Unirse",func() -> void: LobbyNetwork.command("join",{"room_id":int(entry.id)}))
-		button.disabled = LobbyNetwork.pending or int(entry.occupancy) >= 2 or str(entry.phase) in ["countdown","fighting"]
+		var button := _button(row,"Unirse",func() -> void: _enter_room("join",{"room_id":int(entry.id)}))
+		button.disabled = _entering or LobbyNetwork.pending or int(entry.occupancy) >= 2 or str(entry.phase) in ["countdown","fighting"]
 	if LobbyNetwork.rooms.is_empty(): _label(_rooms,"Todavía no hay salas. Creá la primera.",14)
 	for child in _room_content.get_children():
 		_room_content.remove_child(child)
@@ -186,6 +201,17 @@ func _refresh() -> void:
 	if not bool(room.bot_enabled):
 		_countdown.update_status({"enabled":true,"owner_id":own_id,"round_id":room.round_id,"phase":"active" if phase == "fighting" else phase,"countdown":room.countdown},own_id)
 	else: _countdown.clear()
+
+func _enter_room(operation: String, payload: Dictionary) -> void:
+	if _entering or LobbyNetwork.pending: return
+	_entering = true
+	_feedback = "Guardando tu nick…"
+	_refresh()
+	var ok := await RankingNetwork.ensure_name(_nickname.text)
+	_entering = false
+	_feedback = "" if ok else RankingNetwork.message
+	if ok and _active and LobbyNetwork.room.is_empty(): LobbyNetwork.command(operation,payload)
+	_refresh()
 
 func _label(parent: Node, text_value: String, size_value: int) -> Label:
 	var label := Label.new()

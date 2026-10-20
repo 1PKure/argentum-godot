@@ -7,6 +7,7 @@ const RANGED_RANGE := 8
 const EQUIPMENT_SLOTS := ["armor", "weapon", "helmet", "shield", "accessory", "ammunition"]
 const ATTACK_BINDING := -1
 const MACRO_VERSION := 2
+const MAGE_DAMAGE_MULTIPLIER := 0.88
 # Curated combat presentation. Keep imported DAT/rules intact for reference and
 # regression fixtures; beginner spells no longer appear in the arena book/macros.
 const COMBAT_BOOK_ORDER := [25,27,51,59,31,53,41,113,26,29,350,11,269,242,243,263,112,122,131,141,54,55,132,133,28,268,4]
@@ -123,7 +124,8 @@ static func magic_damage(amount: int, caster_class: int, target_class: int, cast
 	# EOT tick powers use their own DAT values, without this direct-hit bonus.
 	var level_bonus := 1.0 + 0.03 * float(caster.level) if scale_by_level else 1.0
 	var resistance := 0.0 if ignore_resistance else float(target.get("resistance_percent", 0))
-	return maxi(1, roundi(amount * level_bonus * (1.0 + float(caster.get("magic_bonus", 0)) / 100.0) * (1.0 - resistance / 100.0)))
+	var class_tuning := MAGE_DAMAGE_MULTIPLIER if caster_class == 1 else 1.0
+	return maxi(1, roundi(amount * class_tuning * level_bonus * (1.0 + float(caster.get("magic_bonus", 0)) / 100.0) * (1.0 - resistance / 100.0)))
 
 
 static func equipment_slot(class_id: int, item_id: int) -> String:

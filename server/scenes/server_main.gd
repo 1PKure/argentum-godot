@@ -103,6 +103,9 @@ func _on_lobby_command(peer_id: int, operation: String, payload: Dictionary, req
 	if operation.length() > 20 or payload.size() > 8:
 		LobbyNetwork.send_result(peer_id,request,ArenaLobbyRoom.error("Solicitud inválida."))
 		return
+	if operation in ["create","join"] and not _ranked_peers.has(peer_id):
+		LobbyNetwork.send_result(peer_id,request,ArenaLobbyRoom.error("Elegí primero tu nick."))
+		return
 	var old_room := lobbies.room_for(peer_id)
 	var result := lobbies.command(peer_id,operation,payload,request)
 	var room := lobbies.room_for(peer_id)

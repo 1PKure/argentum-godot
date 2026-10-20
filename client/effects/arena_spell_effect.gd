@@ -64,7 +64,7 @@ func _ready() -> void:
 	if ResourceLoader.exists(sound_path):
 		_audio = AudioStreamPlayer.new()
 		_audio.stream = load(sound_path)
-		_audio.volume_db = 0.0
+		_audio.volume_db = -12.0
 		ArenaAudioMix.route(_audio)
 		add_child(_audio)
 		if _is_shot:

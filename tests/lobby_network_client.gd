@@ -44,7 +44,7 @@ func _run() -> void:
 	root.get_node("SpellNetwork").spell_resolved.connect(func(data: Dictionary) -> void: fx.append(int(data.caster_id)))
 	main = load("res://client/scenes/client_main.tscn").instantiate()
 	root.add_child(main)
-	_check(await _wait(func() -> bool: return net.available),"protocol22 capabilities")
+	_check(await _wait(func() -> bool: return net.available),"protocol23 capabilities")
 	var ranking := root.get_node("RankingNetwork")
 	_check(await _wait(func() -> bool: return ranking.registered),"ranking profile authenticated over real WS")
 	_check(ranking.snapshot.get("entries",[]).size() >= 1 and ranking.snapshot.entries[0].nickname == "milusita","honorary ranking received from authority")

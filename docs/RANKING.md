@@ -91,7 +91,7 @@ archivo y el límite de 50 jugadores más homenaje.
 
 El botón **Ranking** del directorio y de la sala muestra la tabla y permite elegir
 apodo. El cliente se autentica automáticamente al conectar, consulta cada 30 s y
-recibe actualizaciones al confirmarse una victoria. El protocolo es 22. Se captura
+recibe actualizaciones al confirmarse una victoria. El protocolo es 23. Se captura
 la identidad de los participantes al comenzar la ronda: reconexiones, resultados
 repetidos, derrotas, abandonos o dos ventanas del mismo perfil no regalan puntos.
 Los fallos de guardado se reintentan cada cinco segundos mientras sigue el servidor.
@@ -105,3 +105,5 @@ HTTP ni se añadió servicio de pago, cuenta, proveedor externo o base de datos.
 Para QA se puede usar `--ranking-path=/ruta/aislada.json` en el dedicado. En uso
 normal hay que conservar el directorio de datos `user://` del servidor y su archivo
 `.bak` entre actualizaciones; reemplazar el ejecutable/proyecto no exige borrarlos.
+
+Crear y Unirse piden un nick y esperan confirmación del registro antes de entrar. La autenticación automática inicial sólo prepara la identidad; no obliga a abrir Ranking. El Ranking permite renombrar después y la sala muestra el nombre confirmado. Un nombre vacío, reservado o duplicado deja al usuario en el directorio con feedback, sin crear salas a medias.

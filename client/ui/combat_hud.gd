@@ -33,6 +33,8 @@ var _menu_card: PanelContainer
 var _menu_close_button: Button
 var _menu_disconnect_button: Button
 var _menu_credits: Label
+var _volume_sliders: Dictionary = {}
+var _audio_feedback: Label
 var _inventory_button: Button
 var _spell_button: Button
 var _spell_controller: SpellTargetingController
@@ -533,9 +535,10 @@ func _build_menu() -> void:
 		_controls_panel.open_panel()
 		set_menu_opened(false)
 	)
+	_build_audio_controls(content)
 	content.add_child(HSeparator.new())
 	_menu_credits = Label.new()
-	_menu_credits.text = "Desarrollado por Matias Pulido (1PKure)\n\nCréditos de recursos: AO20 · © Noland Studios\nRecursos de terceros · CC BY-NC-ND 4.0\nEsta arena es un proyecto independiente de Matias Pulido."
+	_menu_credits.text = "Desarrollado por Matias Pulido (1PKure)\n\nCréditos de recursos: AO20 · © Noland Studios\nRecursos de terceros · CC BY-NC-ND 4.0\nPisadas: Kenney · Impact Sounds (CC0)\nEsta arena es un proyecto independiente de Matias Pulido."
 	_menu_credits.add_theme_font_size_override("font_size", 12)
 	_menu_credits.modulate = Color("c3b99f")
 	content.add_child(_menu_credits)
@@ -563,6 +566,38 @@ func _build_menu() -> void:
 	)
 	_menu_panel.hide()
 
+
+func _build_audio_controls(parent: VBoxContainer) -> void:
+	for channel: String in ["master","effects","footsteps"]:
+		var row := HBoxContainer.new()
+		parent.add_child(row)
+		var label := Label.new()
+		label.text = str({"master":"General","effects":"Efectos","footsteps":"Pasos"}[channel])
+		label.custom_minimum_size.x = 75
+		row.add_child(label)
+		var slider := HSlider.new()
+		slider.min_value = 0
+		slider.max_value = 100
+		slider.step = 1
+		slider.value = ArenaAudioMix.volume(channel)
+		slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		slider.custom_minimum_size = Vector2(150,28)
+		row.add_child(slider)
+		_volume_sliders[channel] = slider
+		var percent := Label.new()
+		percent.custom_minimum_size.x = 45
+		percent.text = "%d%%" % int(slider.value)
+		row.add_child(percent)
+		slider.value_changed.connect(func(value: float) -> void:
+			percent.text = "%d%%" % int(value)
+			var error := ArenaAudioMix.set_volume(channel,value)
+			_audio_feedback.text = "No se pudo guardar el volumen en este dispositivo." if error != OK else ""
+			_audio_feedback.visible = error != OK
+		)
+	_audio_feedback = Label.new()
+	_audio_feedback.add_theme_font_size_override("font_size",12)
+	_audio_feedback.hide()
+	parent.add_child(_audio_feedback)
 
 func is_modal_open() -> bool:
 	return _menu_panel.visible or _class_panel.visible or _bot_panel.visible or _skins_panel.visible or _arena_panel.visible or (_controls_panel != null and _controls_panel.visible)
@@ -734,7 +769,8 @@ func _on_recovery_event(event: Dictionary) -> void:
 	if event.action in ["health_potion", "mana_potion"] and int(event.peer_id) == _local_peer_id:
 		var audio := AudioStreamPlayer.new()
 		audio.stream = load("res://assets/argentum/source/audio/135.wav")
-		audio.volume_db = 0.0
+		audio.volume_db = -12.0
+		ArenaAudioMix.route(audio)
 		add_child(audio)
 		audio.finished.connect(audio.queue_free)
 		audio.play()

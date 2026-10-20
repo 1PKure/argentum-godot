@@ -14,6 +14,7 @@ var _profile := ""
 var _request := 0
 var _pending_request := 0
 var _elapsed := 0.0
+var _last_registration_msec := -1000
 const IDENTITY_PATH := "user://ranking_identity_v1.cfg"
 const REFRESH_SECONDS := 30.0
 
@@ -67,6 +68,7 @@ func _connected() -> bool:
 
 func register_name(value: String) -> void:
 	if pending or not available or not _connected(): return
+	_last_registration_msec = Time.get_ticks_msec()
 	_request += 1
 	_pending_request = _request
 	pending = true
@@ -79,6 +81,26 @@ func register_name(value: String) -> void:
 		pending = false
 		message = "El servidor no respondió. Volvé a intentar."
 		changed.emit()
+
+# The lobby waits for a confirmed nickname before Create/Join. Auto-registration
+# may still be in flight when the player first opens this screen.
+func ensure_name(value: String) -> bool:
+	value = value.strip_edges()
+	if value.length() < 2 or value.length() > 20:
+		message = "Elegí un nick de 2 a 20 caracteres."
+		changed.emit()
+		return false
+	var deadline := Time.get_ticks_msec()+5000
+	while pending and _connected() and Time.get_ticks_msec()<deadline:
+		await get_tree().create_timer(0.025).timeout
+	if not available or not _connected() or pending: return false
+	if registered and nickname == value: return true
+	var wait_msec := 1050-(Time.get_ticks_msec()-_last_registration_msec)
+	if wait_msec > 0: await get_tree().create_timer(float(wait_msec)/1000.0).timeout
+	if not available or not _connected(): return false
+	register_name(value)
+	while pending and _connected(): await get_tree().create_timer(0.025).timeout
+	return registered and nickname == value
 
 func refresh() -> void:
 	if available and _connected(): _request_snapshot.rpc_id(NetworkConstants.SERVER_PEER_ID)
