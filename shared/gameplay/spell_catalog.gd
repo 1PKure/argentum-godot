@@ -93,6 +93,8 @@ static func _ensure_loaded() -> void:
 
 
 static func _unsupported_reason(id: int, data: Dictionary) -> String:
+	if id == 56:
+		return "Retirado de la arena por balance."
 	if not data.has("Nombre"):
 		return "Entrada sin definición de hechizo en el archivo original."
 	if STATUS_HANDLERS.has(id) or PERIODIC_HANDLERS.has(id):

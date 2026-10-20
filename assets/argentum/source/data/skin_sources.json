@@ -67,5 +67,12 @@
       "sha256": "c7762f41b5e7203e5c92ca73db24f00882833a9b1bc18e6473ac3223964bb949",
       "bytes": 294667
     }
-  ]
+  ],
+  "mage_progression": {
+    "preset": 117,
+    "one_win": 113,
+    "three_wins": 142,
+    "five_wins": 141,
+    "equipment_stats": "unchanged"
+  }
 }

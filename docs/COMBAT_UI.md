@@ -30,4 +30,6 @@ GitHub Desktop → work/arena-lobbies → Pull. Reiniciar `tools/Start-PrivateWe
 
 `run_lobby_native.py` prueba el PCK exportado con dos humanos y luego un bot: navegación, movimientos, apuntado, pociones, rebind real deUsar, clic derecho en macro, scroll hasta último objeto, cuatro resoluciones, pausa/reanudación y desconexión. La revisión estética y auditiva en navegador Windows sigue siendo manual.
 
-El menú acredita "Desarrollado por Mati (1PKure)" y separa AO20/Noland Studios como créditos de recursos de terceros.
+El menú acredita "Desarrollado por Matias Pulido (1PKure)" y separa AO20/Noland Studios como créditos de recursos de terceros.
+
+El libro se reordena con botón derecho sostenido y arrastre sobre otra entrada; se guarda por perfil/clase sin alterar macros. Juicio Final está deshabilitado también en la autoridad del servidor.

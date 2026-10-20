@@ -33,6 +33,7 @@ var _arena_id: String = (
 
 var _avatars: Dictionary[int, PlayerAvatar] = {}
 
+var _biome_ambient: ArenaBiomeAmbient
 var _arena_ground: ArenaGround
 var _arena_props: Array[Node2D] = []
 var _arena_revision := -1
@@ -56,6 +57,7 @@ func _ready() -> void:
 
 	_create_arena_ground()
 	_create_arena_props()
+	_create_biome_ambient()
 
 	PlayerNetwork.snapshot_received.connect(
 		_on_snapshot_received
@@ -136,6 +138,9 @@ func target_grid_at(viewport_position: Vector2) -> Vector2i:
 
 
 func _on_spell_resolved(event: Dictionary) -> void:
+	var caster: PlayerAvatar = _avatars.get(int(event.get("caster_id",0)))
+	if caster != null and str(event.get("action","")) != "shot":
+		caster.play_spell_cast()
 	var effect := ArenaSpellEffect.new()
 	effect.event = event
 	effect.origin = _grid_to_world(Vector2i(int(event.origin_x), int(event.origin_y)))
@@ -150,6 +155,7 @@ func _on_spell_resolved(event: Dictionary) -> void:
 func _on_melee_resolved(event: Dictionary) -> void:
 	# Rejections and misses never produce an impact sound.
 	if int(event.get("amount",0)) <= 0 or not _avatars.has(int(event.get("target_id",0))) or not _avatars.has(int(event.get("caster_id",0))): return
+	(_avatars[int(event.caster_id)] as PlayerAvatar).play_melee_swing()
 	var audio := AudioStreamPlayer.new()
 	audio.stream = MELEE_IMPACT_SOUND
 	audio.volume_db = -12.0
@@ -194,6 +200,12 @@ func _create_arena_ground() -> void:
 		TILE_SIZE,
 		WORLD_ORIGIN
 	)
+
+
+func _create_biome_ambient() -> void:
+	_biome_ambient = ArenaBiomeAmbient.new()
+	add_child(_biome_ambient)
+	_biome_ambient.setup(_arena_id, Rect2(WORLD_ORIGIN, Vector2(GRID_COLUMNS, GRID_ROWS) * TILE_SIZE))
 
 
 func _create_arena_props() -> void:
@@ -262,6 +274,7 @@ func set_arena(id: String) -> void:
 	_arena_props.clear()
 	_arena_ground.setup(_arena_id,GRID_COLUMNS,GRID_ROWS,TILE_SIZE,WORLD_ORIGIN)
 	_create_arena_props()
+	_biome_ambient.setup(_arena_id, Rect2(WORLD_ORIGIN, Vector2(GRID_COLUMNS, GRID_ROWS) * TILE_SIZE))
 
 func _create_prop(
 	grh_id: int,

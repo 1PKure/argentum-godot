@@ -1,6 +1,8 @@
 class_name PlayerVisual
 extends Node2D
 
+const SpriteFinish := preload("res://client/characters/sprite_finish.gd")
+
 @onready var body: AnimatedSprite2D = $Body
 @onready var head: Sprite2D = $Head
 
@@ -37,6 +39,11 @@ var _class_id := 0
 var _skin_id := "preset"
 var _equipped_items: Dictionary = {}
 var _equipment: Dictionary[String, AnimatedSprite2D] = {}
+const MELEE_GESTURE_SECONDS := 0.24
+const CAST_GESTURE_SECONDS := 0.30
+var _equipment_action := ""
+var _equipment_action_elapsed := 0.0
+var _visual_is_ghost := false
 
 
 func _ready() -> void:
@@ -51,6 +58,7 @@ func _ready() -> void:
 		CanvasItem.TEXTURE_FILTER_NEAREST
 	)
 	body.frame_changed.connect(_sync_equipment)
+	set_process(false)
 
 	set_body_id(
 		DEFAULT_BODY_ID
@@ -92,6 +100,7 @@ func set_loadout(id: int, equipped: Dictionary, skin_id: String = "preset") -> v
 	var profile := ClassCatalog.get_equipped_profile(id, equipped)
 	if profile.is_empty():
 		return
+	_clear_equipment_gesture()
 	_class_id = id
 	_equipped_items = equipped.duplicate()
 	_skin_id = skin_id
@@ -113,14 +122,83 @@ func set_loadout(id: int, equipped: Dictionary, skin_id: String = "preset") -> v
 
 func _sync_equipment() -> void:
 	var animation := _get_animation_name(current_direction)
+	if body.sprite_frames != null and body.sprite_frames.has_animation(body.animation) and body.sprite_frames.get_frame_count(body.animation) > 0:
+		SpriteFinish.apply(body,body.sprite_frames.get_frame_texture(body.animation,body.frame),0.18)
 	for kind: String in _equipment:
 		var sprite: AnimatedSprite2D = _equipment[kind]
 		if not sprite.visible or not sprite.sprite_frames.has_animation(animation):
 			continue
 		sprite.animation = animation
 		sprite.frame = body.frame % maxi(1, sprite.sprite_frames.get_frame_count(animation))
+		SpriteFinish.apply(sprite,sprite.sprite_frames.get_frame_texture(animation,sprite.frame),0.28)
 		sprite.position = head.position if kind == "helmet" else Vector2.ZERO
 		sprite.z_index = 2 if kind == "helmet" else (-1 if current_direction == Vector2.UP else 1)
+	_apply_equipment_gesture()
+
+
+func play_melee_swing() -> bool:
+	return _begin_equipment_gesture("melee")
+
+
+func play_spell_cast() -> bool:
+	return _begin_equipment_gesture("cast")
+
+
+func _begin_equipment_gesture(action: String) -> bool:
+	var weapon: AnimatedSprite2D = _equipment.get("weapon")
+	if _visual_is_ghost or weapon == null or not weapon.visible:
+		return false
+	_equipment_action = action
+	_equipment_action_elapsed = 0.0
+	set_process(true)
+	_sync_equipment()
+	return true
+
+
+func _process(delta: float) -> void:
+	if _equipment_action.is_empty():
+		return
+	_equipment_action_elapsed += maxf(delta,0.0)
+	var duration := MELEE_GESTURE_SECONDS if _equipment_action == "melee" else CAST_GESTURE_SECONDS
+	if _equipment_action_elapsed >= duration:
+		_clear_equipment_gesture()
+	_sync_equipment()
+
+
+func _clear_equipment_gesture() -> void:
+	_equipment_action = ""
+	_equipment_action_elapsed = 0.0
+	var weapon: AnimatedSprite2D = _equipment.get("weapon")
+	if weapon != null:
+		weapon.position = Vector2.ZERO
+		weapon.rotation = 0.0
+	set_process(false)
+
+
+func _apply_equipment_gesture() -> void:
+	var weapon: AnimatedSprite2D = _equipment.get("weapon")
+	if weapon == null:
+		return
+	weapon.rotation = 0.0
+	if _equipment_action.is_empty() or not weapon.visible:
+		return
+	var duration := MELEE_GESTURE_SECONDS if _equipment_action == "melee" else CAST_GESTURE_SECONDS
+	var progress := clampf(_equipment_action_elapsed / duration,0.0,1.0)
+	var envelope := sin(progress * PI)
+	var side := -1.0 if current_direction == Vector2.LEFT or current_direction == Vector2.UP else 1.0
+	var angle: float
+	var offset: Vector2
+	if _equipment_action == "melee":
+		# Brief anticipation, directional cut, then return to the original grip.
+		angle = side * sin(progress * TAU - PI * 0.25) * envelope * 0.62
+		offset = current_direction * envelope * 4.5
+	else:
+		# A restrained lift makes staves participate in the cast without hiding FX.
+		angle = side * envelope * 0.20
+		offset = Vector2(0,-4.0) * envelope + current_direction * envelope * 1.5
+	var grip := Vector2(side * 5.0,2.0)
+	weapon.rotation = angle
+	weapon.position += grip - grip.rotated(angle) + offset
 
 
 func set_head_id(
@@ -354,6 +432,7 @@ func _update_head() -> void:
 			direction_name
 		]
 	)
+	SpriteFinish.apply(head,head.texture,0.12)
 
 
 func _update_head_position() -> void:
@@ -441,6 +520,8 @@ func _get_animation_name(
 func set_ghost_mode(
 	enabled: bool
 ) -> void:
+	_visual_is_ghost = enabled
+	if enabled: _clear_equipment_gesture()
 	var color := (
 		GHOST_MODULATE
 		if enabled

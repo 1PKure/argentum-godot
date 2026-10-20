@@ -9,7 +9,7 @@ const ATTACK_BINDING := -1
 const MACRO_VERSION := 2
 # Curated combat presentation. Keep imported DAT/rules intact for reference and
 # regression fixtures; beginner spells no longer appear in the arena book/macros.
-const COMBAT_BOOK_ORDER := [25,27,51,59,31,53,41,113,26,29,350,11,269,242,243,263,112,122,131,141,54,55,56,132,133,28,268,4]
+const COMBAT_BOOK_ORDER := [25,27,51,59,31,53,41,113,26,29,350,11,269,242,243,263,112,122,131,141,54,55,132,133,28,268,4]
 const PRESET_LEVEL := 50
 const PRESET_STRENGTH := 28 # Arena-ready attribute; explicit PvP tuning, not a racial base.
 const PRESET_CONSTITUTION := 20 # Human: 18 + 2.

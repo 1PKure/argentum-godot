@@ -83,7 +83,7 @@ func _run() -> void:
 	root.add_child(main)
 	hud = main._hud
 	controller = main._spell_controller
-	_check(await _wait(func() -> bool: return net.available),"exported PCK negotiates protocol18")
+	_check(await _wait(func() -> bool: return net.available),"exported PCK negotiates protocol19")
 	if not net.available: await _finish(); return
 	if role=="solo":
 		await _solo()
@@ -162,6 +162,35 @@ func _host() -> void:
 	_check(hud._spell_search.get_global_rect().end.y <= hud._spell_scroll.get_global_rect().position.y,"search stays above the first spell row")
 	_check(hud._spell_scroll.size.y>=300 and not hud._minimap.visible,"manual-cast book prioritizes at least six rows")
 	_check([1,2,3,12,13,291].all(func(id: int) -> bool: return not hud._spell_buttons.has(id)),"starter spells absent from combat book")
+	var before_order: Array[int] = hud._book_order.duplicate()
+	var before_macros: Array = controller.bindings.duplicate()
+	var from_button: Control = hud._spell_buttons[before_order[0]]
+	var to_button: Control = hud._spell_buttons[before_order[1]]
+	var start := from_button.get_global_rect().get_center()
+	var finish := to_button.get_global_rect().get_center()
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_RIGHT
+	press.pressed = true
+	press.position = start
+	Input.parse_input_event(press)
+	await process_frame
+	var drag := InputEventMouseMotion.new()
+	drag.position = finish
+	drag.button_mask = MOUSE_BUTTON_MASK_RIGHT
+	Input.parse_input_event(drag)
+	await process_frame
+	var release := InputEventMouseButton.new()
+	release.button_index = MOUSE_BUTTON_RIGHT
+	release.position = finish
+	Input.parse_input_event(release)
+	await process_frame
+	_check(hud._book_order[1]==before_order[0],"actual right drag reorders spellbook")
+	_check(controller.bindings==before_macros and controller.aimed_spell_id==0,"book management preserves macros without casting")
+	_check(ArenaSpellBookOrder.load_order(root.get_node("InputBindings").profile_id,controller.class_id)==hud._book_order,"right drag persists class book order")
+	await _click(hud._inventory_button)
+	await _click(hud._spell_button)
+	_check(hud._book_order[1]==before_order[0],"tab changes retain book order")
+	ArenaSpellBookOrder.save_order(root.get_node("InputBindings").profile_id,controller.class_id,before_order)
 	var book_casts := spells.size()
 	await _click(hud._spell_buttons[25])
 	await _click(hud._launch_button)
@@ -226,7 +255,7 @@ func _layout_and_controls() -> void:
 	controller.assign_hotkey(0,saved)
 	await _click(hud._menu_button)
 	_check(not net.is_paused(),"human PvP keeps running while menu is open")
-	_check(hud._menu_credits.text.contains("Desarrollado por Mati") and hud._menu_credits.text.contains("Créditos de recursos"),"developer and resource credits are separate")
+	_check(hud._menu_credits.text.contains("Desarrollado por Matias Pulido") and hud._menu_credits.text.contains("Créditos de recursos"),"developer and resource credits are separate")
 	await _click(hud._controls_button)
 	_check(hud._controls_panel.visible and not main._local_input.is_processing(),"Controls opens and blocks gameplay")
 	var bind_button: Control = hud._controls_panel._buttons["use_selected"]

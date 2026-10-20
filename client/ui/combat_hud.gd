@@ -75,6 +75,9 @@ var _inventory_move: Dictionary = {}
 var _inventory_move_start := Vector2.ZERO
 var _inventory_move_preview: TextureRect
 var _book_class_id := -1
+var _book_profile := ""
+var _book_order: Array[int] = []
+var _book_move_id := 0
 var _inventory_revision := -1
 var _inventory_peer := 0
 var _pixel_scale := 1
@@ -177,8 +180,12 @@ func _update_spell_ui() -> void:
 		_spell_status.text = str(selected.unavailable_reason)
 	elif not selected.is_empty() and not ClassCatalog.can_cast(_spell_controller.class_id, int(selected.id)):
 		_spell_status.text = "Tu clase no tiene este hechizo en su preset."
-	if _book_class_id != _spell_controller.class_id:
+	if _book_class_id != _spell_controller.class_id or _book_profile != InputBindings.profile_id:
+		_cancel_inventory_move()
 		_book_class_id = _spell_controller.class_id
+		_book_profile = InputBindings.profile_id
+		_book_order = ArenaSpellBookOrder.load_order(_book_profile,_book_class_id)
+		_apply_book_order()
 		_filter_spellbook()
 	_spell_status.tooltip_text = _spell_status.text
 	_layout_spellbook()
@@ -384,6 +391,7 @@ func _build_interface() -> void:
 		entry.custom_minimum_size = Vector2(244,46)
 		entry.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		entry.pressed.connect(_on_spell_selected.bind(id))
+		entry.book_move_started.connect(_begin_book_move)
 		_spell_buttons[id] = entry
 	_spell_status = _label(_spell_panel,"",Rect2(),12)
 	_spell_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -519,7 +527,7 @@ func _build_menu() -> void:
 	)
 	content.add_child(HSeparator.new())
 	_menu_credits = Label.new()
-	_menu_credits.text = "Desarrollado por Mati (1PKure)\n\nCréditos de recursos: AO20 · © Noland Studios\nRecursos de terceros · CC BY-NC-ND 4.0\ngithub.com/ao-org/Recursos\nEsta arena es un proyecto independiente de Mati."
+	_menu_credits.text = "Desarrollado por Matias Pulido (1PKure)\n\nCréditos de recursos: AO20 · © Noland Studios\nRecursos de terceros · CC BY-NC-ND 4.0\ngithub.com/ao-org/Recursos\nEsta arena es un proyecto independiente de Matias Pulido."
 	_menu_credits.add_theme_font_size_override("font_size", 12)
 	_menu_credits.modulate = Color("c3b99f")
 	content.add_child(_menu_credits)
@@ -596,6 +604,26 @@ func set_round_paused(paused: bool) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if _book_move_id != 0:
+		if event is InputEventKey and event.pressed and InputBindings.matches(event,"menu"):
+			_cancel_inventory_move()
+			get_viewport().set_input_as_handled()
+			return
+		if event is InputEventMouseMotion:
+			_inventory_move_preview.visible = _inventory_move_preview.visible or event.position.distance_to(_inventory_move_start) >= 6.0
+			_inventory_move_preview.position = event.position + Vector2(12,12)
+			get_viewport().set_input_as_handled()
+			return
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and not event.pressed:
+			if _inventory_move_preview.visible and _spell_panel.visible and not is_modal_open() and _spell_scroll.get_global_rect().has_point(event.position):
+				for id: int in _book_order:
+					var button: SpellSlotButton = _spell_buttons[id]
+					if id != _book_move_id and button.visible and button.get_global_rect().has_point(event.position):
+						_move_book_spell(_book_move_id,id)
+						break
+			_cancel_inventory_move()
+			get_viewport().set_input_as_handled()
+			return
 	if not _inventory_move.is_empty():
 		if event is InputEventKey and event.pressed and InputBindings.matches(event,"menu"):
 			_cancel_inventory_move()
@@ -914,6 +942,7 @@ func _begin_inventory_move(source: int, screen_position: Vector2) -> void:
 
 
 func _cancel_inventory_move() -> void:
+	_book_move_id = 0
 	_inventory_move.clear()
 	if _inventory_move_preview != null:
 		_inventory_move_preview.hide()
@@ -1098,3 +1127,33 @@ func _on_arena_status() -> void:
 	_minimap.queue_redraw()
 	_update_local_stats()
 	_notify_modal_state()
+
+
+func _begin_book_move(id: int, screen_position: Vector2) -> void:
+	if is_modal_open() or not _spell_panel.visible or id not in _book_order:
+		return
+	_cancel_inventory_move()
+	_release_text_focus()
+	if _spell_controller != null: _spell_controller.cancel_targeting()
+	_book_move_id = id
+	_inventory_move_start = screen_position
+	_inventory_move_preview.texture = _spell_buttons[id].icon
+	_inventory_move_preview.position = screen_position + Vector2(12,12)
+	_inventory_move_preview.hide()
+
+
+func _move_book_spell(source: int, target: int) -> void:
+	if source not in _book_order or target not in _book_order or source == target: return
+	var previous: Array[int] = _book_order.duplicate()
+	var destination := _book_order.find(target)
+	_book_order.erase(source)
+	_book_order.insert(destination,source)
+	if ArenaSpellBookOrder.save_order(_book_profile,_book_class_id,_book_order) != OK:
+		_book_order = previous
+		console.append_message("No se pudo guardar el orden del libro.")
+	_apply_book_order()
+
+
+func _apply_book_order() -> void:
+	for index in range(_book_order.size()):
+		_spell_list.move_child(_spell_buttons[_book_order[index]],index)

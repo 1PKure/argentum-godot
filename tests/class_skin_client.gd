@@ -41,7 +41,8 @@ func _run() -> void:
 		for index in range(5):
 			skins.progress.award("class-%d-fixture-%d" % [id,index], id)
 		skins.changed.emit()
-		var bodies: Array[int] = [int(ClassCatalog.get_profile(id).body_id)]
+		var starter := SkinCatalog.get_skin("preset",id)
+		var bodies: Array[int] = [int(starter.body_id) if int(starter.body_id)>0 else int(ClassCatalog.get_profile(id).body_id)]
 		var previews_match := true
 		for skin: Dictionary in SkinCatalog.for_class(id).slice(1):
 			previews_match = previews_match and panel._names[skin.id].text == str(skin.name) and panel.previews[skin.id]._body_definition == root.get_node("AOResources").get_body_definition(int(skin.body_id)) and not bodies.has(int(skin.body_id))

@@ -10,6 +10,7 @@ var action := ""
 var layout: ArenaInventoryLayout
 var _equipped_badge: Label
 var potion_selected := false
+var _finished_item: TextureRect
 
 
 func _ready() -> void:
@@ -37,6 +38,9 @@ func configure(index: int, inventory: ArenaInventoryLayout) -> void:
 	layout = inventory
 	action = inventory.actions[index]
 	icon = null
+	if _finished_item != null: _finished_item.hide()
+	for state: String in ["icon_normal_color","icon_hover_color","icon_pressed_color","icon_focus_color"]:
+		add_theme_color_override(state,Color.WHITE)
 	tooltip_text = "Casillero %d · Vacío" % (index + 1)
 	mouse_default_cursor_shape = Control.CURSOR_ARROW if action.is_empty() else Control.CURSOR_POINTING_HAND
 	if _equipped_badge != null:
@@ -45,6 +49,22 @@ func configure(index: int, inventory: ArenaInventoryLayout) -> void:
 		var item_id := inventory.item_id(index)
 		var item := ClassCatalog.get_item(item_id)
 		icon = AOResources.get_equipment_icon(item_id)
+		if _finished_item == null:
+			_finished_item = TextureRect.new()
+			_finished_item.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			_finished_item.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			_finished_item.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			add_child(_finished_item)
+			_finished_item.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+			_finished_item.offset_left = -17
+			_finished_item.offset_top = -17
+			_finished_item.offset_right = 17
+			_finished_item.offset_bottom = 17
+		_finished_item.texture = icon
+		_finished_item.show()
+		ArenaSpriteFinish.apply(_finished_item,icon,0.28)
+		for state: String in ["icon_normal_color","icon_hover_color","icon_pressed_color","icon_focus_color"]:
+			add_theme_color_override(state,Color.TRANSPARENT)
 		var equipped := inventory.equipped_ids.has(item_id)
 		tooltip_text = "%s · %s\nClic: equipar / desequipar · Arrastrar con botón derecho: mover" % [item.get("Name", "Objeto"), "Equipado" if equipped else "En inventario"]
 		if _equipped_badge == null:

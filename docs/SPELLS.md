@@ -1,6 +1,6 @@
 # Hechizos y Lanzar
 
-La arena continúa la interfaz validada de AO20, sin incorporar la prueba retirada de `work/pvp-spells`. El libro importa las 213 entradas de Hechizos.dat y habilita 39 que tienen resolución de servidor. La lista exacta, con cada dependencia pendiente, está en [SPELL_CATALOG.md](SPELL_CATALOG.md).
+La arena continúa la interfaz validada de AO20, sin incorporar la prueba retirada de `work/pvp-spells`. El libro importa las 213 entradas de Hechizos.dat y habilita 38 que tienen resolución de servidor. La lista exacta, con cada dependencia pendiente, está en [SPELL_CATALOG.md](SPELL_CATALOG.md).
 
 ## Controles
 

@@ -3,6 +3,7 @@ extends Button
 
 signal spell_dropped(slot: int, dropped_spell_id: int)
 signal clear_requested(slot: int)
+signal book_move_started(id: int, screen_position: Vector2)
 
 var spell_id := 0
 var hotkey_slot := -1
@@ -43,6 +44,8 @@ func configure(id: int, slot: int = -1, profile_id: int = 1) -> void:
 		text = ""
 		icon = null
 		tooltip_text = "Acceso sin asignar. Arrastrá un hechizo hasta acá."
+	if slot < 0:
+		tooltip_text += "\nBotón derecho + arrastrar: ordenar el libro."
 	icon_alignment = HORIZONTAL_ALIGNMENT_CENTER if slot >= 0 else HORIZONTAL_ALIGNMENT_LEFT
 	alignment = HORIZONTAL_ALIGNMENT_LEFT
 	if slot >= 0:
@@ -107,6 +110,9 @@ func _drop_data(_position: Vector2, data: Variant) -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
-	if hotkey_slot >= 0 and event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
 		accept_event()
-		clear_requested.emit(hotkey_slot)
+		if hotkey_slot >= 0:
+			clear_requested.emit(hotkey_slot)
+		else:
+			book_move_started.emit(spell_id, get_global_mouse_position())

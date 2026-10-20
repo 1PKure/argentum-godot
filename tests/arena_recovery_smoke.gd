@@ -79,7 +79,7 @@ func _run() -> void:
 	_check(result.ok and rival.active_effects.has("Paralizado") and caster.current_mana == 2112, "Paralyze applies original cost and synchronized status")
 	registry._last_move_time[702] = -1000
 	var tile: Vector2i = rival.grid_position
-	_check(registry.try_move_player(702, 3) == null and rival.grid_position == tile, "Server rejects movement during paralysis")
+	_check(registry.try_move_player(702, 3) != null and rival.grid_position == tile and rival.facing_direction == 3, "Paralysis blocks translation but permits an authoritative turn")
 	registry._last_spell_time[702] = -5000
 	result = registry.try_cast_spell(702, 27, rival.grid_position, 1)
 	_check(result.ok and rival.active_effects.is_empty(), "A paralyzed player can cast Remove Paralysis on self")

@@ -10,7 +10,7 @@ Atajos y macros se guardan por perfil local estable, no por ID de conexión. Sin
 
 Abrir Menú o una ventana de opciones durante práctica individual contra bot solicita pausa al servidor. La simulación de esa sala congela movimiento, IA, regeneración, estados, cuenta y recargas con un reloj lógico. El cliente pausa sus animaciones y audio de mundo; red y UI permanecen activas. Cambiar Menú → Controles conserva la pausa. Cerrar, salir o desconectar no deja otra sala pausada. En PvP humano el menú sólo bloquea la entrada local; el duelo sigue.
 
-El botón Desconectar inferior cierra la conexión; Menú → Salir de la sala vuelve al directorio conservándola. Cliente/servidor requieren protocolo18.
+El botón Desconectar inferior cierra la conexión; Menú → Salir de la sala vuelve al directorio conservándola. Cliente/servidor requieren protocolo19.
 
 ## Validación
 
@@ -19,3 +19,7 @@ El botón Desconectar inferior cierra la conexión; Menú → Salir de la sala v
 ## Libro de combate
 
 La pestaña Hechizos usa más altura para mostrar unas seis entradas y Lanzar; Inventario restaura el minimapa ampliado. Se filtran Dardo/Flecha/Misil básicos, curaciones iniciales y variantes redundantes. Los datos/reglas originales permanecen en el proyecto; la selección y los macros de la arena usan el catálogo de combate. Asesino/Paladín/Bandido priorizan golpe físico enmacro3, Druida Rayo Elemental y las clases con Descarga la conservan. Los huecos guardados no se rellenan automáticamente. Vida siempre arriba de maná.
+
+Al pulsar una dirección bloqueada por rival, pared o raíz, el jugador puede orientarse sin cambiar de tile. El giro comparte la cadencia de movimiento y no interrumpe meditación estando quieto. No evita los bloqueos de ronda o pausa.
+
+Libro: mantené botón derecho y arrastrá un hechizo sobre otro para ordenar la lista. Se guarda localmente por perfil y clase; no modifica macros. Clic izquierdo conserva selección/Lanzar y arrastre hacia macros. Escape o soltar afuera cancela el movimiento.

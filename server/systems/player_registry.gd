@@ -149,80 +149,35 @@ func try_move_player(
 	direction: int,
 	current_time: int = -1
 ) -> PlayerState:
-	if is_round_locked(peer_id):
+	if is_round_locked(peer_id) or not _players.has(peer_id) or not MovementRules.is_valid_direction(direction):
 		return null
-	if not _players.has(peer_id):
+	var player: PlayerState = _players[peer_id]
+	if not player.is_alive and not player.is_ghost:
 		return null
-
-	if not MovementRules.is_valid_direction(
-		direction
-	):
-		return null
-	
-	var player: PlayerState = (
-		_players[peer_id]
-	)
-
-	if (
-		not player.is_alive
-		and not player.is_ghost
-	):
-		return null
-
 	if current_time < 0:
 		current_time = Time.get_ticks_msec()
-
-	var last_move_time: int = (
-		_last_move_time.get(
-			peer_id,
-			0
-		)
-	)
-
-	if _status_system.is_rooted(peer_id, current_time):
-		return null
+	var last_move_time: int = _last_move_time.get(peer_id, 0)
 	if not MovementRules.is_move_ready(current_time, last_move_time):
 		return null
 
-	var offset: Vector2i = (
-		MovementRules.get_offset(
-			direction
-		)
-	)
-
-	var new_position: Vector2i = (
-		player.grid_position
-		+ offset
-	)
-
-	if not ArenaData.is_walkable(
-		_arena_id,
-		new_position
-	):
-		return null
-
-	if (
-		player.is_alive
-		and _is_position_blocked(
-			new_position,
-			peer_id
-		)
-	):
-		print(
-		"Movement blocked -> Player: %d | Position: %s"
-		% [
-			peer_id,
-			new_position
-		]
-	)
-		return null
+	var new_position := player.grid_position + MovementRules.get_offset(direction)
+	var blocked := _status_system.is_rooted(peer_id, current_time) or not ArenaData.is_walkable(_arena_id, new_position)
+	if not blocked and player.is_alive:
+		blocked = _is_position_blocked(new_position, peer_id)
+	if blocked:
+		# Pressing toward an adjacent opponent must still aim the melee attack.
+		# A rooted player can turn, but cannot translate; turns and steps share
+		# the same cadence so alternating them cannot bypass movement limits.
+		if player.facing_direction == direction:
+			return null
+		player.facing_direction = direction
+		_last_move_time[peer_id] = MovementRules.get_accepted_move_time(current_time, last_move_time)
+		return player
 
 	player.is_meditating = false
 	player.grid_position = new_position
 	player.facing_direction = direction
-
 	_last_move_time[peer_id] = MovementRules.get_accepted_move_time(current_time, last_move_time)
-
 	return player
 
 

@@ -18,7 +18,7 @@ Lava exterior usa roca oscura con grietas finas de escala fija del mundo y brill
 
 ## Magia y meditación
 
-`ArenaSpellVisual` dibuja y anima los39 conceptos con código nuevo; ninguna animación/hoja AO20 se muestra como capa principal. La referencia conserva el concepto: Descarga tiene dos esferas eléctricas que convergen, Tormenta abre fuego/partículas y Apocalipsis una gran explosión con silueta de cráneo. Los demás efectos tienen variantes propias de curación, control, raíces, implosión y protección. La meditación compacta azul/dorada aprobada se conserva.
+`ArenaSpellVisual` dibuja y anima los38 conceptos activos con código nuevo; ninguna animación/hoja AO20 se muestra como capa principal. La referencia conserva el concepto: Descarga tiene dos esferas eléctricas que convergen, Tormenta abre fuego/partículas y Apocalipsis una gran explosión con silueta de cráneo. Los demás efectos tienen variantes propias de curación, control, raíces, implosión y protección. La meditación vuelve al remolino dorado/blanco ascendente, con vetas azules y centro abierto.
 
 Al abrir Hechizos, la columna da prioridad al libro y su botón Lanzar; al volver a Inventario restaura el minimapa ampliado. Se retira el catálogo completo de la UI y se muestran únicamente las opciones de combate legales de la clase, en orden útil. Los datos DAT/reglas importados permanecen para referencia; no se cambian costes ni daños. Los macros guardados conservan huecos y asignaciones válidas; los básicos retirados vuelven al valor de combate del preset.
 
@@ -29,3 +29,11 @@ Se conservan anclaje a pies, seguimiento interpolado, palabras del lanzador y se
 Import y render nativo GL Compatibility. Los smoke de interfaz verifican recursos propios, foco, filtros, consola y reconexión; las pruebas con PCK y dedicado comprueban inventario/macros/pociones y cambio sincronizado de escenario. HUD y ventanas se revisan en cuatro resoluciones. `combat_feedback_smoke.gd` comprueba las nuevas familias, anclaje, seguimiento, limpieza y flecha/sangre. Hay galería renderizada de todos los hechizos para QA.
 
 La revisión estética y de sonido en navegador Windows sigue siendo manual. Próximas iteraciones pueden mejorar animaciones de personajes/equipo y detalles artísticos sin volver a alterar el combate.
+
+## Personajes, equipo y ambiente
+
+`ArenaSpriteFinish` aplica reconstrucción de bordes 2x, sombras frías y reflejos marfil sobre las siluetas 2D existentes, también en los objetos del inventario/preset. Los límites de cada región del atlas evitan mezclar fotogramas vecinos. Conserva dirección, animación, transparencia y color fantasma; no modifica archivos AO20 ni colisiones. No son modelos 3D nuevos.
+
+El golpe confirmado anima la espada durante 240ms; el lanzamiento confirmado inclina y eleva ligeramente el báculo durante 300ms. Los gestos vuelven al agarre original, se cancelan al cambiar equipo/morir y se congelan al pausar. No retrasan daño ni intervalos.
+
+Los biomas tienen dos capas de partículas con baja densidad: hojas/motas en bosque, polvo en desierto, ceniza y brasas en lava y polvo iluminado en sala. Cambiar arena sustituye el ambiente y pausar la práctica lo congela. Tormenta usa naranja vivo y núcleos ámbar; Descarga conserva esferas luminosas y rayos verticales; Apocalipsis acentúa masa de fuego y cráneo. Las capturas de United aportadas se usan como referencia visual, sin copiar sus recursos.

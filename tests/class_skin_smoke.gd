@@ -18,7 +18,8 @@ func _run() -> void:
 		var original := ClassCatalog.get_equipped_profile(id, player.equipped_items)
 		visual.set_loadout(id, player.equipped_items, "preset")
 		var fingerprints: Array[String] = [_fingerprint(visual.body.sprite_frames)]
-		var bodies: Array[int] = [int(original.body_id)]
+		var base_skin := SkinCatalog.get_skin("preset",id)
+		var bodies: Array[int] = [int(base_skin.body_id) if int(base_skin.body_id)>0 else int(original.body_id)]
 		var skins := SkinCatalog.for_class(id)
 		_check(skins.size() == 4, "Class %d has its preset and three resolved rewards" % id)
 		for skin: Dictionary in skins.slice(1):
@@ -39,6 +40,7 @@ func _run() -> void:
 			if id == 1 or id == 6:
 				_check(str(skin.style) == "robe" and str(skin.reference_family) == "blue" and (str(skin.source_name).to_lower().contains("túnica") or str(skin.source_name).to_lower().contains("tunica")), "Caster class %d reward uses a blue-reference robe" % id)
 	_check(SkinCatalog.get_skin("explorer", 8).body_id != ClassCatalog.get_profile(8).body_id, "Hunter's first win cannot repeat its starter armor")
+	_check(SkinCatalog.for_class(1).map(func(s: Dictionary) -> int: return int(s.body_id)) == [117,113,142,141], "Mage tiers progress blue, red, gray, legendary without changing equipment")
 	_check(SkinCatalog.for_class(9).is_empty(), "Discarded classes have no cosmetic catalog")
 	# v1 IDs and the same storage file retain previously earned wins/selection.
 	var progress := SkinProgress.new()

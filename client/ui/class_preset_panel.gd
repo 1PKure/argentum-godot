@@ -140,6 +140,7 @@ func _show_selected() -> void:
 		_gear.add_child(row)
 		var icon := TextureRect.new()
 		icon.texture = AOResources.get_equipment_icon(item_id)
+		ArenaSpriteFinish.apply(icon,icon.texture,0.28)
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon.custom_minimum_size = Vector2(26, 26)

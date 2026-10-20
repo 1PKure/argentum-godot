@@ -22,7 +22,7 @@ const CONCEPTS := {
 	1: "arcane_dart", 2: "arcane_arrow", 3: "arcane_missiles", 4: "dragon_breath",
 	11: "cleanse_poison", 12: "minor_healing", 13: "major_healing", 25: "paralysis_cage",
 	26: "binding_vines", 27: "shatter_paralysis", 28: "dizzy_stars", 29: "restore_motion",
-	31: "critical_healing", 39: "flying_ember", 40: "igneous_flare", 41: "opening_firestorm",
+	31: "critical_healing", 39: "flying_ember", 40: "igneous_flare", 41: "opening_fire_cloud",
 	43: "electric_arrow", 50: "electric_impact", 51: "converging_electric_orbs", 53: "apocalypse_skull_burst",
 	54: "implosion", 55: "banshee_wail", 56: "final_judgement", 59: "elemental_ray",
 	112: "dispel_magic", 113: "thorn_burst", 122: "mortal_word", 131: "banishment_gate",
@@ -98,27 +98,27 @@ func _draw() -> void:
 # These paths drive the actual drawing and also let QA check the movement,
 # rather than merely asserting a descriptive family/name flag.
 func electric_orb_positions(p: float) -> PackedVector2Array:
-	var approach := smoothstep(0.0, 0.48, p)
-	var separation := lerpf(63.0, 0.0, approach)
-	var height := lerpf(-89.0, -55.0, approach)
+	var approach := smoothstep(0.03, 0.74, p)
+	var separation := lerpf(50.0, 0.0, approach)
+	var height := lerpf(-89.0, -82.0, approach)
 	return PackedVector2Array([Vector2(-separation, height), Vector2(separation, height)])
 
 
 func storm_particle_positions(p: float) -> PackedVector2Array:
 	var points := PackedVector2Array()
 	for i in range(22):
-		var angle := -PI * 0.93 + i * PI * 0.86 / 21.0 + sin(i * 7.1) * 0.065
+		var angle := i * 2.399 + p * 0.35 + sin(i * 7.1) * 0.10
 		var delay := (i % 4) * 0.027 + (sin(i * 1.7) + 1) * 0.018
 		var travel := clampf((p - delay) / 0.82, 0.0, 1.0)
-		var speed := 0.69 + (i % 7) * 0.062
-		var drift := Vector2(sin(i * 3.1) * 5, sin(i * 4.7) * 3)
-		points.append(Vector2(0, -8) + drift + Vector2(cos(angle), sin(angle)) * (12.0 + travel * 103.0 * speed) + Vector2(0, travel * travel * 17))
+		var speed := 0.74 + (i % 7) * 0.055
+		var drift := Vector2(sin(i * 3.1) * 4, sin(i * 4.7) * 3)
+		points.append(Vector2(0, -51) + drift + Vector2(cos(angle), sin(angle) * 0.76) * (8.0 + travel * 92.0 * speed))
 	return points
 
 
 func apocalypse_outline(p: float) -> PackedVector2Array:
-	var growth := smoothstep(0.08, 0.40, p)
-	var center := Vector2(0, -130 - growth * 26)
+	var growth := smoothstep(0.14, 0.60, p)
+	var center := Vector2(0, lerpf(-40, -146, growth))
 	var points := PackedVector2Array()
 	for i in range(49):
 		var angle := i * TAU / 48.0
@@ -141,25 +141,36 @@ func healing_particle_positions(p: float) -> PackedVector2Array:
 func _electric(a: float, p: float) -> void:
 	if spell_id == 51:
 		var orbs := electric_orb_positions(p)
-		var approaching := 1.0 - smoothstep(0.46, 0.62, p)
+		var approaching := 1.0 - smoothstep(0.64, 0.82, p)
 		for i in range(2):
 			var at := orbs[i]
-			_orb(at, 14 + sin(p * 15 + i) * 1.5, ELECTRIC, a * approaching)
+			_electric_sphere(at, 12 + sin(p * 15 + i), a * approaching)
 			_ring(at, 10, 1.0, ELECTRIC, a * approaching * 0.7, 1)
 			_ring(at, 13, 0.35, WHITE, a * approaching * 0.5, 0.7)
 			for branch in range(3):
 				var angle := branch * TAU / 3 + p * 5 + i * PI
 				var direction := Vector2.from_angle(angle)
 				_lightning(at + direction * 7, at + direction * 27, ELECTRIC, a * approaching * 0.8, i + branch)
-		if p < 0.5: _lightning(orbs[0], orbs[1], ELECTRIC, a * 0.8, 2)
-		var burst := clampf((p - 0.43) / 0.57, 0, 1)
-		if p > 0.43:
-			_orb(Vector2(0, -55), 17 * (1-burst), WHITE, a * (1-burst))
-			for i in range(9):
-				var direction := Vector2.from_angle(i * TAU / 9 + 0.12)
-				_lightning(Vector2(0, -55) + direction * 7, Vector2(0, -55) + direction * (21 + burst * 49), ELECTRIC, a * (1-burst), i)
-			_lightning(Vector2(0, -55), Vector2(0, -2), ELECTRIC, a * (1-burst), 1)
-			_ring(Vector2.ZERO, 16 + burst * 29, 0.33, ELECTRIC, a * (1-burst) * 0.65, 1.2)
+		if p < 0.60: _lightning(orbs[0], orbs[1], ELECTRIC, a * 0.65, 2)
+		# The paired spheres keep their AO cloud/ball silhouette. Their bolts
+		# descend and intertwine rather than becoming an unrelated radial star.
+		if p > 0.20:
+			var descend := smoothstep(0.20, 0.56, p)
+			for i in range(2):
+				_electric_current(orbs[i], Vector2(orbs[i].x * 0.55, -82 + descend * 78), a * approaching * descend, i + 1)
+		if p > 0.66:
+			var merged := smoothstep(0.66, 0.84, p)
+			var top := Vector2(0, lerpf(-83, -69, merged))
+			var bottom := Vector2(sin(p*7)*4, -11)
+			_electric_sphere(top, 15, a * merged)
+			_orb(bottom, 7 + merged * 3, WHITE, a * merged * 0.65)
+			for side in [-1.0, 1.0]:
+				var current := PackedVector2Array()
+				for j in range(21):
+					var f := j / 20.0
+					current.append(top.lerp(bottom, f) + Vector2(sin(f * TAU + p * 5) * 9 * side, 0))
+				_glow_line(current, ELECTRIC, 3.4, a * merged)
+				_glow_line(current, WHITE, 1.2, a * merged * 0.88)
 		return
 	if spell_id == 43:
 		var at := Vector2(0, lerpf(-115.0, -23.0, smoothstep(0, 0.55, p)))
@@ -183,45 +194,51 @@ func _electric(a: float, p: float) -> void:
 
 
 func _apocalypse(a: float, p: float) -> void:
-	var birth := smoothstep(0.0, 0.18, p)
+	var birth := smoothstep(0.0, 0.48, p)
 	var blast := clampf((p-0.15) / 0.75, 0, 1)
-	var sustain := 1.0 - smoothstep(0.66, 1.0, p)
+	var sustain := 1.0 - smoothstep(0.72, 1.0, p)
 	# A huge ember plume resolves into an energy skull, then disintegrates.
 	# It occupies the target's vicinity, never a screen-wide white flash.
 	for side in [-1.0, 1.0]:
 		var trunk := PackedVector2Array()
 		for i in range(22):
 			var f := i / 21.0
-			trunk.append(Vector2(side * (8 + sin(f * 8 - p * 7) * 10) * sin(f * PI), -f * 146 * birth))
-		_glow_line(trunk, FIRE, 5.0, a * sustain * 0.75)
+			trunk.append(Vector2(side * (6 + sin(f * 7 - p * 6) * 3) * sin(f * PI), -f * 126 * birth))
+		_glow_line(trunk, FIRE.lerp(GOLD, 0.25), 3.8, a * sustain * 0.65)
+		_flame(Vector2(side * 5, -12), 9 * birth, 67 * birth, FIRE, a * sustain * 0.28)
 	var skull := apocalypse_outline(p)
-	if p > 0.085: draw_colored_polygon(skull, Color(FIRE, a * sustain * 0.18))
-	_glow_line(skull, FIRE.lerp(GOLD, 0.35), 3.5, a * sustain)
-	var grow := smoothstep(0.08, 0.40, p)
-	var center := Vector2(0, -130 - grow * 26)
+	if p > 0.15:
+		draw_colored_polygon(skull, Color("ff651c", a * sustain * 0.60))
+		var hot_core := PackedVector2Array()
+		var hot_center := Vector2(0, lerpf(-40, -146, smoothstep(0.14, 0.60, p)))
+		for point in skull: hot_core.append(hot_center + (point-hot_center)*0.84)
+		draw_colored_polygon(hot_core, Color("ffbe37", a * sustain * 0.38))
+	_glow_line(skull, Color("ff9d25"), 4.5, a * sustain)
+	var grow := smoothstep(0.14, 0.60, p)
+	var center := Vector2(0, lerpf(-40, -146, grow))
 	for i in range(11):
 		var angle := PI + i * PI / 10
 		var at := center + Vector2(cos(angle) * 67, sin(angle) * 51) * grow
-		var warmth := FIRE.lerp(GOLD, (i % 3) * 0.22)
+		var warmth := Color("ff771a").lerp(Color("ffd94e"), (i % 3) * 0.30)
 		# Wide soft energy lobes, not a row of white beads along the skull.
 		for layer in range(4, 0, -1):
-			draw_circle(at, (12 + layer * 4) * grow, Color(warmth, a * sustain * (0.07 if layer > 1 else 0.13)), true, -1, true)
+			draw_circle(at, (12 + layer * 4) * grow, Color(warmth, a * sustain * (0.13 if layer > 1 else 0.22)), true, -1, true)
 		if i % 2 == 0:
 			var plume := PackedVector2Array([at, at + Vector2(sin(i + p*6)*9, -17*grow), at + Vector2(sin(i*2 + p*4)*14, -32*grow)])
 			_glow_line(plume, warmth, 1.8, a * sustain * 0.5)
 	if grow > 0.05:
 		for side in [-1.0, 1.0]:
-			var eye := PackedVector2Array([Vector2(side * 10, -5), Vector2(side * 43, -15), Vector2(side * 32, 8)])
+			var eye := PackedVector2Array([Vector2(side * 11, -6), Vector2(side * 40, -12), Vector2(side * 39, 1), Vector2(side * 25, 8), Vector2(side * 14, 4)])
 			for i in range(eye.size()): eye[i] = center + eye[i] * grow
-			draw_colored_polygon(eye, Color("25172c", a * sustain * 0.9))
-			_glow_line(PackedVector2Array([eye[0], eye[1], eye[2]]), GOLD, 1.5, a * sustain)
+			draw_colored_polygon(eye, Color("8c2116", a * sustain * 0.96))
+			_glow_line(PackedVector2Array([eye[0], eye[1]]), Color("ffd955"), 0.8, a * sustain * 0.65)
 			var cheek := PackedVector2Array([center + Vector2(side * 59, 12) * grow, center + Vector2(side * 31, 38) * grow, center + Vector2(side * 24, 59) * grow])
 			_glow_line(cheek, FIRE, 3.0, a * sustain)
 		for i in range(5):
 			var at := center + Vector2((i-2)*9, 39) * grow
 			_glow_line(PackedVector2Array([at, at + Vector2(0, 16)*grow]), GOLD, 2, a * sustain * 0.8)
 		var nose := PackedVector2Array([center + Vector2(0, 8)*grow, center + Vector2(-8, 24)*grow, center + Vector2(8, 24)*grow])
-		draw_colored_polygon(nose, Color("25172c", a * sustain * 0.85))
+		draw_colored_polygon(nose, Color("8c2116", a * sustain * 0.94))
 	for i in range(28):
 		var angle := i * TAU / 28 + 0.05
 		var direction := Vector2(cos(angle), sin(angle) * 0.64)
@@ -235,18 +252,18 @@ func _apocalypse(a: float, p: float) -> void:
 func _fire(a: float, p: float) -> void:
 	if spell_id == 41:
 		var particles := storm_particle_positions(p)
-		# Unequal warm puffs/embers open away from the body. Avoid evenly spaced
-		# spokes: the original concept is a spreading fire cloud, not a radial UI.
+		# Warm irregular lobes open around the body into a broken fire cloud,
+		# echoing AO's expanding burst without reusing its bitmap frames.
 		for i in range(particles.size()):
 			var at := particles[i]
 			var size_value := 5.0 + (i * 7 % 11) * 0.65
-			var strength := a * (0.88 - p * 0.30) * (0.68 + (i % 3) * 0.12)
-			var color := FIRE.lerp(GOLD, (i % 5) * 0.12)
+			var strength := a * (1.05 - p * 0.22) * (0.78 + (i % 3) * 0.10)
+			var color := Color("ff5018").lerp(Color("ffbe2d"), (i % 5) * 0.16)
 			for layer in range(5, 0, -1):
 				var radius := size_value * (0.35 + layer * 0.28)
-				draw_circle(at, radius, Color(color, strength * (0.11 if layer > 2 else 0.18)), true, -1, true)
+				draw_circle(at, radius, Color(color, strength * (0.17 if layer > 2 else 0.29)), true, -1, true)
 			if i % 4 == 1:
-				_flame(at + Vector2(0, 3), size_value * 0.5, size_value * 1.6, color, strength * 0.65)
+				_flame(at + Vector2(0, 3), size_value * 0.5, size_value * 1.6, color, strength * 0.85)
 			elif i % 4 == 0:
 				var drift := Vector2(sin(i * 5.2) * 4, -5 - i % 3)
 				_glow_line(PackedVector2Array([at-drift, at]), GOLD, 1.0, strength * 0.5)
@@ -284,7 +301,7 @@ func _healing(a: float, p: float) -> void:
 		_sparks(GREEN,a,p,7,23,75)
 		return
 	var restoring := family == "restoration"
-	var color := Color("8bdfd4") if restoring else GREEN
+	var color := Color("8bdfd4") if restoring else (Color("e7e8b3") if spell_id in [12, 13] else GREEN)
 	var points := healing_particle_positions(p)
 	for i in range(points.size()):
 		var at := points[i]
@@ -506,9 +523,26 @@ func _arcane(a: float, p: float) -> void:
 			_orb(at,5,ELECTRIC,a)
 			_glow_line(PackedVector2Array([at+Vector2(0,-17),at]),VIOLET,1.3,a*0.6)
 		else:
-			_star(at,4.5,ELECTRIC,a)
-			_glow_line(PackedVector2Array([at+Vector2(0,-25),at]),VIOLET,1.6,a*0.7)
+			_star(at,4.5,Color("f1e8c3"),a)
+			_glow_line(PackedVector2Array([at+Vector2(0,-25),at]),GOLD,1.6,a*0.7)
 	_sparks(VIOLET,a*0.5,p,6,26,51)
+
+
+func _electric_sphere(at: Vector2, radius: float, alpha: float) -> void:
+	_orb(at, radius * 1.55, Color("5ab5ff"), alpha)
+	draw_circle(at, radius * 0.76, Color(ELECTRIC, alpha * 0.75), true, -1, true)
+	draw_circle(at, radius * 0.46, Color(WHITE, alpha * 0.96), true, -1, true)
+
+
+func _electric_current(start: Vector2, end: Vector2, alpha: float, seed_value: int) -> void:
+	var points := PackedVector2Array()
+	for i in range(19):
+		var f := i / 18.0
+		var sway := sin(f * TAU * 1.5 + _age * 5 + seed_value) * 7 * sin(f * PI)
+		points.append(start.lerp(end, f) + Vector2(sway, 0))
+	_glow_line(points, Color("5baaff"), 5.0, alpha * 0.8)
+	_glow_line(points, ELECTRIC, 3.0, alpha)
+	_glow_line(points, WHITE, 1.25, alpha * 0.92)
 
 
 func _lightning(start: Vector2, end: Vector2, color: Color, alpha: float, seed_value: int) -> void:

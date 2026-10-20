@@ -6,6 +6,7 @@ const TILE_SIZE: float = 48.0
 const VISUAL_MOVEMENT_GRACE_SECONDS: float = 0.05
 var is_ghost: bool
 var _last_visual_direction := Vector2.DOWN
+var _server_facing_direction := Vector2.DOWN
 var _visual_movement_grace_timer := 0.0
 
 const MOVE_SPEED: float = (
@@ -91,6 +92,9 @@ func _process(delta: float) -> void:
 			position = waypoint
 			_movement_waypoints.pop_front()
 
+	if _movement_waypoints.is_empty():
+		# A turn-only update can arrive before the last confirmed step finishes.
+		_last_visual_direction = _server_facing_direction
 	if moved_this_frame:
 		_visual_movement_grace_timer = VISUAL_MOVEMENT_GRACE_SECONDS
 		_player_visual.set_movement(_last_visual_direction, true)
@@ -123,6 +127,9 @@ func setup(
 	local_player: bool,
 	world_position: Vector2
 ) -> void:
+	_server_facing_direction = Vector2(MovementRules.get_offset(player_state.facing_direction))
+	_last_visual_direction = _server_facing_direction
+	_player_visual.set_movement(_last_visual_direction, false)
 	peer_id = player_state.peer_id
 	grid_position = player_state.grid_position
 	display_name = player_state.display_name
@@ -174,8 +181,9 @@ func apply_server_stats(
 	is_ghost = player_state.is_ghost
 	_apply_effect_presentation(player_state)
 	_player_visual.set_loadout(player_state.class_id, player_state.equipped_items, player_state.skin_id)
+	_server_facing_direction = Vector2(MovementRules.get_offset(player_state.facing_direction))
 	if _movement_waypoints.is_empty():
-		_last_visual_direction = Vector2(MovementRules.get_offset(player_state.facing_direction))
+		_last_visual_direction = _server_facing_direction
 		_player_visual.set_movement(_last_visual_direction, false)
 
 	_player_visual.set_ghost_mode(
@@ -277,3 +285,13 @@ func _update_label() -> void:
 
 	_name_label.text = display_name
 	_name_label.modulate = Color("f2d47b") if is_local_player else Color.WHITE
+
+
+func play_melee_swing() -> void:
+	if is_alive and not is_ghost:
+		_player_visual.play_melee_swing()
+
+
+func play_spell_cast() -> void:
+	if is_alive and not is_ghost:
+		_player_visual.play_spell_cast()

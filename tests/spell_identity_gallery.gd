@@ -40,11 +40,44 @@ func _run() -> void:
 			label.add_theme_font_size_override("font_size", 13)
 			core.add_child(label)
 	await _capture("spell-modern-core-phases.png")
+	core.queue_free()
+	await process_frame
+	_setup_window(Vector2i(1120, 560))
+	var med_page := Node2D.new()
+	root.add_child(med_page)
+	for column in range(4):
+		var cell := Vector2(column * 280, 0)
+		var label := Label.new()
+		label.position = cell + Vector2(12, 8)
+		label.text = "Meditación · %.2f s" % (column * 1.1)
+		label.add_theme_font_size_override("font_size", 14)
+		med_page.add_child(label)
+		var avatar = load("res://client/characters/player_visual.tscn").instantiate()
+		avatar.position = cell + Vector2(140, 236)
+		med_page.add_child(avatar)
+		avatar.set_process(false)
+		var med := ArenaMeditationVisual.new()
+		med.position = avatar.position + Vector2(0, 30)
+		med.scale = Vector2.ONE * 1.05 # Same approved presentation scale as PlayerAvatar.
+		med.modulate.a = 0.85
+		med_page.add_child(med)
+		med.set_process(false)
+		med.set_age(column * 1.1)
+		# Second row includes actual avatar name/bars with meditation above.
+		var state := PlayerState.new(column + 1, "Meditando", Vector2i(4, 5))
+		state.is_meditating = true
+		var full_avatar = load("res://client/characters/player_avatar.tscn").instantiate()
+		med_page.add_child(full_avatar)
+		full_avatar.setup(state, true, cell + Vector2(140, 479))
+		full_avatar.set_process(false)
+		full_avatar._meditation_fx.set_process(false)
+		full_avatar._meditation_fx.set_age(column * 1.1)
+	await _capture("meditation-modern-phases.png")
 	# Draw every early/late frame as well, catching zero-sized polygons and
 	# other rendering errors which a headless geometry-only test cannot see.
 	for fraction in [0.001, 0.05, 0.09, 0.18, 0.48, 0.72, 0.96, 1.01]:
-		for child in core.get_children():
-			if child is ArenaSpellVisual: child.set_age(child.lifetime*fraction)
+		for child in med_page.get_children():
+			if child is ArenaMeditationVisual: child.set_age(fraction*5)
 		await process_frame
 		await RenderingServer.frame_post_draw
 	quit()

@@ -101,3 +101,5 @@ El menú se abre como modal centrado, por encima del HUD tanto al dibujar como a
 El nombre ocupa su propia línea; clase y ubicación van debajo. Los estados están en una fila reservada junto a los recursos; Fantasma aparece una vez y Reaparecer sólo aparece al morir, dentro del menú. Los avisos largos de hechizos tienen dos líneas y tooltip completo, separados de Lanzar. El contenido de inventario/hechizos queda recortado a su panel.
 
 `hud_layout_client.gd` comprueba clics y teclas contra un dedicado real con PCK exportado, estado de fantasma, bloqueo de clics detrás del menú y layout a 1280×800, 1280×720, 1920×1080 y 800×600. Se revisan capturas nativas; la comprobación en navegador Windows corresponde a la revisión del usuario. Esta limpieza conserva el balance y el zoom aceptados.
+
+Progresión cosmética del mago: Azul (0), Roja especial (1), Legendaria gris (3), Legendaria (5 victorias). Cambia sólo apariencia; la armadura y sus estadísticas conservan el preset. Los IDs de tier y las victorias guardadas se conservan.
