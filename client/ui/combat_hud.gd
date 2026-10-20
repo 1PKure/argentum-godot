@@ -228,12 +228,20 @@ func _on_spell_event(event: Dictionary) -> void:
 		text_value = "Te lanzaste %s" % event.spell_name if own_target else "Lanzaste %s a %s" % [event.spell_name, target]
 	else:
 		text_value = "%s te lanzó %s" % [event.caster_name, event.spell_name]
+	if str(event.get("outcome","")) in ["evaded","blocked"]:
+		text_value += " · " + ("bloqueado con escudo" if str(event.outcome)=="blocked" else "esquivado")
 	if int(event.amount) > 0:
 		text_value += " · %d" % int(event.amount)
 	console.append_message(text_value + ".", "healing" if str(event.effect) == "healing" else "damage")
 
 
 func _on_basic_attack_event(event: Dictionary) -> void:
+	if str(event.get("outcome","")) in ["evaded","blocked"]:
+		if _local_peer_id == int(event.caster_id):
+			console.append_message("%s %s tu golpe." % [event.target_name,"bloqueó" if str(event.outcome)=="blocked" else "esquivó"],"damage")
+		elif _local_peer_id == int(event.target_id):
+			console.append_message("%s el golpe de %s." % ["Bloqueaste" if str(event.outcome)=="blocked" else "Esquivaste",event.caster_name],"damage")
+		return
 	if _local_peer_id == int(event.caster_id):
 		console.append_message("Golpeaste a %s · %d." % [event.target_name, event.amount], "damage")
 	elif _local_peer_id == int(event.target_id):
@@ -527,7 +535,7 @@ func _build_menu() -> void:
 	)
 	content.add_child(HSeparator.new())
 	_menu_credits = Label.new()
-	_menu_credits.text = "Desarrollado por Matias Pulido (1PKure)\n\nCréditos de recursos: AO20 · © Noland Studios\nRecursos de terceros · CC BY-NC-ND 4.0\ngithub.com/ao-org/Recursos\nEsta arena es un proyecto independiente de Matias Pulido."
+	_menu_credits.text = "Desarrollado por Matias Pulido (1PKure)\n\nCréditos de recursos: AO20 · © Noland Studios\nRecursos de terceros · CC BY-NC-ND 4.0\nPisadas: Kenney · Impact Sounds (CC0)\nEsta arena es un proyecto independiente de Matias Pulido."
 	_menu_credits.add_theme_font_size_override("font_size", 12)
 	_menu_credits.modulate = Color("c3b99f")
 	content.add_child(_menu_credits)

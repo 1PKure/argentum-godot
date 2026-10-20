@@ -48,6 +48,8 @@ func _ready() -> void:
 	var value := ("+" if spell.effect == "healing" else "−") + str(event.amount)
 	if spell.effect in ["status", "periodic"]:
 		value = str(event.get("status_message", spell.name))
+	if _is_shot and str(event.get("outcome","")) in ["evaded","blocked"]:
+		value = "Bloqueó" if str(event.outcome)=="blocked" else "Esquivó"
 	_text = _make_label(value, target + Vector2(-80, -75), 16)
 	_text.size.x = 160
 	_text.modulate = Color("a8f0a4") if spell.effect == "healing" else Color("ffb49c")
@@ -82,7 +84,7 @@ func _process(delta: float) -> void:
 	if _is_shot and not _shot_sound_played and _elapsed >= SHOT_TRAVEL_SECONDS:
 		_shot_sound_played = true
 		if is_instance_valid(target_avatar) and not target_avatar.is_queued_for_deletion():
-			if _audio != null:
+			if _audio != null and int(event.get("amount",0)) > 0:
 				_audio.play()
 			if int(event.get("amount", 0)) > 0:
 				_blood_active = true

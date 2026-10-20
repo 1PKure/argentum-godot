@@ -40,6 +40,11 @@ var _axis_run := 0
 var _recent_cells: Array[Vector2i] = []
 var _combo_step := 0
 var _combo_until := 0
+var _combo_rebuilding := false
+var _fallback_used := false
+var _semi_step := 0
+var _semi_until := 0
+var _next_melee := 0
 var _rng := RandomNumberGenerator.new()
 var _next_control := 0
 var _cast_request := 0
@@ -136,7 +141,12 @@ func _start_round(peer_id: int, class_id: int, now: int) -> Dictionary:
 	_recent_cells.clear()
 	_combo_step = 0
 	_combo_until = 0
-	_next_control = _starts_at + _rng.randi_range(10000, 14000)
+	_combo_rebuilding = false
+	_fallback_used = false
+	_semi_step = 0
+	_semi_until = 0
+	_next_melee = _ready_at
+	_next_control = _ready_at if _is_semimagic(bot) else _starts_at + _rng.randi_range(10000, 14000)
 	reset_world.emit()
 	status_changed.emit(status())
 	return {"ok": true}
@@ -201,7 +211,7 @@ func tick(now: int = -1) -> Array[Dictionary]:
 		_observed_cell = target.grid_position
 		_observed_rooted = target.active_effects.has("Paralizado") or target.active_effects.has("Inmovilizado")
 		_next_observation = now + _rng.randi_range(THINK_MSEC - 30, THINK_MSEC + 30)
-	var caster := bot.class_id in [1, 2, 5, 6]
+	var caster := bot.class_id in [1, 6]
 	var ranged := caster or bot.class_id == 8
 	var distance := _distance(bot.grid_position, _observed_cell)
 	if not _defending and (bot.current_health < bot.max_health * 0.55 or (caster and bot.current_mana < bot.max_mana * 0.18)):
@@ -273,7 +283,7 @@ func _attack(bot: PlayerState, ranged: bool, caster: bool, now: int, actions: Ar
 		if caster:
 			spell = _combo_spell(bot, now)
 			var choice := _rng.randf()
-			if now >= _next_control and not _observed_rooted and bot.current_mana > 700 and choice < 0.3:
+			if _combo_step == 0 and now >= _next_control and not _observed_rooted and bot.current_mana >= _mana_reserve(bot) and choice < 0.3:
 				spell = 25
 				_next_control = now + _rng.randi_range(14000, 18000)
 		var cell := _observed_cell
@@ -284,15 +294,14 @@ func _attack(bot: PlayerState, ranged: bool, caster: bool, now: int, actions: Ar
 		_next_offense = now + interval + _rng.randi_range(0, 100)
 		if caster:
 			if _cast(spell, cell, now, actions) and spell != 25:
-				# Advance only after a real confirmed hit; a missed click cannot unlock
-				# the cheaper follow-up as if the opponent had survived a combo.
-				_combo_step = 1 if spell in [53, 59] else 2 if spell == 51 or (_combo_step == 1 and spell == 3) else 0
-				_combo_until = now + 6000
+				_record_combo_spell(bot, spell, now)
 		else:
 			_shot_request += 1
 			var shot := registry.try_ranged_attack(BOT_ID, cell, _shot_request, now)
 			if shot.ok:
 				actions.append({"kind": "cast", "result": shot})
+	elif _is_semimagic(bot):
+		_semi_attack(bot, now, actions)
 	elif absi(delta.x) + absi(delta.y) == 1:
 		# Leave a real recovery window after a melee hit when health is low.
 		if _defending and _potion_due != 0:
@@ -307,7 +316,7 @@ func _attack(bot: PlayerState, ranged: bool, caster: bool, now: int, actions: Ar
 
 func _tick_potions(bot: PlayerState, now: int, actions: Array[Dictionary]) -> void:
 	var red := bot.max_health - bot.current_health >= 27
-	var blue := bot.max_mana > 0 and bot.current_mana < bot.max_mana * 0.65
+	var blue := bot.max_mana > 0 and bot.current_mana < _mana_reserve(bot)
 	if not red and not blue:
 		_potion_due = 0
 		return
@@ -392,18 +401,105 @@ func _remember_move(direction: int, cell: Vector2i) -> void:
 		_recent_cells.pop_front()
 
 
+func _is_semimagic(bot: PlayerState) -> bool:
+	return bot.max_mana > 0 and bot.class_id not in [1, 6]
+
+func _heavy_spell(bot: PlayerState) -> int:
+	return 53 if bot.class_id == 1 else 59
+
+func _mana_reserve(bot: PlayerState) -> int:
+	if bot.max_mana <= 0: return 0
+	if bot.class_id in [1, 6]:
+		var heavy_cost := int(SpellCatalog.get_spell(_heavy_spell(bot)).mana)
+		var reserve := heavy_cost * (1 if _combo_step == 1 else 2)
+		# Recover a real two-cast budget: 65% could strand the mage below it.
+		return mini(bot.max_mana, reserve + int(SpellCatalog.get_spell(27).mana) + roundi(bot.max_mana * 0.05))
+	var cost := int(SpellCatalog.get_spell(25).mana) + int(SpellCatalog.get_spell(51).mana) + int(SpellCatalog.get_spell(27).mana)
+	return mini(bot.max_mana, maxi(roundi(bot.max_mana * 0.65), cost))
+
+func _affordable(bot: PlayerState, candidates: Array[int]) -> int:
+	for id in candidates:
+		if ClassCatalog.can_cast(bot.class_id,id) and bot.current_mana >= int(SpellCatalog.get_spell(id).mana): return id
+	return 0
+
 func _combo_spell(bot: PlayerState, now: int) -> int:
-	if now > _combo_until:
+	if now > _combo_until and _combo_step == 1:
 		_combo_step = 0
-	var preferred: Array[int] = [53, 51, 59, 3]
+		_combo_rebuilding = true
+	var heavy := _heavy_spell(bot)
+	var cost := int(SpellCatalog.get_spell(heavy).mana)
 	if _combo_step == 1:
-		preferred = [51, 3]
-	elif _combo_step == 2:
-		preferred = [41, 39, 3]
-	for id: int in preferred:
-		if ClassCatalog.can_cast(bot.class_id, id) and bot.current_mana >= int(SpellCatalog.get_spell(id).mana):
-			return id
-	return 3
+		if bot.current_mana >= cost: return heavy
+		_combo_step = 0
+		_combo_rebuilding = true
+	if _combo_step == 0 and bot.current_mana >= cost * 2:
+		_combo_rebuilding = false
+		_fallback_used = false
+		return heavy
+	_combo_rebuilding = true
+	# One strong fallback, then cheaper pressure lets real blue potions build
+	# the next pair rather than spending every recovered MP immediately.
+	if bot.class_id == 1:
+		if not _fallback_used: return _affordable(bot,[51,41,39,3])
+		return _affordable(bot,[41,39,3])
+	if not _fallback_used: return _affordable(bot,[113,43,3])
+	return _affordable(bot,[43,3])
+
+func _record_combo_spell(bot: PlayerState, spell: int, now: int) -> void:
+	if spell == _heavy_spell(bot):
+		if _combo_step == 1:
+			_combo_step = 0
+			_combo_rebuilding = true
+			_fallback_used = false
+		else: _combo_step = 1
+		_combo_until = now + 6000
+	elif _combo_rebuilding: _fallback_used = true
+
+func _semi_attack(bot: PlayerState, now: int, actions: Array[Dictionary]) -> void:
+	var distance := _distance(bot.grid_position,_observed_cell)
+	var adjacent := absi(bot.grid_position.x-_observed_cell.x)+absi(bot.grid_position.y-_observed_cell.y)==1
+	if now > _semi_until and _semi_step != 0: _semi_step = 0
+	var clear := distance <= 8 and CombatRules.has_clear_shot(registry.get_arena_id(),bot.grid_position,_observed_cell)
+	if clear and _semi_step == 0 and now >= _next_control and not _observed_rooted:
+		var opener_cost := int(SpellCatalog.get_spell(25).mana) + int(SpellCatalog.get_spell(51).mana)
+		if bot.current_mana >= mini(bot.max_mana,opener_cost) and _cast(25,_observed_cell,now,actions):
+			_semi_step = 1
+			_semi_until = now + 6000
+			_next_control = now + _rng.randi_range(7500,10000)
+			_next_offense = now + SpellCatalog.SPELL_ATTACK_GAP_MSEC
+			return
+	if _semi_step == 2 and clear:
+		var finish_cost := int(SpellCatalog.get_spell(51).mana)
+		var missing := finish_cost-bot.current_mana
+		# Keep a finishing opportunity when only one/two real blues are missing.
+		if ClassCatalog.can_cast(bot.class_id,51) and missing > 0 and missing <= maxi(1,roundi(bot.max_mana*0.05))*2 and bot.current_health >= bot.max_health*0.55 and now < _semi_until-1000: return
+		var spell := _affordable(bot,[51,43,3])
+		if spell > 0 and _cast(spell,_observed_cell,now,actions):
+			_semi_step = 0
+			_next_offense = now + SpellCatalog.SPELL_ATTACK_GAP_MSEC
+			return
+		if now < _next_spell: return
+		_semi_step = 0
+	if adjacent and now >= _next_melee:
+		if _defending and _potion_due != 0: return
+		bot.facing_direction = _direction(_observed_cell-bot.grid_position)
+		_next_melee = now + maxi(CombatRules.BASIC_ATTACK_COOLDOWN_MSEC,ATTACK_INTERVAL_MSEC) + _rng.randi_range(0,100)
+		var target := registry.try_basic_attack(BOT_ID,now)
+		if target != null:
+			# A legitimate miss is still an action, never a free retry.
+			actions.append({"kind":"melee","attacker":bot.to_dictionary(),"target":target.to_dictionary()})
+			_semi_step = 2
+			_semi_until = now + 4500
+			_next_offense = now + SpellCatalog.ATTACK_SPELL_GAP_MSEC
+		else: _next_offense = now + 100
+		return
+	if _semi_step == 1 and now < _semi_until-3000: return
+	if clear and distance >= 2 and now >= _next_spell:
+		_next_offense = now + 300
+		if _rng.randf() < 0.32:
+			var spell := _affordable(bot,[51,43,3])
+			if spell > 0 and _cast(spell,_observed_cell,now,actions): _semi_step = 0
+
 
 func _distance(a: Vector2i, b: Vector2i) -> int:
 	return maxi(absi(a.x - b.x), absi(a.y - b.y))

@@ -15,6 +15,14 @@ run/main_scene="uid://crpuji0hxix8t"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
 
+[audio]
+
+general/default_playback_type=0
+general/default_playback_type.web=0
+driver/output_latency.web=80
+driver/mix_rate=48000
+driver/mix_rate.web=48000
+
 [autoload]
 
 NetworkManager="*uid://f63okkehfaww"
@@ -36,6 +44,12 @@ window/size/viewport_width=1280
 window/size/viewport_height=800
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
+
+[importer_defaults]
+
+wav={
+"compress/mode": 0
+}
 
 [input]
 

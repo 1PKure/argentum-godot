@@ -6,7 +6,7 @@ signal spell_resolved(event: Dictionary)
 signal spell_rejected(request_id: int, message: String, remaining_msec: int)
 signal server_capabilities_received(available: bool)
 
-const PROTOCOL_VERSION := 20
+const PROTOCOL_VERSION := 21
 var server_available := false
 var _query_generation := 0
 

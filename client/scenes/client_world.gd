@@ -161,8 +161,17 @@ func _on_spell_resolved(event: Dictionary) -> void:
 
 func _on_melee_resolved(event: Dictionary) -> void:
 	# Rejections and misses never produce an impact sound.
-	if int(event.get("amount",0)) <= 0 or not _avatars.has(int(event.get("target_id",0))) or not _avatars.has(int(event.get("caster_id",0))): return
+	if not _avatars.has(int(event.get("target_id",0))) or not _avatars.has(int(event.get("caster_id",0))): return
+	if int(event.get("amount",0)) <= 0 and str(event.get("outcome","")) not in ["evaded","blocked"]: return
 	(_avatars[int(event.caster_id)] as PlayerAvatar).play_melee_swing()
+	if int(event.get("amount",0)) <= 0:
+		var feedback = preload("res://client/effects/physical_feedback.gd").new()
+		feedback.target_avatar = _avatars[int(event.target_id)]
+		feedback.outcome = str(event.outcome)
+		add_child(feedback)
+		_spell_effects.append(feedback)
+		feedback.tree_exited.connect(func() -> void: _spell_effects.erase(feedback))
+		return
 	var blood := BloodImpact.new()
 	blood.setup(_avatars[int(event.target_id)],_avatars[int(event.target_id)].position - _avatars[int(event.caster_id)].position)
 	add_child(blood)
@@ -495,13 +504,13 @@ func _on_avatar_step(avatar: PlayerAvatar) -> void:
 	if _game_paused or not is_instance_valid(avatar) or not avatar.is_alive or avatar.is_ghost:
 		return
 	var now := Time.get_ticks_msec()
-	if now - _last_footstep.get(avatar.peer_id,-1000) < 85:
+	if now - _last_footstep.get(avatar.peer_id,-1000) < FootstepAudio.MIN_CONTACT_INTERVAL_MSEC:
 		return # Never replay a backlog of footsteps after a stalled render frame.
 	var audio: AudioStreamPlayer2D = _footstep_audio.get(avatar.peer_id)
 	if audio == null:
 		audio = AudioStreamPlayer2D.new()
 		audio.name = "Footsteps"
-		audio.volume_db = -20.0
+		audio.volume_db = -14.0
 		audio.max_distance = TILE_SIZE * 8.0
 		audio.attenuation = 1.4
 		audio.panning_strength = 0.45
@@ -513,11 +522,12 @@ func _on_avatar_step(avatar: PlayerAvatar) -> void:
 			_footstep_count.erase(avatar.peer_id)
 		)
 	var count: int = _footstep_count.get(avatar.peer_id,0)
-	audio.stream = FootstepAudio.stream_for(_arena_id,count)
-	audio.pitch_scale = 0.98 if count % 2 == 0 else 1.02
+	var pattern := FootstepAudio.pattern_for(_arena_id)
+	if audio.stream != pattern: audio.stream = pattern
+	audio.pitch_scale = 1.0
 	_last_footstep[avatar.peer_id] = now
 	_footstep_count[avatar.peer_id] = count + 1
-	ArenaAudioMix.route(audio)
+	ArenaAudioMix.route(audio,3)
 	audio.play()
 
 

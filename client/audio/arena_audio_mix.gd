@@ -8,7 +8,7 @@ const OUTPUT_CEILING_DB := -1.0
 static func configure() -> void:
 	var bus := AudioServer.get_bus_index(BUS)
 	if bus < 0:
-		AudioServer.add_bus()
+		AudioServer.add_bus(AudioServer.bus_count)
 		bus = AudioServer.bus_count - 1
 		AudioServer.set_bus_name(bus,BUS)
 		AudioServer.set_bus_send(bus,&"Master")
@@ -24,7 +24,9 @@ static func configure() -> void:
 	limiter.release = 0.10
 	AudioServer.add_bus_effect(master,limiter)
 
-static func route(player: Node) -> void:
+static func route(player: Node, voices: int = 1) -> void:
 	configure()
 	player.set("bus",BUS)
-	player.set("max_polyphony",1)
+	player.set("max_polyphony",clampi(voices,1,4))
+	# Web Sample playback bypasses bus effects; use the same protected mixer.
+	player.set("playback_type",AudioServer.PLAYBACK_TYPE_STREAM)

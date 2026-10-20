@@ -128,6 +128,7 @@ func _show_selected() -> void:
 	_preview.set_class_id(int(profile.id))
 	_preview.set_movement(Vector2.DOWN, true)
 	details.text = "Vida: %d · Maná: %d\nGolpe medio: %d · Alcance: %d\nDefensa corporal: %.0f\nResistencia mágica: %.0f%% · Daño mágico: +%.0f%%\n%d hechizos de combate" % [profile.max_health, profile.max_mana, profile.physical_power, profile.range, profile.armor_points, profile.resistance_percent, profile.magic_bonus, ClassCatalog.combat_book_ids(int(profile.id)).size()]
+	details.text += "\nEvasión: %.0f%% · Rechazo de escudo: %.0f%%" % [profile.get("evasion_percent",0),profile.get("shield_block_percent",0)]
 	for child in _gear.get_children():
 		_gear.remove_child(child)
 		child.queue_free()
