@@ -21,7 +21,7 @@ reservado en cualquier combinación de mayúsculas.
 ## Puntuación y publicación futura
 
 Cada victoria confirmada suma **100 puntos**, tanto en PvP como contra un bot.
-Se mantienen `pvp_wins`, `bot_wins`, `wins` y `points`. El servidor debe llamar a
+Se mantienen `pvp_wins`, `bot_wins`, `wins` y `points`. `ServerMain` llama a
 `record_victory` únicamente después de validar un ganador real. El store no
 decide las condiciones del duelo ni concede recompensas por abandonos.
 
@@ -86,3 +86,22 @@ reservado, el homenaje, puntos PvP/bot, dos jugadores, reinicio, doble entrega,
 reutilización conflictiva de una ronda, exportación pública, recuperación del
 respaldo, corrupción doble, rollback ante fallo de guardado, obstrucción real del
 archivo y el límite de 50 jugadores más homenaje.
+
+## Lobby, red y futura página
+
+El botón **Ranking** del directorio y de la sala muestra la tabla y permite elegir
+apodo. El cliente se autentica automáticamente al conectar, consulta cada 30 s y
+recibe actualizaciones al confirmarse una victoria. El protocolo es 22. Se captura
+la identidad de los participantes al comenzar la ronda: reconexiones, resultados
+repetidos, derrotas, abandonos o dos ventanas del mismo perfil no regalan puntos.
+Los fallos de guardado se reintentan cada cinco segundos mientras sigue el servidor.
+
+En web, `window.argentumRanking` contiene el snapshot público y el evento
+`argentum:ranking` anuncia sus cambios. La futura página puede aprovechar este
+contrato cuando el cliente está conectado; una clasificación pública independiente
+del juego requerirá implementar su endpoint de lectura. No se abrió ningún puerto
+HTTP ni se añadió servicio de pago, cuenta, proveedor externo o base de datos.
+
+Para QA se puede usar `--ranking-path=/ruta/aislada.json` en el dedicado. En uso
+normal hay que conservar el directorio de datos `user://` del servidor y su archivo
+`.bak` entre actualizaciones; reemplazar el ejecutable/proyecto no exige borrarlos.

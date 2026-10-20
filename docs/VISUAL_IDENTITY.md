@@ -40,4 +40,4 @@ Los biomas tienen dos capas de partículas con baja densidad: hojas/motas en bos
 
 Revisión de ambiente:80–120 partículas repartidas uniformemente en el mapa y cayendo como nieve, con hojas/arena/ceniza/polvo propios de cada bioma y suficientes partículas en la vista de combate. Meditación150px,14bandas de oro/marfil con mayor intensidad alrededor de base y torso, sin rojo ni azul. Golpes melee confirmados usan la misma sangre de las flechas, siguiendo al objetivo y sin modificar daño.
 
-Audio web: rutaStream, busCombat con índice explícito,48kHz y búfer80ms. Pisadas de foley KenneyCC0, cuatro variantes por bioma, cadencia espaciada y colas sin cortes. No se atribuye distorsión a las fuentesPCM32: importación y captura coinciden; escucha finalWindows pendiente.
+Audio original a0dB, sin filtros ni limitador. Golpe completo idéntico al adjunto. Pisadas originales AO20, dos alternadas por bioma sin variar tono/volumen. Transporte webStream, bus explícito,48kHz y búfer80ms. Capturas comparadas con la fuente; escucha finalWindows pendiente.

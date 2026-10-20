@@ -4,6 +4,7 @@ var lobbies := ArenaLobbyDirectory.new()
 var ranking: ArenaRankingStore
 var _ranked_peers: Dictionary = {}
 var _ranking_requests: Dictionary = {}
+var _ranking_reads: Dictionary = {}
 var _ranked_rounds: Dictionary = {}
 var _pending_awards: Dictionary = {}
 var _ranking_retry := 0.0
@@ -91,7 +92,11 @@ func _on_peer_disconnected(peer_id: int) -> void:
 	lobbies.disconnect_peer(peer_id)
 	_ranked_peers.erase(peer_id)
 	_ranking_requests.erase(peer_id)
+	_ranking_reads.erase(peer_id)
 	if room != null and lobbies.rooms.has(room.id): _publish_room(room,true)
+	elif room != null:
+		for key: String in _ranked_rounds.keys():
+			if int(_ranked_rounds[key].room_id) == room.id: _ranked_rounds.erase(key)
 	_broadcast_lobby_states()
 
 func _on_lobby_command(peer_id: int, operation: String, payload: Dictionary, request: int) -> void:
@@ -308,7 +313,11 @@ func _on_ranking_profile(peer_id: int, identity: String, secret: String, nicknam
 	RankingNetwork.send_profile(peer_id,request,result,ranking.snapshot())
 
 func _on_ranking_snapshot(peer_id: int) -> void:
-	if _can_send(peer_id): RankingNetwork.send_snapshot(peer_id,ranking.snapshot())
+	if not _can_send(peer_id): return
+	var now := Time.get_ticks_msec()
+	if now - int(_ranking_reads.get(peer_id,-1000)) < 1000: return
+	_ranking_reads[peer_id] = now
+	RankingNetwork.send_snapshot(peer_id,ranking.snapshot())
 
 func _apply_ranking_names(room: ArenaLobbyRoom) -> void:
 	for peer_id: int in room.members:
@@ -321,7 +330,10 @@ func _track_ranking_round(room: ArenaLobbyRoom) -> void:
 		var participants := {}
 		for peer_id: int in room.members:
 			if _ranked_peers.has(peer_id): participants[peer_id] = str(_ranked_peers[peer_id].id)
-		_ranked_rounds[room.round_id] = {"participants":participants,"mode":"bot" if room.bot_enabled and room.members.size() == 1 else "pvp"}
+		# One current round per room; abandoned captures do not accumulate.
+		for key: String in _ranked_rounds.keys():
+			if int(_ranked_rounds[key].room_id) == room.id: _ranked_rounds.erase(key)
+		_ranked_rounds[room.round_id] = {"room_id":room.id,"participants":participants,"mode":"bot" if room.bot_enabled and room.members.size() == 1 else "pvp"}
 	if room.phase != "result" or not _ranked_rounds.has(room.round_id): return
 	var round_data: Dictionary = _ranked_rounds[room.round_id]
 	var participants: Dictionary = round_data.participants

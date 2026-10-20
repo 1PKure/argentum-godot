@@ -85,6 +85,14 @@ func _run() -> void:
 	controller = main._spell_controller
 	_check(await _wait(func() -> bool: return net.available),"exported PCK negotiates protocol22")
 	if not net.available: await _finish(); return
+	var ranking := root.get_node("RankingNetwork")
+	_check(await _wait(func() -> bool: return ranking.registered),"ranking profile registered with dedicated server")
+	await _click(_find_button(main._lobby_panel,"Ranking"))
+	_check(main._lobby_panel._ranking.visible,"Ranking button opens shared-theme panel")
+	_check(main._lobby_panel._ranking._rows.get_child_count() >= 2,"ranking includes header and honorary first place")
+	if role == "host": await _capture("ranking.png")
+	await _click(_find_button(main._lobby_panel._ranking,"Volver"))
+	_check(not main._lobby_panel._ranking.visible,"Volver closes ranking and returns to lobby")
 	if role=="solo":
 		await _solo()
 		await _finish()
