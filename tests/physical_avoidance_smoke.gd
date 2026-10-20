@@ -39,6 +39,7 @@ func _fixture(outcome: String = "hit") -> Dictionary:
 
 
 func _test_profiles() -> void:
+	_check(int(ClassCatalog.get_profile(1).evasion_percent) == 6, "Mage receives slightly increased six-percent evasion")
 	for id: int in ClassCatalog.all_ids():
 		var equipped := ClassCatalog.default_equipment(id)
 		var profile := ClassCatalog.get_equipped_profile(id, equipped)

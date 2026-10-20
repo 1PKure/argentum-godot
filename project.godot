@@ -37,6 +37,7 @@ Skins="*res://autoload/skins.gd"
 ArenaNetwork="*res://autoload/arena_network.gd"
 LobbyNetwork="*res://autoload/lobby_network.gd"
 InputBindings="*res://autoload/input_bindings.gd"
+RankingNetwork="*res://autoload/ranking_network.gd"
 
 [display]
 

@@ -535,7 +535,7 @@ func _build_menu() -> void:
 	)
 	content.add_child(HSeparator.new())
 	_menu_credits = Label.new()
-	_menu_credits.text = "Desarrollado por Matias Pulido (1PKure)\n\nCréditos de recursos: AO20 · © Noland Studios\nRecursos de terceros · CC BY-NC-ND 4.0\nPisadas: Kenney · Impact Sounds (CC0)\nEsta arena es un proyecto independiente de Matias Pulido."
+	_menu_credits.text = "Desarrollado por Matias Pulido (1PKure)\n\nCréditos de recursos: AO20 · © Noland Studios\nRecursos de terceros · CC BY-NC-ND 4.0\nEsta arena es un proyecto independiente de Matias Pulido."
 	_menu_credits.add_theme_font_size_override("font_size", 12)
 	_menu_credits.modulate = Color("c3b99f")
 	content.add_child(_menu_credits)
@@ -734,7 +734,7 @@ func _on_recovery_event(event: Dictionary) -> void:
 	if event.action in ["health_potion", "mana_potion"] and int(event.peer_id) == _local_peer_id:
 		var audio := AudioStreamPlayer.new()
 		audio.stream = load("res://assets/argentum/source/audio/135.wav")
-		audio.volume_db = -12.0
+		audio.volume_db = 0.0
 		add_child(audio)
 		audio.finished.connect(audio.queue_free)
 		audio.play()

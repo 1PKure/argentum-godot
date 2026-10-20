@@ -38,7 +38,7 @@ def main():
         fraction = index*rate/capture_rate
         low = int(fraction)
         value = original[low]*(1-(fraction-low))+original[min(low+1,len(original)-1)]*(fraction-low)
-        expected.append(value*10**(-3/20))
+        expected.append(value)
     # Find device-buffer delay. Correlation checks content, not just non-silence.
     span = min(len(expected),len(recorded))-1536
     best = (-2.0,0)
@@ -52,12 +52,24 @@ def main():
     assert best[0]>.995,best
     assert abs(max(abs(x) for x in recorded)-max(abs(x) for x in expected))<0.003
     print(f"Source17 live playback correlation {best[0]:.6f}, delay {best[1]} frames")
-    mixed,_ = samples(args.capture/"stress-mix.wav")
-    peak = max(abs(x) for x in mixed)
-    rms = math.sqrt(sum(x*x for x in mixed)/len(mixed))
-    assert peak<10**(-1/20)+0.001 and rms>0.01
-    assert not any(abs(x)>.999 for x in mixed)
-    print(f"60-voice stress recording: peak {20*math.log10(peak):.2f} dBFS, RMS {20*math.log10(rms):.2f} dBFS, no clipped samples")
+    source_melee = repo/"assets/argentum/custom/audio/originals/melee_firefly.wav.source"
+    original,source_rate = samples(source_melee)
+    melee,playback_rate = samples(args.capture/"melee-original-playback.wav")
+    assert source_rate==playback_rate==48000
+    assert (repo/"assets/argentum/custom/audio/melee_hit.wav").read_bytes()==source_melee.read_bytes()
+    span = min(len(original),len(melee))-1536
+    best = (-2.0,0)
+    for delay in range(1536):
+        dot = aa = bb = 0.0
+        for index in range(0,span,37):
+            a,b = melee[delay+index],original[index]
+            dot += a*b; aa += a*a; bb += b*b
+        correlation = dot/math.sqrt(max(1e-30,aa*bb))
+        if correlation>best[0]: best = (correlation,delay)
+    assert best[0]>.999,best
+    peak=max(abs(x) for x in melee)
+    assert peak>.999
+    print(f"Full original melee WAV byte-identical; live playback correlation {best[0]:.6f}, original peak {peak:.6f} retained (no gain or limiter).")
 
 
 if __name__=="__main__": main()

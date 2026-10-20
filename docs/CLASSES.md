@@ -112,7 +112,7 @@ Evasión para golpes/flechas; si no evade, se tira rechazo sólo con escudo lega
 
 | Clase | Evasión | Rechazo con escudo |
 | --- | ---: | ---: |
-| Mago | 4% | 0% |
+| Mago | 6% | 0% |
 | Clérigo | 6% | 10% |
 | Guerrero | 12% | 15% |
 | Asesino | 12% | 8% |

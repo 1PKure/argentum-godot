@@ -1,8 +1,20 @@
 extends Node
 
 var lobbies := ArenaLobbyDirectory.new()
+var ranking: ArenaRankingStore
+var _ranked_peers: Dictionary = {}
+var _ranking_requests: Dictionary = {}
+var _ranked_rounds: Dictionary = {}
+var _pending_awards: Dictionary = {}
+var _ranking_retry := 0.0
 
 func _ready() -> void:
+	var ranking_path := ArenaRankingStore.DEFAULT_STORAGE_PATH
+	for argument: String in OS.get_cmdline_user_args():
+		if argument.begins_with("--ranking-path="): ranking_path = argument.trim_prefix("--ranking-path=")
+	ranking = ArenaRankingStore.new(ranking_path)
+	RankingNetwork.profile_requested.connect(_on_ranking_profile)
+	RankingNetwork.snapshot_requested.connect(_on_ranking_snapshot)
 	print("Starting Argentum lobby server...")
 	LobbyNetwork.command_requested.connect(_on_lobby_command)
 	LobbyNetwork.pause_requested.connect(_on_pause_requested)
@@ -53,6 +65,10 @@ func _exit_tree() -> void:
 	lobbies.dispose()
 
 func _process(_delta: float) -> void:
+	_ranking_retry += _delta
+	if _ranking_retry >= 5.0:
+		_ranking_retry = 0
+		_flush_ranking_awards()
 	var directory_changed := false
 	for room: ArenaLobbyRoom in lobbies.rooms.values():
 		var result := room.tick()
@@ -73,6 +89,8 @@ func _on_peer_connected(peer_id: int) -> void:
 func _on_peer_disconnected(peer_id: int) -> void:
 	var room := lobbies.room_for(peer_id)
 	lobbies.disconnect_peer(peer_id)
+	_ranked_peers.erase(peer_id)
+	_ranking_requests.erase(peer_id)
 	if room != null and lobbies.rooms.has(room.id): _publish_room(room,true)
 	_broadcast_lobby_states()
 
@@ -86,6 +104,7 @@ func _on_lobby_command(peer_id: int, operation: String, payload: Dictionary, req
 	if result.ok:
 		if room != null:
 			_bind_room(room)
+			_apply_ranking_names(room)
 			_publish_room(room,true)
 		else:
 			ArenaNetwork.send_state(peer_id,{})
@@ -116,6 +135,7 @@ func _broadcast_lobby_states() -> void:
 	for peer_id: int in multiplayer.get_peers(): _send_lobby_state(peer_id)
 
 func _publish_room(room: ArenaLobbyRoom, snapshot: bool) -> void:
+	_track_ranking_round(room)
 	for peer_id: int in room.members:
 		if not _can_send(peer_id): continue
 		# Room identity arrives first, so clients discard the old map revision/input before the new snapshot.
@@ -262,3 +282,65 @@ func _recipients(room: ArenaLobbyRoom) -> Array:
 func _spell_event(room: ArenaLobbyRoom, event: Dictionary) -> void:
 	var recipients := _recipients(room)
 	if not recipients.is_empty(): SpellNetwork.broadcast_result(event,recipients)
+
+# Only this authority observes round outcomes. There is no client score-write RPC.
+func _on_ranking_profile(peer_id: int, identity: String, secret: String, nickname: String, request: int) -> void:
+	if not _can_send(peer_id): return
+	var now := Time.get_ticks_msec()
+	var result := {"ok":false,"message":"Esperá un momento antes de cambiar el nombre."}
+	if now - int(_ranking_requests.get(peer_id,-1000)) >= 1000:
+		_ranking_requests[peer_id] = now
+		var room := lobbies.room_for(peer_id)
+		if identity.length() > 32 or secret.length() > 64 or nickname.length() > 20:
+			result = {"ok":false,"message":"Perfil inválido."}
+		elif _ranked_peers.has(peer_id) and str(_ranked_peers[peer_id].id) != identity.to_lower():
+			result = {"ok":false,"message":"Reconectate para cambiar de perfil."}
+		elif room != null and room.phase in ["countdown","fighting"]:
+			result = {"ok":false,"message":"El nombre se cambia entre rondas."}
+		else:
+			result = ranking.register(identity,secret,nickname)
+			if result.ok:
+				_ranked_peers[peer_id] = {"id":identity.to_lower(),"nickname":str(result.player.nickname)}
+				if room != null:
+					_apply_ranking_names(room)
+					_publish_room(room,true)
+					_broadcast_lobby_states()
+	RankingNetwork.send_profile(peer_id,request,result,ranking.snapshot())
+
+func _on_ranking_snapshot(peer_id: int) -> void:
+	if _can_send(peer_id): RankingNetwork.send_snapshot(peer_id,ranking.snapshot())
+
+func _apply_ranking_names(room: ArenaLobbyRoom) -> void:
+	for peer_id: int in room.members:
+		if _ranked_peers.has(peer_id):
+			room.registry.get_player(peer_id).display_name = str(_ranked_peers[peer_id].nickname)
+
+func _track_ranking_round(room: ArenaLobbyRoom) -> void:
+	if room.round_id.is_empty(): return
+	if room.phase in ["countdown","fighting"] and not _ranked_rounds.has(room.round_id):
+		var participants := {}
+		for peer_id: int in room.members:
+			if _ranked_peers.has(peer_id): participants[peer_id] = str(_ranked_peers[peer_id].id)
+		_ranked_rounds[room.round_id] = {"participants":participants,"mode":"bot" if room.bot_enabled and room.members.size() == 1 else "pvp"}
+	if room.phase != "result" or not _ranked_rounds.has(room.round_id): return
+	var round_data: Dictionary = _ranked_rounds[room.round_id]
+	var participants: Dictionary = round_data.participants
+	if room.winner_id <= 0 or not participants.has(room.winner_id): return
+	if str(round_data.mode) == "pvp":
+		if participants.size() != 2 or participants.values()[0] == participants.values()[1]: return
+	elif participants.size() != 1: return
+	_pending_awards[room.round_id] = {"id":str(participants[room.winner_id]),"mode":str(round_data.mode)}
+	_ranked_rounds.erase(room.round_id)
+	_flush_ranking_awards()
+
+func _flush_ranking_awards() -> void:
+	var changed := false
+	for round_id: String in _pending_awards.keys():
+		var award: Dictionary = _pending_awards[round_id]
+		var result := ranking.record_victory(round_id,str(award.id),str(award.mode))
+		if result.ok:
+			_pending_awards.erase(round_id)
+			changed = changed or bool(result.get("awarded",false))
+	if changed:
+		for peer_id: int in multiplayer.get_peers():
+			if _can_send(peer_id): RankingNetwork.send_snapshot(peer_id,ranking.snapshot())

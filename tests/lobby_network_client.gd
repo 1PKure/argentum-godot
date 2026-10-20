@@ -32,6 +32,7 @@ func _run() -> void:
 		if arg.begins_with("--lobby-role="): role = arg.trim_prefix("--lobby-role=")
 		if arg.begins_with("--lobby-markers="): directory = arg.trim_prefix("--lobby-markers=")
 	if role.is_empty() or directory.is_empty(): quit(2); return
+	root.get_node("InputBindings").use_profile("__ranking_network_"+role)
 	ProjectSettings.set_setting("network/server_url","ws://127.0.0.1:17877")
 	var net := root.get_node("LobbyNetwork")
 	var players := root.get_node("PlayerNetwork")
@@ -43,7 +44,11 @@ func _run() -> void:
 	root.get_node("SpellNetwork").spell_resolved.connect(func(data: Dictionary) -> void: fx.append(int(data.caster_id)))
 	main = load("res://client/scenes/client_main.tscn").instantiate()
 	root.add_child(main)
-	_check(await _wait(func() -> bool: return net.available),"protocol21 capabilities")
+	_check(await _wait(func() -> bool: return net.available),"protocol22 capabilities")
+	var ranking := root.get_node("RankingNetwork")
+	_check(await _wait(func() -> bool: return ranking.registered),"ranking profile authenticated over real WS")
+	_check(ranking.snapshot.get("entries",[]).size() >= 1 and ranking.snapshot.entries[0].nickname == "milusita","honorary ranking received from authority")
+	ranking.refresh()
 	_check(net.room.is_empty() and main._world._avatars.is_empty(),"connect enters browser without a player in global world")
 	if role == "S":
 		await _solo(net)

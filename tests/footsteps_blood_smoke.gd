@@ -39,10 +39,10 @@ func _run() -> void:
 		world._last_footstep[7] = -1000
 		world._arena_id = material
 		world._on_avatar_step(actor)
-		paths.append(material)
 		var sampled: AudioStream = audio.stream.get_stream(0)
-		check(sampled.get_length()>0.08 and sampled.get_length()<1.0 and sampled.resource_path.contains(material) and audio.stream.streams_count==4,"material-specific short footfall: "+material)
-	check(paths.size()==4 and paths[0]!=paths[1] and paths[1]!=paths[2] and paths[2]!=paths[3],"each biome has a separate material recording")
+		paths.append(sampled.resource_path)
+		check(sampled.get_length()>0.08 and sampled.get_length()<1.0 and sampled.resource_path.ends_with(str({"forest":201,"desert":197,"lava":23,"duel_room":23}[material])+".wav") and audio.stream.streams_count==2 and audio.stream.random_pitch==1.0 and audio.stream.random_volume_offset_db==0.0,"material-specific short footfall: "+material)
+	check(paths.size()==4 and paths[0]!=paths[1] and paths[1]!=paths[2] and paths[2]==paths[3],"forest/desert keep distinct source IDs; dungeon/floor share original 23/24")
 	var before: int = world._footstep_count[7]
 	world.set_game_paused(true)
 	world._on_avatar_step(actor)

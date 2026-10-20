@@ -15,7 +15,7 @@ const PRESET_STRENGTH := 28 # Arena-ready attribute; explicit PvP tuning, not a 
 const PRESET_CONSTITUTION := 20 # Human: 18 + 2.
 const PRESET_INTELLIGENCE := 18
 # Explicit arena avoidance tuning. Magical effects never consult these rates.
-const EVASION_PERCENT := {1: 4, 2: 6, 3: 12, 4: 12, 5: 8, 6: 4, 7: 10, 8: 14, 12: 10}
+const EVASION_PERCENT := {1: 6, 2: 6, 3: 12, 4: 12, 5: 8, 6: 4, 7: 10, 8: 14, 12: 10}
 const SHIELD_BLOCK_PERCENT := {2: 10, 3: 15, 4: 8, 5: 8, 7: 13, 12: 10}
 static var _classes: Dictionary = {}
 static var _equipment: Dictionary = {}

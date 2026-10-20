@@ -179,7 +179,7 @@ func _on_melee_resolved(event: Dictionary) -> void:
 	blood.tree_exited.connect(func() -> void: _blood_impacts.erase(blood))
 	var audio := AudioStreamPlayer.new()
 	audio.stream = MELEE_IMPACT_SOUND
-	audio.volume_db = -12.0
+	audio.volume_db = 0.0
 	ArenaAudioMix.route(audio)
 	add_child(audio)
 	_melee_audio.append(audio)
@@ -510,7 +510,7 @@ func _on_avatar_step(avatar: PlayerAvatar) -> void:
 	if audio == null:
 		audio = AudioStreamPlayer2D.new()
 		audio.name = "Footsteps"
-		audio.volume_db = -14.0
+		audio.volume_db = 0.0
 		audio.max_distance = TILE_SIZE * 8.0
 		audio.attenuation = 1.4
 		audio.panning_strength = 0.45
@@ -527,7 +527,7 @@ func _on_avatar_step(avatar: PlayerAvatar) -> void:
 	audio.pitch_scale = 1.0
 	_last_footstep[avatar.peer_id] = now
 	_footstep_count[avatar.peer_id] = count + 1
-	ArenaAudioMix.route(audio,3)
+	ArenaAudioMix.route(audio,2)
 	audio.play()
 
 

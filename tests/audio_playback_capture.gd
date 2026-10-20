@@ -8,7 +8,7 @@ func _initialize() -> void: call_deferred("_run")
 func check(value: bool,message: String) -> void:
 	checks += 1
 	if not value: failures += 1; print("FAIL: ",message)
-func capture(label: String) -> void:
+func capture(label: String, expected_peak: float) -> void:
 	record.set_recording_active(false)
 	var wav := record.get_recording()
 	wav.save_to_wav(folder.path_join(label+".wav"))
@@ -23,8 +23,8 @@ func capture(label: String) -> void:
 	var rms := sqrt(square/maxi(1,wav.data.size()/2))
 	print("CAPTURE ",label," duration=",wav.get_length()," peak=",peak," rms=",rms," samples=",nonzero)
 	check(wav.get_length()>0.5 and nonzero>1000,"real mixer contains audible samples: "+label)
-	check(peak<0.892,"post-mixer output remains below -1dBFS: "+label)
-func player(path: String,volume: float = -12.0) -> AudioStreamPlayer:
+	check(absf(peak-expected_peak)<0.004,"playback preserves original source peak without attenuation: "+label)
+func player(path: String,volume: float = 0.0) -> AudioStreamPlayer:
 	var audio := AudioStreamPlayer.new()
 	audio.stream = load(path)
 	audio.volume_db = volume
@@ -53,16 +53,11 @@ func _run() -> void:
 	record.set_recording_active(true)
 	player("res://assets/argentum/source/audio/17.wav",0.0)
 	await create_timer(1.8).timeout
-	capture("source17-playback")
+	capture("source17-playback",0.06852)
 	record.set_recording_active(true)
-	for iteration in range(12):
-		# Deliberately exceed legal duel concurrency to exercise the final limiter.
-		for source: String in ["113","18","17"]: player("res://assets/argentum/source/audio/"+source+".wav")
-		player("res://assets/argentum/custom/audio/melee_hit.wav")
-		player("res://assets/argentum/custom/audio/arrow_hit.wav")
-		await create_timer(0.12).timeout
-	await create_timer(0.35).timeout
-	capture("stress-mix")
+	player("res://assets/argentum/custom/audio/melee_hit.wav")
+	await create_timer(1.3).timeout
+	capture("melee-original-playback",1.0)
 	for voice in _voices.duplicate():
 		if is_instance_valid(voice):
 			voice.stop()

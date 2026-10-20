@@ -17,6 +17,7 @@ var _countdown: RoundCountdown
 var _active := false
 var _feedback := ""
 var _create_button: Button
+var _ranking: RankingPanel
 
 func _ready() -> void:
 	layer = 12
@@ -70,6 +71,9 @@ func _ready() -> void:
 	var footer := HBoxContainer.new()
 	_content.add_child(footer)
 	_button(footer,"Desconectar",disconnect_requested.emit)
+	_ranking = RankingPanel.new()
+	add_child(_ranking)
+	_button(footer,"Ranking",_ranking.open)
 	_countdown = RoundCountdown.new()
 	add_child(_countdown)
 	SpellNetwork.server_capabilities_received.connect(func(available: bool) -> void:
@@ -97,6 +101,7 @@ func open_browser() -> void:
 func close_session() -> void:
 	_active = false
 	_countdown.clear()
+	_ranking.close()
 	hide()
 
 func _refresh() -> void:
@@ -104,6 +109,7 @@ func _refresh() -> void:
 	var room: Dictionary = LobbyNetwork.room
 	var phase := str(room.get("phase",""))
 	_surface.visible = phase not in ["countdown","fighting"]
+	if not _surface.visible: _ranking.close()
 	_browser.visible = room.is_empty()
 	_create_button.disabled = not LobbyNetwork.available or LobbyNetwork.pending
 	_room_content.visible = not room.is_empty()
