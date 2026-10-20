@@ -8,6 +8,23 @@ const MIN_REPEAT_INTERVAL_SECONDS: float = (
 )
 
 var _move_timer: float = 0.0
+var _pressed_order: Array[String] = []
+const MOVE_ACTIONS := ["move_up","move_right","move_down","move_left"]
+
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.echo: return
+	for action: String in MOVE_ACTIONS:
+		if event.is_action_pressed(action):
+			_pressed_order.erase(action)
+			_pressed_order.append(action)
+		elif event.is_action_released(action):
+			_pressed_order.erase(action)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		_pressed_order.clear()
 
 
 func _process(delta: float) -> void:
@@ -50,16 +67,12 @@ func _get_input_direction() -> int:
 	var focus := get_viewport().gui_get_focus_owner()
 	if focus is LineEdit or focus is TextEdit:
 		return -1
-	if Input.is_action_pressed("move_up"):
-		return MovementRules.Direction.NORTH
-
-	if Input.is_action_pressed("move_right"):
-		return MovementRules.Direction.EAST
-
-	if Input.is_action_pressed("move_down"):
-		return MovementRules.Direction.SOUTH
-
-	if Input.is_action_pressed("move_left"):
-		return MovementRules.Direction.WEST
-
+	# Newest held direction wins; changing course never needs releasing the old key.
+	# Keep the remaining authoritative timer: changing direction grants no extra step.
+	for action: String in _pressed_order.duplicate():
+		if not Input.is_action_pressed(action): _pressed_order.erase(action)
+	if not _pressed_order.is_empty():
+		return MOVE_ACTIONS.find(_pressed_order[-1])
+	for index in range(MOVE_ACTIONS.size()):
+		if Input.is_action_pressed(MOVE_ACTIONS[index]): return index
 	return -1

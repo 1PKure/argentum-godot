@@ -40,5 +40,8 @@ func _run() -> void:
 	var directory := OS.get_environment("AO_UI_CAPTURE_DIR")
 	if directory.is_empty(): directory = "user://biome-gallery"
 	DirAccess.make_dir_recursive_absolute(directory)
-	root.get_texture().get_image().save_png(directory.path_join("biome-ambient-arenas.png"))
+	var image := root.get_texture().get_image()
+	image.save_png(directory.path_join("biome-ambient-arenas.png"))
+	for i in range(ArenaData.IDS.size()):
+		image.get_region(Rect2i((i%2)*640,floori(i/2.0)*480,640,480)).save_png(directory.path_join("biome-ambient-%s.png" % ArenaData.IDS[i]))
 	quit()

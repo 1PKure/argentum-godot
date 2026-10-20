@@ -8,7 +8,9 @@
     "helmet": 3990,
     "shield": 0,
     "accessory": 0,
-    "ammunition": 0
+    "ammunition": 0,
+    "arena_health": 355,
+    "arena_mana": 2600
   },
   {
     "id": 2,
@@ -19,7 +21,9 @@
     "helmet": 601,
     "shield": 2933,
     "accessory": 0,
-    "ammunition": 0
+    "ammunition": 0,
+    "arena_health": 405,
+    "arena_mana": 1810
   },
   {
     "id": 3,
@@ -52,7 +56,9 @@
     "helmet": 4936,
     "shield": 1719,
     "accessory": 41,
-    "ammunition": 0
+    "ammunition": 0,
+    "arena_health": 390,
+    "arena_mana": 1910
   },
   {
     "id": 6,
@@ -63,7 +69,9 @@
     "helmet": 3976,
     "shield": 0,
     "accessory": 0,
-    "ammunition": 0
+    "ammunition": 0,
+    "arena_health": 380,
+    "arena_mana": 2020
   },
   {
     "id": 7,

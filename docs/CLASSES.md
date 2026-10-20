@@ -60,12 +60,12 @@ Referencia de los nueve presets: **humano, nivel 50, constitución 20, inteligen
 
 | Clase | Vida | Maná |
 | --- | ---: | ---: |
-| Mago | 363 | 2487 |
-| Clérigo | 412 | 1809 |
+| Mago | 355 | 2600 |
+| Clérigo | 405 | 1810 |
 | Guerrero | 510 | 0 |
 | Asesino | 437 | 927 |
-| Bardo | 412 | 1809 |
-| Druida | 412 | 1809 |
+| Bardo | 390 | 1910 |
+| Druida | 380 | 2020 |
 | Paladín | 486 | 927 |
 | Cazador | 486 | 0 |
 | Bandido | 437 | 698 |
@@ -103,3 +103,5 @@ El nombre ocupa su propia línea; clase y ubicación van debajo. Los estados est
 `hud_layout_client.gd` comprueba clics y teclas contra un dedicado real con PCK exportado, estado de fantasma, bloqueo de clics detrás del menú y layout a 1280×800, 1280×720, 1920×1080 y 800×600. Se revisan capturas nativas; la comprobación en navegador Windows corresponde a la revisión del usuario. Esta limpieza conserva el balance y el zoom aceptados.
 
 Progresión cosmética del mago: Azul (0), Roja especial (1), Legendaria gris (3), Legendaria (5 victorias). Cambia sólo apariencia; la armadura y sus estadísticas conservan el preset. Los IDs de tier y las victorias guardadas se conservan.
+
+Estos cuatro recursos máximos son ajustes explícitos de arena solicitados por Matias Pulido, sobre la referencia AO20, compartidos por humanos y bot. Se aplican al elegir clase, comenzar ronda y reaparecer. La poción azul sigue restaurando5% del máximo correspondiente (mago130); equipo, daño y resistencias no cambian.

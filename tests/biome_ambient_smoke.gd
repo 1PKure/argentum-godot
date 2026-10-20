@@ -10,17 +10,27 @@ func _run() -> void:
 	var ambient := ArenaBiomeAmbient.new()
 	root.add_child(ambient)
 	ambient.set_process(false)
-	var bounds := Rect2(120, 80, 1152, 864)
+	var bounds := Rect2(120, 80, 960, 576)
 	var signatures: Dictionary = {}
 	for biome in ArenaData.IDS:
 		ambient.setup(biome, bounds)
-		_check(ambient.particle_count <= 32 and ambient.particle_count >= 18, "Bounded, low-density atmosphere: %s" % biome)
+		_check(ambient.particle_count <= ambient.MAX_PARTICLES and ambient.particle_count >= 80, "Bounded, visible falling atmosphere: %s" % biome)
 		var stays_inside := true
 		var animates := false
 		for i in range(ambient.particle_count):
 			for seconds in [0.0, 1.0, 600.0]: stays_inside = stays_inside and bounds.has_point(ambient.particle_position(i, seconds))
 			animates = animates or ambient.particle_position(i, 0) != ambient.particle_position(i, 1)
 		_check(stays_inside and animates, "Atmosphere drifts and wraps within its own arena: %s" % biome)
+		var visible := 0
+		var falling := true
+		var view := Rect2(bounds.get_center()-Vector2(320,180),Vector2(640,360))
+		for i in range(ambient.particle_count):
+			if view.has_point(ambient.particle_position(i,7.0)): visible += 1
+			var delta_y := ambient.particle_position(i,0.5).y-ambient.particle_position(i,0.0).y
+			if delta_y<0: delta_y += bounds.size.y
+			falling = falling and delta_y>2 and delta_y<25
+		_check(falling, "Every particle falls downward like snow: %s" % biome)
+		_check(visible >= 24, "Typical gameplay view contains visible distributed particles: %s (%d)" % [biome,visible])
 		var signature := str(ambient.particle_position(2, 10)) + str(ambient.particle_count)
 		_check(not signatures.has(signature), "Biome has its own motion/density: %s" % biome)
 		signatures[signature] = true

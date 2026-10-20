@@ -83,7 +83,7 @@ func _run() -> void:
 	root.add_child(main)
 	hud = main._hud
 	controller = main._spell_controller
-	_check(await _wait(func() -> bool: return net.available),"exported PCK negotiates protocol19")
+	_check(await _wait(func() -> bool: return net.available),"exported PCK negotiates protocol20")
 	if not net.available: await _finish(); return
 	if role=="solo":
 		await _solo()

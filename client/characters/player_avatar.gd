@@ -1,6 +1,8 @@
 class_name PlayerAvatar
 extends Node2D
 
+signal step_landed
+
 const MOVE_DURATION_SECONDS: float = MovementRules.MOVE_INTERVAL_SECONDS
 const TILE_SIZE: float = 48.0
 const VISUAL_MOVEMENT_GRACE_SECONDS: float = 0.05
@@ -91,6 +93,7 @@ func _process(delta: float) -> void:
 		if step >= distance - MOVEMENT_EPSILON:
 			position = waypoint
 			_movement_waypoints.pop_front()
+			if is_alive and not is_ghost: step_landed.emit()
 
 	if _movement_waypoints.is_empty():
 		# A turn-only update can arrive before the last confirmed step finishes.

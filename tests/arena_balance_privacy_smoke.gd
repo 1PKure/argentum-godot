@@ -6,10 +6,10 @@ func _initialize() -> void:
 	call_deferred("_run")
 
 func _run() -> void:
-	var profiles := {1: Vector2i(363, 2487), 2: Vector2i(412, 1809), 3: Vector2i(510, 0), 4: Vector2i(437, 927), 5: Vector2i(412, 1809), 6: Vector2i(412, 1809), 7: Vector2i(486, 927), 8: Vector2i(486, 0), 12: Vector2i(437, 698)}
+	var profiles := {1: Vector2i(355, 2600), 2: Vector2i(405, 1810), 3: Vector2i(510, 0), 4: Vector2i(437, 927), 5: Vector2i(390, 1910), 6: Vector2i(380, 2020), 7: Vector2i(486, 927), 8: Vector2i(486, 0), 12: Vector2i(437, 698)}
 	for id: int in profiles:
 		var p := ClassCatalog.get_profile(id)
-		_check(Vector2i(p.max_health, p.max_mana) == profiles[id], "%s uses AO20 human level-50 mean resources" % p.name)
+		_check(Vector2i(p.max_health, p.max_mana) == profiles[id], "%s uses its explicit arena resources or AO20 reference" % p.name)
 		print("PROFILE %s HP=%s MP=%s physical=%s armor=%s" % [p.name, p.max_health, p.max_mana, p.physical_power, p.armor_points])
 	_check(ClassCatalog.physical_damage_range(8, 1) == Vector2i(181, 200), "Hunter's actual equipped damage range against mage is 181-200")
 	_check(ClassCatalog.physical_damage_range(8, 3).x < 181, "Warrior's torso armor absorbs more than a mage robe")

@@ -44,8 +44,8 @@ func _test_potions() -> void:
 	_check(registry.try_recovery_action(901, "health_potion", 1, 10000).ok and player.current_health == 127, "First red potion retains its original 27 HP gain")
 	var early: Dictionary = registry.try_recovery_action(901, "mana_potion", 2, 10279)
 	_check(not early.ok and player.current_mana == 2000, "Switching color cannot drink one millisecond before 280 ms")
-	_check(registry.try_recovery_action(901, "mana_potion", 3, 10280).ok and player.current_mana == 2124, "Blue potion is accepted exactly at the new 280 ms boundary")
-	_check(not registry.try_recovery_action(901, "mana_potion", 3, 10560).ok and player.current_mana == 2124, "Shorter intervals cannot replay the same potion request")
+	_check(registry.try_recovery_action(901, "mana_potion", 3, 10280).ok and player.current_mana == 2130, "Blue potion is accepted exactly at the new 280 ms boundary")
+	_check(not registry.try_recovery_action(901, "mana_potion", 3, 10560).ok and player.current_mana == 2130, "Shorter intervals cannot replay the same potion request")
 	_check(registry.try_recovery_action(901, "health_potion", 4, 10560).ok and player.current_health == 154, "Shared cooldown permits the next color at the next 280 ms boundary")
 
 
@@ -53,9 +53,9 @@ func _test_attacks() -> void:
 	var f := _fixture()
 	var registry = f.registry
 	var target: PlayerState = f.target
-	_check(registry.try_basic_attack(901, 10000) == target and target.current_health == 362, "First mage attack applies the equipped armor profile")
-	_check(registry.try_basic_attack(901, 11199) == null and target.current_health == 362, "Physical attack rejects one millisecond before 1200 ms")
-	_check(registry.try_basic_attack(901, 11200) == target and target.current_health == 361, "Physical attack is accepted exactly at the new 1200 ms boundary")
+	_check(registry.try_basic_attack(901, 10000) == target and target.current_health == 354, "First mage attack applies the equipped armor profile")
+	_check(registry.try_basic_attack(901, 11199) == null and target.current_health == 354, "Physical attack rejects one millisecond before 1200 ms")
+	_check(registry.try_basic_attack(901, 11200) == target and target.current_health == 353, "Physical attack is accepted exactly at the new 1200 ms boundary")
 	_check(f.attacker.current_mana == 2000, "Physical attacks never consume mana")
 
 

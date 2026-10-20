@@ -1,6 +1,9 @@
 class_name ClientWorld
 extends Node2D
 
+const BloodImpact := preload("res://client/effects/arena_blood_impact.gd")
+const FootstepAudio := preload("res://client/effects/arena_footstep_audio.gd")
+
 const PLAYER_AVATAR_SCENE: PackedScene = preload(
 	"res://client/characters/player_avatar.tscn"
 )
@@ -39,6 +42,10 @@ var _arena_props: Array[Node2D] = []
 var _arena_revision := -1
 var _spell_effects: Array[Node2D] = []
 var _melee_audio: Array[AudioStreamPlayer] = []
+var _blood_impacts: Array[Node2D] = []
+var _footstep_audio: Dictionary[int,AudioStreamPlayer2D] = {}
+var _last_footstep: Dictionary[int,int] = {}
+var _footstep_count: Dictionary[int,int] = {}
 var _game_paused := false
 const MELEE_IMPACT_SOUND := preload("res://assets/argentum/custom/audio/melee_hit.wav")
 
@@ -156,9 +163,15 @@ func _on_melee_resolved(event: Dictionary) -> void:
 	# Rejections and misses never produce an impact sound.
 	if int(event.get("amount",0)) <= 0 or not _avatars.has(int(event.get("target_id",0))) or not _avatars.has(int(event.get("caster_id",0))): return
 	(_avatars[int(event.caster_id)] as PlayerAvatar).play_melee_swing()
+	var blood := BloodImpact.new()
+	blood.setup(_avatars[int(event.target_id)],_avatars[int(event.target_id)].position - _avatars[int(event.caster_id)].position)
+	add_child(blood)
+	_blood_impacts.append(blood)
+	blood.tree_exited.connect(func() -> void: _blood_impacts.erase(blood))
 	var audio := AudioStreamPlayer.new()
 	audio.stream = MELEE_IMPACT_SOUND
 	audio.volume_db = -12.0
+	ArenaAudioMix.route(audio)
 	add_child(audio)
 	_melee_audio.append(audio)
 	audio.finished.connect(audio.queue_free)
@@ -170,13 +183,16 @@ func _on_melee_resolved(event: Dictionary) -> void:
 func set_game_paused(paused: bool) -> void:
 	if _game_paused == paused: return
 	_game_paused = paused
+	if paused:
+		for footfall: AudioStreamPlayer2D in _footstep_audio.values():
+			footfall.stop() # Drop pending contacts; never replay old steps on resume.
 	# Networking and the HUD stay live; freeze only this room's rendered world.
 	process_mode = Node.PROCESS_MODE_DISABLED if paused else Node.PROCESS_MODE_INHERIT
 	_pause_world_audio(self,paused)
 
 
 func _pause_world_audio(node: Node, paused: bool) -> void:
-	if node is AudioStreamPlayer: node.stream_paused = paused
+	if node is AudioStreamPlayer or node is AudioStreamPlayer2D: node.stream_paused = paused
 	for child in node.get_children(): _pause_world_audio(child,paused)
 
 
@@ -466,9 +482,43 @@ func _spawn_player(
 	_avatars[
 		state.peer_id
 	] = avatar
+	avatar.step_landed.connect(_on_avatar_step.bind(avatar))
 	if is_local:
+		var listener := AudioListener2D.new()
+		avatar.add_child(listener)
+		listener.make_current()
 		_local_avatar_peer_id = state.peer_id
 		_update_camera()
+
+
+func _on_avatar_step(avatar: PlayerAvatar) -> void:
+	if _game_paused or not is_instance_valid(avatar) or not avatar.is_alive or avatar.is_ghost:
+		return
+	var now := Time.get_ticks_msec()
+	if now - _last_footstep.get(avatar.peer_id,-1000) < 85:
+		return # Never replay a backlog of footsteps after a stalled render frame.
+	var audio: AudioStreamPlayer2D = _footstep_audio.get(avatar.peer_id)
+	if audio == null:
+		audio = AudioStreamPlayer2D.new()
+		audio.name = "Footsteps"
+		audio.volume_db = -20.0
+		audio.max_distance = TILE_SIZE * 8.0
+		audio.attenuation = 1.4
+		audio.panning_strength = 0.45
+		avatar.add_child(audio)
+		_footstep_audio[avatar.peer_id] = audio
+		avatar.tree_exiting.connect(func() -> void:
+			_footstep_audio.erase(avatar.peer_id)
+			_last_footstep.erase(avatar.peer_id)
+			_footstep_count.erase(avatar.peer_id)
+		)
+	var count: int = _footstep_count.get(avatar.peer_id,0)
+	audio.stream = FootstepAudio.stream_for(_arena_id,count)
+	audio.pitch_scale = 0.98 if count % 2 == 0 else 1.02
+	_last_footstep[avatar.peer_id] = now
+	_footstep_count[avatar.peer_id] = count + 1
+	ArenaAudioMix.route(audio)
+	audio.play()
 
 
 func _grid_to_world(
@@ -491,6 +541,8 @@ func _grid_to_world(
 func clear_session() -> void:
 	set_game_paused(false)
 	_clear_players()
+	for blood in _blood_impacts.duplicate():
+		if is_instance_valid(blood): blood.queue_free()
 	for effect in _spell_effects.duplicate():
 		if is_instance_valid(effect):
 			effect.queue_free()

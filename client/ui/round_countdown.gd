@@ -50,6 +50,7 @@ func _ready() -> void:
 	content.add_child(detail)
 	_audio = AudioStreamPlayer.new()
 	_audio.volume_db = -14
+	ArenaAudioMix.route(_audio)
 	add_child(_audio)
 	_tick_sound = _tone(520.0, 0.09)
 	_go_sound = _tone(880.0, 0.22)

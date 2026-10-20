@@ -127,6 +127,9 @@ static func _ensure_loaded() -> void:
 		entry.intelligence = PRESET_INTELLIGENCE
 		entry.max_health = roundi((float(balance.MODVIDA[key]) - (21.0 - PRESET_CONSTITUTION) * 0.5) * (PRESET_LEVEL - 1) + PRESET_CONSTITUTION)
 		entry.max_mana = roundi(PRESET_INTELLIGENCE * float(balance.MANA_INICIAL[key]) + mana_factor * PRESET_INTELLIGENCE * (PRESET_LEVEL - 1))
+		# Explicit arena tuning overrides the imported reference, shared by humans/bots.
+		entry.max_health = int(entry.get("arena_health",entry.max_health))
+		entry.max_mana = int(entry.get("arena_mana",entry.max_mana))
 		entry.base_hit = 35.0 * float(balance.GOLPE_PRE_36[key]) + (PRESET_LEVEL - 36) * float(balance.GOLPE_POST_36[key])
 		entry.wrestling_modifier = float(balance.MODDANOWRESTLING[key])
 		entry.resistance_skill = 100

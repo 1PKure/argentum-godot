@@ -1,6 +1,8 @@
 class_name ArenaSpellEffect
 extends Node2D
 
+const BloodImpact := preload("res://client/effects/arena_blood_impact.gd")
+
 var event: Dictionary
 var origin := Vector2.ZERO
 var target := Vector2.ZERO
@@ -61,6 +63,7 @@ func _ready() -> void:
 		_audio = AudioStreamPlayer.new()
 		_audio.stream = load(sound_path)
 		_audio.volume_db = -12.0
+		ArenaAudioMix.route(_audio)
 		add_child(_audio)
 		if _is_shot:
 			_lifetime = maxf(_lifetime, SHOT_TRAVEL_SECONDS + _audio.stream.get_length() + 0.05)
@@ -146,22 +149,5 @@ func _make_label(value: String, at: Vector2, font_size: int) -> Label:
 
 
 func _draw() -> void:
-	if not _blood_active:
-		return
-	# Hold contrast through the first 300 ms; the old tiny, immediately faded
-	# drops disappeared into clothes at the arena's 1x source-pixel scale.
-	var fade := clampf((BLOOD_SECONDS - _blood_age) / 0.20, 0.0, 1.0)
-	if _blood_age < 0.18:
-		var tip := _blood_origin + _blood_direction * (14.0 + _blood_age * 55.0)
-		draw_line(_blood_origin, tip, Color(0.34, 0.01, 0.03, fade), 8.0, false)
-		draw_line(_blood_origin, tip, Color(0.94, 0.12, 0.19, fade), 5.0, false)
-	for index in range(12):
-		var direction := _blood_direction.rotated((index - 5.5) * 0.19)
-		var velocity := direction * (75.0 + (index % 4) * 15.0)
-		var at := _blood_origin + direction * 6.0 + velocity * _blood_age + Vector2(0, 120.0 * _blood_age * _blood_age)
-		var size_value := 6.0 if index % 3 == 0 else 4.0
-		var rect := Rect2(at.round(), Vector2.ONE * size_value)
-		var color := Color("f45151") if index % 3 == 0 else Color("c5192d")
-		color.a = fade
-		draw_rect(rect.grow(1.0), Color(0.30, 0.01, 0.03, fade))
-		draw_rect(rect, color)
+	if _blood_active:
+		BloodImpact.draw_burst(self,_blood_origin,_blood_direction,_blood_age)

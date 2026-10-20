@@ -10,7 +10,7 @@ Atajos y macros se guardan por perfil local estable, no por ID de conexión. Sin
 
 Abrir Menú o una ventana de opciones durante práctica individual contra bot solicita pausa al servidor. La simulación de esa sala congela movimiento, IA, regeneración, estados, cuenta y recargas con un reloj lógico. El cliente pausa sus animaciones y audio de mundo; red y UI permanecen activas. Cambiar Menú → Controles conserva la pausa. Cerrar, salir o desconectar no deja otra sala pausada. En PvP humano el menú sólo bloquea la entrada local; el duelo sigue.
 
-El botón Desconectar inferior cierra la conexión; Menú → Salir de la sala vuelve al directorio conservándola. Cliente/servidor requieren protocolo19.
+El botón Desconectar inferior cierra la conexión; Menú → Salir de la sala vuelve al directorio conservándola. Cliente/servidor requieren protocolo20.
 
 ## Validación
 
@@ -23,3 +23,5 @@ La pestaña Hechizos usa más altura para mostrar unas seis entradas y Lanzar; I
 Al pulsar una dirección bloqueada por rival, pared o raíz, el jugador puede orientarse sin cambiar de tile. El giro comparte la cadencia de movimiento y no interrumpe meditación estando quieto. No evita los bloqueos de ronda o pausa.
 
 Libro: mantené botón derecho y arrastrá un hechizo sobre otro para ordenar la lista. Se guarda localmente por perfil y clase; no modifica macros. Clic izquierdo conserva selección/Lanzar y arrastre hacia macros. Escape o soltar afuera cancela el movimiento.
+
+Movimiento:140ms por tile para jugador y bot (antes120), aproximadamente14% menos velocidad. Entre teclas de movimiento mantenidas gana la última presionada; soltarla retoma la anterior. Cambiar dirección conserva la recarga de paso para evitar movimientos extra. Las colisiones y el giro junto a un rival se mantienen.

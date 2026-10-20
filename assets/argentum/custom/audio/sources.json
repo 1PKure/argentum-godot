@@ -13,5 +13,69 @@
     "processing": "Trim 37 ms leading quiet and tail after 550 ms; gain -3 dB; 3 ms attack/40 ms release fades.",
     "reproduce": "python tools/prepare_melee_audio.py",
     "use": "Only confirmed melee impact; preserves the supplied medieval contact sound."
+  },
+  "footstep_forest_1.wav": {
+    "source": "Original procedural footfall; no external recording or paid asset.",
+    "sha256": "44e0a3d206d9f95b43ddba20332b9cb6cae77e1bb2ed308995619bc1967ed32b",
+    "format": "PCM mono 16-bit 32000 Hz, 110 ms; peak 0.50 (-6 dBFS)",
+    "material": "forest",
+    "reproduce": "python tools/prepare_footstep_audio.py",
+    "use": "One spatial footfall per completed living-avatar tile; never idle or turn-only."
+  },
+  "footstep_forest_2.wav": {
+    "source": "Original procedural footfall; no external recording or paid asset.",
+    "sha256": "14d9a21d19f118ce4773ff87854ee5ab690be4d85119b1518197397e2f7f9c51",
+    "format": "PCM mono 16-bit 32000 Hz, 110 ms; peak 0.50 (-6 dBFS)",
+    "material": "forest",
+    "reproduce": "python tools/prepare_footstep_audio.py",
+    "use": "One spatial footfall per completed living-avatar tile; never idle or turn-only."
+  },
+  "footstep_desert_1.wav": {
+    "source": "Original procedural footfall; no external recording or paid asset.",
+    "sha256": "191200fca0f17c1886ce1cd6848eb2d14f7ce41806a78403bf72b5f3acbf7396",
+    "format": "PCM mono 16-bit 32000 Hz, 110 ms; peak 0.50 (-6 dBFS)",
+    "material": "desert",
+    "reproduce": "python tools/prepare_footstep_audio.py",
+    "use": "One spatial footfall per completed living-avatar tile; never idle or turn-only."
+  },
+  "footstep_desert_2.wav": {
+    "source": "Original procedural footfall; no external recording or paid asset.",
+    "sha256": "69dd9770b55ec653936691e86bb1abae835cb29cf8472a29a57e8a310579d2aa",
+    "format": "PCM mono 16-bit 32000 Hz, 110 ms; peak 0.50 (-6 dBFS)",
+    "material": "desert",
+    "reproduce": "python tools/prepare_footstep_audio.py",
+    "use": "One spatial footfall per completed living-avatar tile; never idle or turn-only."
+  },
+  "footstep_lava_1.wav": {
+    "source": "Original procedural footfall; no external recording or paid asset.",
+    "sha256": "d62bb522e81c157a18febb6ced1dd7a8841f96d4bbe3965f2c4978a12cb11c69",
+    "format": "PCM mono 16-bit 32000 Hz, 110 ms; peak 0.50 (-6 dBFS)",
+    "material": "lava",
+    "reproduce": "python tools/prepare_footstep_audio.py",
+    "use": "One spatial footfall per completed living-avatar tile; never idle or turn-only."
+  },
+  "footstep_lava_2.wav": {
+    "source": "Original procedural footfall; no external recording or paid asset.",
+    "sha256": "837c66158692f1345bc40f5763ccbd1a6ec7b06bb321fe3ec0d3e361117000ce",
+    "format": "PCM mono 16-bit 32000 Hz, 110 ms; peak 0.50 (-6 dBFS)",
+    "material": "lava",
+    "reproduce": "python tools/prepare_footstep_audio.py",
+    "use": "One spatial footfall per completed living-avatar tile; never idle or turn-only."
+  },
+  "footstep_duel_room_1.wav": {
+    "source": "Original procedural footfall; no external recording or paid asset.",
+    "sha256": "468c383dd7c82bcc59ece88c6f5e97b1a7fc0ee56c01970359175c845cd09c99",
+    "format": "PCM mono 16-bit 32000 Hz, 110 ms; peak 0.50 (-6 dBFS)",
+    "material": "duel_room",
+    "reproduce": "python tools/prepare_footstep_audio.py",
+    "use": "One spatial footfall per completed living-avatar tile; never idle or turn-only."
+  },
+  "footstep_duel_room_2.wav": {
+    "source": "Original procedural footfall; no external recording or paid asset.",
+    "sha256": "dd8fef047ced1e73ce6a8b95aac282e32fcd1b51dff51d0c5897f418ab2af90e",
+    "format": "PCM mono 16-bit 32000 Hz, 110 ms; peak 0.50 (-6 dBFS)",
+    "material": "duel_room",
+    "reproduce": "python tools/prepare_footstep_audio.py",
+    "use": "One spatial footfall per completed living-avatar tile; never idle or turn-only."
   }
 }

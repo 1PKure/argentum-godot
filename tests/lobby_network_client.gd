@@ -43,7 +43,7 @@ func _run() -> void:
 	root.get_node("SpellNetwork").spell_resolved.connect(func(data: Dictionary) -> void: fx.append(int(data.caster_id)))
 	main = load("res://client/scenes/client_main.tscn").instantiate()
 	root.add_child(main)
-	_check(await _wait(func() -> bool: return net.available),"protocol19 capabilities")
+	_check(await _wait(func() -> bool: return net.available),"protocol20 capabilities")
 	_check(net.room.is_empty() and main._world._avatars.is_empty(),"connect enters browser without a player in global world")
 	if role == "S":
 		await _solo(net)

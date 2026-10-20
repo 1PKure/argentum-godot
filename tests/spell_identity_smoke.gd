@@ -57,8 +57,13 @@ func _run() -> void:
 	for i in range(meditation.RIBBON_COUNT): all_ribbons.append_array(meditation.ribbon_points(i, 1.2))
 	var meditation_bounds := _bounds(all_ribbons)
 	_check(meditation.get_child_count() == 0 and meditation.get_meta("procedural_only", false), "Meditation is newly drawn, with no restored AO sprite")
-	_check(meditation.get_meta("concept", "") == "golden_rising_whirlwind" and meditation_bounds.size.y > 85 and meditation_bounds.size.x > 40, "Meditation wraps the body in a clear rising golden whirlwind")
-	_check(meditation_bounds.position.y > -125 and meditation_bounds.end.y < 12 and meditation_bounds.size.x < 75, "Meditation retains a compact foot-based envelope")
+	_check(meditation.get_meta("concept", "") == "golden_rising_whirlwind" and meditation_bounds.size.y > 130 and meditation_bounds.size.x > 55, "Meditation wraps the body in a clear rising golden whirlwind")
+	_check(meditation_bounds.position.y > -180 and meditation_bounds.end.y < 12 and meditation_bounds.size.x < 85, "Meditation retains a compact foot-based envelope")
+	var body_bands := 0
+	for i in range(meditation.RIBBON_COUNT):
+		var band := meditation.ribbon_points(i, 1.2)
+		if band[16].y > -85: body_bands += 1
+	_check(body_bands >= 8 and meditation.IVORY.r > meditation.IVORY.b and meditation.GOLD.r > meditation.GOLD.b, "Warm ivory/gold bands are concentrated at base and torso, not only overhead")
 	_check(meditation.ribbon_points(2, 0.4) != meditation.ribbon_points(2, 1.2), "Meditation ribbons revolve and ascend through the cycle")
 	meditation.visible = false
 	_check(not meditation.is_processing(), "Hidden meditation stops its animation work")

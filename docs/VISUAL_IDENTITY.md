@@ -18,7 +18,7 @@ Lava exterior usa roca oscura con grietas finas de escala fija del mundo y brill
 
 ## Magia y meditación
 
-`ArenaSpellVisual` dibuja y anima los38 conceptos activos con código nuevo; ninguna animación/hoja AO20 se muestra como capa principal. La referencia conserva el concepto: Descarga tiene dos esferas eléctricas que convergen, Tormenta abre fuego/partículas y Apocalipsis una gran explosión con silueta de cráneo. Los demás efectos tienen variantes propias de curación, control, raíces, implosión y protección. La meditación vuelve al remolino dorado/blanco ascendente, con vetas azules y centro abierto.
+`ArenaSpellVisual` dibuja y anima los38 conceptos activos con código nuevo; ninguna animación/hoja AO20 se muestra como capa principal. La referencia conserva el concepto: Descarga tiene dos esferas eléctricas que convergen, Tormenta abre fuego/partículas y Apocalipsis una gran explosión con silueta de cráneo. Los demás efectos tienen variantes propias de curación, control, raíces, implosión y protección. La meditación vuelve al remolino dorado/blanco ascendente, con sin colores de bando y centro abierto.
 
 Al abrir Hechizos, la columna da prioridad al libro y su botón Lanzar; al volver a Inventario restaura el minimapa ampliado. Se retira el catálogo completo de la UI y se muestran únicamente las opciones de combate legales de la clase, en orden útil. Los datos DAT/reglas importados permanecen para referencia; no se cambian costes ni daños. Los macros guardados conservan huecos y asignaciones válidas; los básicos retirados vuelven al valor de combate del preset.
 
@@ -37,3 +37,5 @@ La revisión estética y de sonido en navegador Windows sigue siendo manual. Pr�
 El golpe confirmado anima la espada durante 240ms; el lanzamiento confirmado inclina y eleva ligeramente el báculo durante 300ms. Los gestos vuelven al agarre original, se cancelan al cambiar equipo/morir y se congelan al pausar. No retrasan daño ni intervalos.
 
 Los biomas tienen dos capas de partículas con baja densidad: hojas/motas en bosque, polvo en desierto, ceniza y brasas en lava y polvo iluminado en sala. Cambiar arena sustituye el ambiente y pausar la práctica lo congela. Tormenta usa naranja vivo y núcleos ámbar; Descarga conserva esferas luminosas y rayos verticales; Apocalipsis acentúa masa de fuego y cráneo. Las capturas de United aportadas se usan como referencia visual, sin copiar sus recursos.
+
+Revisión de ambiente:80–120 partículas repartidas uniformemente en el mapa y cayendo como nieve, con hojas/arena/ceniza/polvo propios de cada bioma y suficientes partículas en la vista de combate. Meditación150px,14bandas de oro/marfil con mayor intensidad alrededor de base y torso, sin rojo ni azul. Golpes melee confirmados usan la misma sangre de las flechas, siguiendo al objetivo y sin modificar daño.

@@ -263,7 +263,7 @@ func _test_training_behavior() -> void:
 		recovery_windows = recovery_windows and recovered and bot.current_health > 80
 	print("Agite metrics: static_hits=%d moving_hits=%d moving_attempts=%d continuous_steps=%d cast_and_move=%d" % [static_hits, moving_hits, total_attempts, smooth_steps, simultaneous])
 	_check(paths.size() > 1, "Movement bursts vary between seeds rather than repeating a fixed approach/up pattern")
-	_check(smooth_steps >= 300 and legal_moves, "Bot sustains continuous 120 ms steps at the player's legal cadence")
+	_check(smooth_steps >= 300 and legal_moves, "Bot sustains continuous 140 ms steps at the player's legal cadence")
 	_check(simultaneous >= 8, "Casting and movement can happen together instead of freezing for every attack")
 	_check(static_hits >= 100, "Stationary opponents receive sustained combat pressure across eight seeds")
 	_check(moving_hits >= 40 and moving_hits < total_attempts, "Moving opponents can be hit and can also evade delayed perception")
