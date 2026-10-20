@@ -105,3 +105,21 @@ El nombre ocupa su propia línea; clase y ubicación van debajo. Los estados est
 Progresión cosmética del mago: Azul (0), Roja especial (1), Legendaria gris (3), Legendaria (5 victorias). Cambia sólo apariencia; la armadura y sus estadísticas conservan el preset. Los IDs de tier y las victorias guardadas se conservan.
 
 Estos cuatro recursos máximos son ajustes explícitos de arena solicitados por Matias Pulido, sobre la referencia AO20, compartidos por humanos y bot. Se aplican al elegir clase, comenzar ronda y reaparecer. La poción azul sigue restaurando5% del máximo correspondiente (mago130); equipo, daño y resistencias no cambian.
+
+## Defensa física de arena
+
+Evasión para golpes/flechas; si no evade, se tira rechazo sólo con escudo legal equipado. No evita magia. Valores iniciales de prueba:
+
+| Clase | Evasión | Rechazo con escudo |
+| --- | ---: | ---: |
+| Mago | 4% | 0% |
+| Clérigo | 6% | 10% |
+| Guerrero | 12% | 15% |
+| Asesino | 12% | 8% |
+| Bardo | 8% | 8% |
+| Druida | 4% | 0% |
+| Paladín | 10% | 13% |
+| Cazador | 14% | 0% |
+| Bandido | 10% | 10% |
+
+El rechazo es condicional al fallo de evasión; los porcentajes no se suman directamente. Desequipar escudo lleva rechazo a0. Los evitados consumen recarga y se replican con daño0/outcome y texto Esquivó/Bloqueó, sin sangre ni audio de impacto. Descarga51 habilitada en Asesino/Paladín/Bandido con coste460; Bandido necesita pociones para pagar375+460.

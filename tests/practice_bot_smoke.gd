@@ -263,7 +263,7 @@ func _test_training_behavior() -> void:
 		recovery_windows = recovery_windows and recovered and bot.current_health > 80
 	print("Agite metrics: static_hits=%d moving_hits=%d moving_attempts=%d continuous_steps=%d cast_and_move=%d" % [static_hits, moving_hits, total_attempts, smooth_steps, simultaneous])
 	_check(paths.size() > 1, "Movement bursts vary between seeds rather than repeating a fixed approach/up pattern")
-	_check(smooth_steps >= 300 and legal_moves, "Bot sustains continuous 140 ms steps at the player's legal cadence")
+	_check(smooth_steps >= 300 and legal_moves, "Bot sustains continuous steps at its configured legal cadence")
 	_check(simultaneous >= 8, "Casting and movement can happen together instead of freezing for every attack")
 	_check(static_hits >= 100, "Stationary opponents receive sustained combat pressure across eight seeds")
 	_check(moving_hits >= 40 and moving_hits < total_attempts, "Moving opponents can be hit and can also evade delayed perception")
@@ -351,10 +351,10 @@ func _test_combos_and_paths() -> void:
 					vertical = vertical + 1 if axis == 0 else 0
 					longest_vertical = maxi(longest_vertical, vertical)
 					path.append(bot.grid_position)
-		combos = combos and offensive.size() >= 3 and offensive.slice(0, 3) == [53, 51, 41]
+		combos = combos and offensive.size() >= 4 and offensive.slice(0, 2) == [53, 53] and offensive.has(51) and offensive.has(41)
 		both_axes = both_axes and axes.size() == 2
 		variants[str(path)] = true
-	_check(combos, "Across eight seeds, confirmed mage hits start Apocalypse then Discharge before Firestorm against a surviving rival")
+	_check(combos, "Across eight seeds, mage prioritizes double Apocalypse before affordable Discharge/Firestorm recovery pressure")
 	_check(both_axes and variants.size() >= 6, "Comfortable-range movement uses both axes with distinct trajectories across seeds")
 	_check(longest_vertical <= 6, "The bot breaks extended up-down patterns instead of staying on one vertical line")
 	for class_id: int in [2, 5, 6]:
@@ -371,8 +371,10 @@ func _test_combos_and_paths() -> void:
 			for action: Dictionary in manager.tick(10000 + step * 20):
 				if action.kind == "cast" and int(action.result.event.target_id) == 301:
 					offensive.append(int(action.result.event.spell_id))
-		var expected := [59, 3, 3] if class_id == 6 else [53, 51, 3]
-		_check(offensive.size() >= 3 and offensive.slice(0, 3) == expected, "Class %d uses only its legal combo and affordable follow-up spells" % class_id)
+		var class_legal := true
+		for id in offensive: class_legal = class_legal and ClassCatalog.can_cast(class_id,id)
+		var sequence := offensive.size() >= 2 and offensive.slice(0,2) == [59,59] if class_id == 6 else offensive.size() >= 2 and offensive[0] == 25 and offensive.has(51)
+		_check(class_legal and sequence, "Class %d follows its legal caster or hybrid tactic and affordable spells" % class_id)
 	print("Movement variation: %d paths, longest vertical run %d tiles" % [variants.size(), longest_vertical])
 
 
@@ -410,7 +412,7 @@ func _test_exchange() -> void:
 					vertical = MovementRules.Direction.SOUTH
 				registry.try_move_player(301, vertical, now)
 			if now >= next_shot:
-				next_shot = now + 1800
+				next_shot = now + CombatRules.RANGED_ATTACK_COOLDOWN_MSEC + 100
 				shot_id += 1
 				if registry.try_ranged_attack(301, bot.grid_position, shot_id, now).ok:
 					received_arrows += 1

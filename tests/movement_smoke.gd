@@ -165,10 +165,10 @@ func _test_avatar() -> void:
 	state.is_bot = true
 	avatar.setup(state, false, start)
 	avatar.apply_server_position(Vector2i(5, 5), start + Vector2(48, 0))
-	avatar._process(0.07)
-	_check(avatar.position.is_equal_approx(start + Vector2(24, 0)), "Bot presentation uses the same 140 ms tile interpolation as the human")
-	avatar._process(0.07)
-	_check(avatar.position.is_equal_approx(start + Vector2(48, 0)), "Bot reaches its exact confirmed tile on the same cadence as the player")
+	avatar._process(MovementRules.PRACTICE_BOT_MOVE_INTERVAL_MSEC / 2000.0)
+	_check(avatar.position.is_equal_approx(start + Vector2(24, 0)), "Bot presentation uses its132 ms authoritative interpolation")
+	avatar._process(MovementRules.PRACTICE_BOT_MOVE_INTERVAL_MSEC / 2000.0)
+	_check(avatar.position.is_equal_approx(start + Vector2(48, 0)), "Bot reaches its exact confirmed tile on its own slightly faster cadence")
 	state.is_bot = false
 	avatar.apply_server_stats(state)
 	_check(is_equal_approx(avatar._move_speed, avatar.MOVE_SPEED), "A human state restores the unchanged 140 ms interpolation")

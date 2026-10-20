@@ -10,6 +10,7 @@ func _check(value: bool, message: String) -> void:
 func _run() -> void:
 	var registry := PlayerRegistry.new()
 	root.add_child(registry)
+	registry._physical_rng.seed = 1
 	var actor: PlayerState = registry.add_player(71)
 	var rival: PlayerState = registry.add_player(72)
 	actor.grid_position = Vector2i(5,5)

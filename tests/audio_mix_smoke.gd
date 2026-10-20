@@ -25,11 +25,15 @@ func _run() -> void:
 	root.add_child(one)
 	one.volume_db = -12
 	ArenaAudioMix.route(one)
-	check(one.bus==&"Combat" and one.volume_db==-12 and one.pitch_scale==1.0,"routing preserves gain and speed")
+	check(one.bus==&"Combat" and one.volume_db==-12 and one.pitch_scale==1.0 and one.playback_type==AudioServer.PLAYBACK_TYPE_STREAM,"routing preserves gain and speed")
 	var two := AudioStreamPlayer2D.new()
 	root.add_child(two)
 	ArenaAudioMix.route(two)
 	check(two.bus==&"Combat","positional footsteps share protected mix")
+	check(two.playback_type==AudioServer.PLAYBACK_TYPE_STREAM,"spatial audio uses protected Stream mixer on web too")
+	check(ProjectSettings.get_setting("audio/driver/output_latency.web")==80 and ProjectSettings.get_setting("audio/general/default_playback_type.web")==0,"single-thread web reserves buffer and uses Stream rather than unsupported Sample effects")
+	ArenaAudioMix.route(two,3)
+	check(two.max_polyphony==3,"footfall tails can overlap without being cut off")
 	one.queue_free(); two.queue_free()
 	await process_frame
 	print("Audio mix checks: %d; failures: %d" % [checks,failures])

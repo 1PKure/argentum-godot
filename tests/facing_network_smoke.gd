@@ -19,6 +19,7 @@ func _run() -> void:
 	if "--facing-server" in args:
 		registry = PlayerRegistry.new()
 		root.add_child(registry)
+		registry._physical_rng.seed = 1
 		manager.peer_connected.connect(func(id: int) -> void:
 			var player := registry.add_player(id)
 			if actor_id == 0:

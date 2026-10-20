@@ -47,6 +47,7 @@ func _run() -> void:
 	_check(ClassCatalog.magic_damage(100, 1, 1) != 100, "Weapon magic bonus and helmet resistance affect spell damage")
 	var registry = load("res://server/systems/player_registry.gd").new()
 	root.add_child(registry)
+	registry._physical_rng.seed = 1 # This fixture verifies actual arrow damage, not avoidance.
 	var player: PlayerState = registry.add_player(801)
 	var target: PlayerState = registry.add_player(802)
 	var original := player.to_dictionary()

@@ -26,6 +26,7 @@ func _run() -> void:
 func _fixture() -> Dictionary:
 	var registry = load("res://server/systems/player_registry.gd").new()
 	root.add_child(registry)
+	registry._physical_rng.seed = 1 # Stable hit fixture; avoidance has dedicated seeded coverage.
 	registries.append(registry)
 	var attacker: PlayerState = registry.add_player(901)
 	var target: PlayerState = registry.add_player(902)

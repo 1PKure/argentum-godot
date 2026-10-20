@@ -55,6 +55,7 @@ func run() -> void:
 	check(not directory.pause(2,true,2,wall+100011).ok,"PvP pause refused")
 	check(CombatRules.BASIC_ATTACK_COOLDOWN_MSEC == CombatRules.RANGED_ATTACK_COOLDOWN_MSEC,"melee and arrow interval match")
 	var combat := PlayerRegistry.new()
+	combat._physical_rng.seed = 1
 	var attacker := combat.add_player(10)
 	var target := combat.add_player(11)
 	attacker.facing_direction = MovementRules.Direction.EAST
