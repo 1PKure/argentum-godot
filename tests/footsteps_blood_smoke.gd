@@ -79,5 +79,7 @@ func _run() -> void:
 	check(world._footstep_audio.is_empty() and world._blood_impacts.is_empty(),"leaving clears spatial audio and blood")
 	world.queue_free()
 	await process_frame
+	# Let the audio thread retire stopped positional playbacks before shutdown.
+	await create_timer(0.25).timeout
 	print("Footsteps/blood checks: %d; failures: %d" % [checks,failures])
 	quit(1 if failures else 0)
