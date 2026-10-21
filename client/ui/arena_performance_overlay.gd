@@ -18,7 +18,7 @@ func _process(delta: float) -> void:
 		intervals.clear()
 		_previous_us = 0
 		return
-	var mode := "AO original" if ArenaVisualSettings.uses_original_fx() else "Moderno"
+	var mode := "AO original" if ArenaVisualSettings.uses_original_fx() else "Moderna ligera"
 	if mode != _mode:
 		_mode = mode
 		intervals.clear()

@@ -12,7 +12,7 @@ const COMMAND_INTERVAL_MSEC := 400
 const MOVE_INTERVAL_MSEC := MovementRules.PRACTICE_BOT_MOVE_INTERVAL_MSEC
 const CAST_INTERVAL_MSEC := 1250
 const ATTACK_INTERVAL_MSEC := 650
-const POTION_INTERVAL_MSEC := 280
+const POTION_INTERVAL_MSEC := 320
 var registry: PlayerRegistry
 var owner_id := 0
 var phase := "idle"
@@ -34,6 +34,7 @@ var _root_due := 0
 var _root_observed := false
 var _defending := false
 var _next_heal := 0
+var _last_red_at := -100000
 var _movement_mode := 1
 var _last_move_direction := -1
 var _axis_run := 0
@@ -163,6 +164,7 @@ func remove_bot(notify: bool = true) -> void:
 	phase = "idle"
 	_defending = false
 	_next_heal = 0
+	_last_red_at = -100000
 	_last_potion = ""
 	_potion_due = 0
 	_root_due = 0
@@ -241,10 +243,11 @@ func tick(now: int = -1) -> Array[Dictionary]:
 	# A defensive spell uses the same global cast interval as an attack.
 	if not removing and now >= _next_offense:
 		var healed := false
-		if now >= _next_heal and bot.current_health < bot.max_health * 0.55:
-			_next_heal = now + _rng.randi_range(1800, 2400)
-			if _rng.randf() < 0.65:
+		if now >= _next_heal and now - _last_red_at >= 1600 and bot.current_health < bot.max_health * 0.45:
+			_next_heal = now + _rng.randi_range(4500, 5500)
+			if _rng.randf() < 0.45:
 				healed = _cast(31, bot.grid_position, now, actions)
+				if healed: _potion_due = maxi(_potion_due,now+1600)
 		if not healed:
 			_attack(bot, ranged, caster, now, actions)
 	if not target.is_alive:
@@ -321,7 +324,7 @@ func _tick_potions(bot: PlayerState, now: int, actions: Array[Dictionary]) -> vo
 		_potion_due = 0
 		return
 	if _potion_due == 0:
-		_potion_due = now + _rng.randi_range(100, 160)
+		_potion_due = now + _rng.randi_range(160, 240)
 		return
 	if now < _potion_due:
 		return
@@ -331,6 +334,11 @@ func _tick_potions(bot: PlayerState, now: int, actions: Array[Dictionary]) -> vo
 			action = "mana_potion"
 	if _recover(action, now, actions):
 		_last_potion = action
+		if action == "health_potion":
+			_last_red_at = now
+			# Emergency recovery is a defensive choice; do not weave free offense into it.
+			if bot.current_health < bot.max_health * 0.45:
+				_next_offense = maxi(_next_offense,now+350)
 		_potion_due = now + maxi(RecoveryRules.POTION_INTERVAL_MSEC, POTION_INTERVAL_MSEC)
 	else:
 		# A normal attack/potion gap can block this; retain the pending decision.

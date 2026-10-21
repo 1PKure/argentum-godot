@@ -1,118 +1,36 @@
 class_name ArenaMeditationVisual
 extends Node2D
-## A warm ivory/gold whirlwind inspired by the approved rising spiral.
-## Broad, luminous bands wrap the feet and torso before curling upward.
-## Modern mode keeps warm colors; original mode restores the AO atlas for A/B.
-## This renderer never changes gameplay timing.
-
-const RIBBON_COUNT := 14
-const HEIGHT := 150.0
-const MAX_RADIUS := 36.0
-const IVORY := Color("fff3cf")
-const GOLD := Color("efc96c")
+## Both modes animate a cached AO atlas. Modern meditation uses a gold finish.
 var _elapsed := 0.0
-var _original := false
+var _mode := ""
 var _legacy: AnimatedSprite2D
-
-
 func _ready() -> void:
-	set_meta("modern_fx", true)
-	set_meta("procedural_only", true)
 	set_meta("foot_anchored", true)
-	set_meta("concept", "golden_rising_whirlwind")
+	set_meta("procedural_only", false)
+	_legacy = get_tree().root.get_node("AOResources").create_fx_sprite(120, true, true)
+	if _legacy != null:
+		_legacy.scale = Vector2.ONE * 1.5
+		add_child(_legacy)
+		_legacy.play()
 	_sync_profile()
-	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-	visibility_changed.connect(func() -> void: set_process(visible))
-
-
+	visibility_changed.connect(func() -> void:
+		set_process(visible)
+		if _legacy != null:
+			if visible: _legacy.play()
+			else: _legacy.pause()
+	)
 func _process(delta: float) -> void:
-	_sync_profile()
 	_elapsed += delta
-	if not _original: queue_redraw()
-
-
+	_sync_profile()
 func set_age(seconds: float) -> void:
 	_elapsed = maxf(0, seconds)
-	queue_redraw()
-
-
-func ribbon_points(index: int, seconds: float) -> PackedVector2Array:
-	var rise := fmod(seconds * 0.19 + index / float(RIBBON_COUNT), 1.0)
-	# A broad lower/body spiral, tapering upward. Concentrate bands in the
-	# lower 80 px instead of opening an empty cone above the character.
-	var height_phase := pow(rise, 1.42)
-	var radius := MAX_RADIUS * (0.90 - rise * 0.34) + sin(rise * PI) * 4
-	var turn := seconds * 1.85 + index * 2.399
-	var points := PackedVector2Array()
-	for j in range(33):
-		var f := j / 32.0
-		var angle := turn + f * 2.70
-		points.append(Vector2(cos(angle)*radius,-height_phase*HEIGHT+sin(angle)*radius*0.24-f*12))
-	return points
-
-
-func _draw() -> void:
-	if _original: return
-	var pulse := 0.94 + sin(_elapsed * 2.0) * 0.04
-	_ellipse(22, GOLD, pulse * 0.62, 1.6)
-	_ellipse(30, IVORY, pulse * 0.35, 1.0)
-	for i in range(RIBBON_COUNT):
-		var rise := fmod(_elapsed*0.19+i/float(RIBBON_COUNT),1.0)
-		var fade := smoothstep(0.0,0.055,rise)*(1-smoothstep(0.88,1.0,rise))
-		var visibility := (0.78+sin(rise*PI)*0.22)*fade*pulse
-		var points := ribbon_points(i,_elapsed)
-		var depth := sin(_elapsed*1.85+i*2.399+1.35)
-		var alpha := visibility*(0.91 if depth>0 else 0.51)
-		var thickness := lerpf(7.5,3.1,rise)
-		var color := IVORY if i%3==0 else GOLD
-		_stroke(points,color,2.8,alpha*0.52)
-		_stroke(points.slice(4,29),color,thickness,alpha*0.78)
-		draw_polyline(points.slice(10,24),Color(IVORY,alpha*0.87),1.65,true)
-	# Longer upward curls join the spiral into one flowing current.
-	for side in [-1.0,1.0]:
-		for i in range(2):
-			var curl := PackedVector2Array()
-			for j in range(29):
-				var f := j/28.0
-				var radius := 27-f*10
-				var x: float = side*(radius+sin(f*9-_elapsed*2+i)*7)
-				curl.append(Vector2(x,-f*(137+i*9)))
-			_stroke(curl,GOLD,1.2+i*0.4,pulse*0.32)
-	for i in range(10):
-		var rise := fmod(_elapsed*0.23+i/10.0,1.0)
-		var at := Vector2(sin(i*4.1+_elapsed)*(20-rise*5),-5-rise*144)
-		var alpha := sin(rise*PI)*0.52
-		draw_circle(at,3.0,Color(IVORY,alpha*0.11),true,-1,true)
-		draw_line(at+Vector2(0,4),at+Vector2(1,-4),Color(IVORY,alpha),1.0,true)
-
-
-func _stroke(points: PackedVector2Array, color: Color, width: float, alpha: float) -> void:
-	draw_polyline(points,Color(color,alpha*0.12),width+10,true)
-	draw_polyline(points,Color(color,alpha*0.28),width+4,true)
-	draw_polyline(points,Color(color,alpha),width,true)
-
-
-func _ellipse(radius: float, color: Color, alpha: float, width: float) -> void:
-	var points := PackedVector2Array()
-	for i in range(49):
-		var angle := i*TAU/48
-		points.append(Vector2(cos(angle)*radius,sin(angle)*radius*0.28))
-	_stroke(points,color,width,alpha)
-
-
+	if _legacy != null:
+		var frames := _legacy.sprite_frames
+		_legacy.frame = int(_elapsed * frames.get_animation_speed("default")) % frames.get_frame_count("default")
 func _sync_profile() -> void:
-	var original := ArenaVisualSettings.uses_original_fx()
-	if original == _original: return
-	_original = original
-	set_meta("modern_fx", not original)
-	set_meta("procedural_only", not original)
-	if original:
-		_legacy = get_tree().root.get_node("AOResources").create_fx_sprite(120, true, true)
-		if _legacy != null:
-			_legacy.scale = Vector2.ONE * 1.5 # Source 32px tile to arena 48px tile.
-			add_child(_legacy)
-			_legacy.play()
-	elif _legacy != null:
-		_legacy.queue_free()
-		_legacy = null
-	queue_redraw()
+	var mode := "original" if ArenaVisualSettings.uses_original_fx() else "lightweight"
+	if mode == _mode: return
+	_mode = mode
+	set_meta("modern_fx", mode == "lightweight")
+	set_meta("concept", "golden_ao_whirlwind" if mode == "lightweight" else "original_ao_whirlwind")
+	if _legacy != null: _legacy.material = ArenaSpellFinish.material(true) if mode == "lightweight" else null

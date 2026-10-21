@@ -42,7 +42,7 @@ func _ready() -> void:
 		_projectile.scale = Vector2.ONE * ClientWorld.VISUAL_SCALE
 		add_child(_projectile)
 	else:
-		_sprite = ArenaLegacySpellVisual.new() if ArenaVisualSettings.uses_original_fx() else ArenaSpellVisual.new()
+		_sprite = ArenaLegacySpellVisual.new() if ArenaVisualSettings.uses_original_fx() else ArenaModernSpellVisual.new()
 		_sprite.configure(spell)
 		_lifetime = _sprite.lifetime
 		add_child(_sprite)

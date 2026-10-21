@@ -308,11 +308,19 @@ func _layout_and_controls() -> void:
 	hud._fit_interface()
 	await process_frame
 	await process_frame
-	_check(hud._inventory_slots.size()==42 and hud._inventory_scroll.get_v_scroll_bar().visible,"all inventory storage remains scrollable")
+	_check(hud._inventory_slots.filter(func(slot: Control) -> bool: return slot.visible).size()==18,"compact inventory exposes three rows")
+	_check(hud._bottom_back.position.y-hud._inventory_panel.position.y-hud._inventory_panel.size.y==12,"resources sit directly below inventory")
+	_check(hud._footer_back.position.y>hud._bottom_back.position.y+hud._bottom_back.size.y,"footer buttons have their own panel")
+	hud._inventory_layout.actions[41]="item:126"
+	hud._compact_inventory_slots()
+	await process_frame
+	_check(hud._inventory_slots[41].visible,"occupied legacy slot stays accessible")
 	hud._inventory_scroll.scroll_vertical = 1000
 	await process_frame
 	_check(hud._inventory_panel.get_global_rect().encloses(hud._inventory_slots[41].get_global_rect()),"last inventory slot reachable by scroll")
 	hud._inventory_scroll.scroll_vertical = 0
+	hud._inventory_layout.actions[41]=""
+	hud._compact_inventory_slots()
 	var saved: int = controller.bindings[0]
 	await _mouse(hud._hotkey_buttons[0].get_global_rect().get_center(),MOUSE_BUTTON_RIGHT)
 	_check(controller.bindings[0]==0 and hud._hotkey_buttons[0].icon==null,"real right click clears macro without cast")

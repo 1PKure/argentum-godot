@@ -3,6 +3,7 @@ extends SceneTree
 func _initialize() -> void: call_deferred("_run")
 func _run() -> void:
 	var Legacy = load("res://client/effects/arena_legacy_spell_visual.gd")
+	var Light = load("res://client/effects/arena_modern_spell_visual.gd")
 	var output := OS.get_environment("AO_UI_CAPTURE_DIR")
 	if output.is_empty(): push_error("AO_UI_CAPTURE_DIR required");quit(1);return
 	DirAccess.make_dir_recursive_absolute(output)
@@ -10,14 +11,14 @@ func _run() -> void:
 	RenderingServer.set_default_clear_color(Color("17212b"))
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	var results := {"environment":"Native Linux GL Compatibility / Xvfb software rendering; no audio/network. Not browser performance.","samples":[]}
-	for mode: String in ["baseline","modern","original"]:
+	for mode: String in ["baseline","modern","original","modern_light"]:
 		var page := Node2D.new();root.add_child(page)
 		var visuals: Array[ArenaSpellVisual] = []
 		if mode!="baseline":
 			for column in range(2):
 				var avatar = load("res://client/characters/player_visual.tscn").instantiate()
 				avatar.position=Vector2(400+column*400,500);page.add_child(avatar)
-				var visual: ArenaSpellVisual = Legacy.new() if mode=="original" else ArenaSpellVisual.new()
+				var visual: ArenaSpellVisual = Light.new() if mode=="modern_light" else (Legacy.new() if mode=="original" else ArenaSpellVisual.new())
 				visual.configure(SpellCatalog.get_spell(53));visual.position=avatar.position+Vector2(0,30)
 				page.add_child(visual);visuals.append(visual)
 		var calls: Array[float]=[];var intervals: Array[float]=[]

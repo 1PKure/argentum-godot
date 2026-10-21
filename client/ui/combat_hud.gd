@@ -65,6 +65,7 @@ var _close_button: Button
 var _reserved_buttons: Array[Button] = []
 var _inventory_slots: Array[InventorySlotButton] = []
 var _inventory_layout := ArenaInventoryLayout.new()
+var _footer_back: Panel
 var _bottom_back: Panel
 var _class_panel: ClassPresetPanel
 var _bot_panel: BotPracticePanel
@@ -451,6 +452,7 @@ func _build_interface() -> void:
 	_launch_button.tooltip_text = "Elegí un hechizo y después un objetivo."
 	_launch_button.pressed.connect(_on_launch_pressed)
 	_bottom_back = _surface(_frame,Color("121b28"),PALETTE.BORDER)
+	_footer_back = _surface(_frame,Color("121b28"),PALETTE.BORDER)
 	_health_bar = _resource_bar(Color("d65d70"))
 	_mana_bar = _resource_bar(Color("65a5df"))
 	_health_label = _label(_frame,"—",Rect2(),13)
@@ -526,6 +528,7 @@ func _build_interface() -> void:
 	# GUI hit testing follows sibling order, independently of drawing z_index.
 	_frame.move_child(_menu_panel, _frame.get_child_count() - 1)
 	_filter_spellbook()
+	_compact_inventory_slots()
 
 
 func _build_menu() -> void:
@@ -677,6 +680,7 @@ func _sync_bot_pause() -> void:
 func _on_bindings_changed() -> void:
 	for index in range(_inventory_slots.size()):
 		_inventory_slots[index].configure(index,_inventory_layout)
+	_compact_inventory_slots()
 	_update_spell_ui()
 
 
@@ -760,8 +764,8 @@ func _input(event: InputEvent) -> void:
 
 
 func _layout_footer_actions() -> void:
-	if _frame == null or _menu_button == null: return
-	_menu_button.position = Vector2(_frame.size.x-296,_frame.size.y-58)
+	if _frame == null or _menu_button == null or _footer_back == null: return
+	_menu_button.position = _footer_back.position + Vector2(8,8)
 	_menu_button.size = Vector2(128,34)
 	_disconnect_button.position = _menu_button.position+Vector2(136,0)
 	_disconnect_button.size = Vector2(128,34)
@@ -846,6 +850,7 @@ func _update_recovery_controls() -> void:
 		_status_label.text = " · ".join(labels)
 	_status_label.tooltip_text = _status_label.text
 	_stats_button.visible = state != null and not state.is_alive
+	_layout_resource_panels()
 
 
 func _fit_interface() -> void:
@@ -903,22 +908,11 @@ func _fit_interface() -> void:
 	for panel: Control in [_inventory_panel,_spell_panel]:
 		panel.position = Vector2(side_x+16,208 if book_open else 332)
 		panel.size = Vector2(264,height-524)
-	# Six visible rows instead of seven; all server slots remain scrollable.
-	_inventory_panel.size.y = maxf(128,height-540)
+	# Three visible rows; occupied later slots remain accessible through scrolling.
+	_inventory_panel.size.y = 128
 	_spell_panel.size.y = height-398 if book_open else height-524
 	_layout_spellbook()
-	_bottom_back.position = Vector2(side_x+8,height-176)
-	_bottom_back.size = Vector2(280,152)
-	_status_label.position = Vector2(side_x+16,height-170)
-	_status_label.size = Vector2(264,30)
-	_mana_bar.position = Vector2(side_x+16,height-96)
-	_mana_bar.size = Vector2(264,24)
-	_health_bar.position = Vector2(side_x+16,height-128)
-	_health_bar.size = Vector2(264,24)
-	_health_label.position = _health_bar.position
-	_health_label.size = _health_bar.size
-	_mana_label.position = _mana_bar.position
-	_mana_label.size = _mana_bar.size
+	_layout_resource_panels()
 	_menu_panel.position = Vector2.ZERO
 	_menu_panel.size = _frame.size
 	_pause_label.position = Vector2(0,16)
@@ -1017,6 +1011,7 @@ func _update_local_stats() -> void:
 		_inventory_layout.apply_state(state)
 		for index in range(_inventory_slots.size()):
 			_inventory_slots[index].configure(index, _inventory_layout)
+		_compact_inventory_slots()
 	elif state == null:
 		_inventory_revision = -1
 		_inventory_peer = 0
@@ -1283,8 +1278,8 @@ func _build_visual_controls(parent: VBoxContainer) -> void:
 	var choice := Button.new()
 	choice.name = "SpellVisualMode"
 	choice.focus_mode = Control.FOCUS_NONE
-	choice.text = "Original AO" if ArenaVisualSettings.uses_original_fx() else "Moderna"
-	choice.tooltip_text = "Alternar gráficos originales y modernos de hechizos y meditación."
+	choice.text = "Original AO" if ArenaVisualSettings.uses_original_fx() else "Moderna ligera"
+	choice.tooltip_text = "Alternar gráficos originales y modernos ligeros de hechizos y meditación."
 	choice.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(choice)
 	var feedback := Label.new()
@@ -1293,7 +1288,7 @@ func _build_visual_controls(parent: VBoxContainer) -> void:
 	parent.add_child(feedback)
 	choice.pressed.connect(func() -> void:
 		var error := ArenaVisualSettings.set_original_fx(not ArenaVisualSettings.uses_original_fx())
-		choice.text = "Original AO" if ArenaVisualSettings.uses_original_fx() else "Moderna"
+		choice.text = "Original AO" if ArenaVisualSettings.uses_original_fx() else "Moderna ligera"
 		feedback.text = "No se pudo guardar la preferencia." if error != OK else "Se aplica al próximo hechizo."
 		feedback.show()
 	)
@@ -1304,3 +1299,36 @@ func _build_visual_controls(parent: VBoxContainer) -> void:
 	metrics.button_pressed = ArenaVisualSettings.metrics
 	metrics.toggled.connect(func(enabled: bool) -> void: ArenaVisualSettings.metrics = enabled)
 	row.add_child(metrics)
+
+
+func _compact_inventory_slots() -> void:
+	var last := 17
+	for index in range(_inventory_layout.actions.size()):
+		if not _inventory_layout.actions[index].is_empty(): last = maxi(last,index)
+	var shown := mini(_inventory_slots.size(),ceili((last+1)/6.0)*6)
+	for index in range(_inventory_slots.size()): _inventory_slots[index].visible = index < shown
+
+
+func _layout_resource_panels() -> void:
+	if _bottom_back == null or _footer_back == null: return
+	var panel := _spell_panel if _spell_panel.visible else _inventory_panel
+	var resource_y := panel.position.y + panel.size.y + 12
+	var has_status := not _status_label.text.is_empty()
+	var bar_offset := 26.0 if has_status else 8.0
+	_bottom_back.position = Vector2(_frame.size.x-304,resource_y)
+	_bottom_back.size = Vector2(280,96 if has_status else 72)
+	_status_label.visible = has_status
+	_status_label.position = _bottom_back.position + Vector2(8,4)
+	_status_label.size = Vector2(264,18)
+	_health_bar.position = _bottom_back.position + Vector2(8,bar_offset)
+	_health_bar.size = Vector2(264,24)
+	_mana_bar.position = _health_bar.position + Vector2(0,32)
+	_mana_bar.size = Vector2(264,24)
+	_health_label.position = _health_bar.position
+	_health_label.size = _health_bar.size
+	_mana_label.position = _mana_bar.position
+	_mana_label.size = _mana_bar.size
+	_footer_back.position = _bottom_back.position + Vector2(0,_bottom_back.size.y+12)
+	_footer_back.size = Vector2(280,50)
+	_side_art.size.y = _footer_back.position.y+_footer_back.size.y+8-_side_art.position.y
+	_layout_footer_actions()

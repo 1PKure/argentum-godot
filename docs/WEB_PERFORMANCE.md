@@ -1,32 +1,37 @@
-# Comparación de efectos en PR12
+# Efectos modernos ligeros · PR12
 
-21 de octubre de 2026. Reporte del usuario: el desplazamiento es fluido en web, pero al lanzar Apocalipsis se traban animación y sonido. La grabación no permite medir FPS reales ni demuestra que la red sea la causa. Las pruebas de carga del dedicado tampoco miden el costo de dibujar el cliente.
+21 de octubre de 2026. El usuario confirmó que en su navegador los efectos originales funcionan sin los tirones observados con la versión procedural. El nuevo modo «Moderna ligera» reutiliza las animaciones AO originales y su silueta, con un shader canvas_item compartido de contraste, saturación y realce de color. Meditación usa el atlas original con acabado dorado. Se trata de un retoque ligero, no de arte completamente nuevo.
 
-## Cambio reversible
+## Implementación y comparación
 
-La web comienza con efectos originales AO (hechizos y meditación), salvo preferencia local explícita. Nativo conserva Moderna por defecto. Menú → Magia alterna Original AO / Moderna sin cambiar daño, intervalos, maná, reglas, servidor o protocolo24. El modo se guarda en `user://visual_settings_v1.cfg`; `--fx-original` y `--fx-modern` permiten pruebas nativas sin guardar cambios. No se eliminaron efectos modernos, interfaz, personajes, pociones, biomas ni equipamiento.
+El selector Menú → Magia conserva Original AO y sustituye el modo moderno costoso por Moderna ligera. Nativo tiene moderno por defecto; web conserva original salvo preferencia guardada. El viejo renderer procedural queda como referencia fuera del flujo de combate. Daño, hechizos permitidos, intervalos y audio no cambian por el modo visual.
 
-Los originales usan atlas existentes con cuadros compartidos/cacheados, manteniendo avance por tiempo, impacto anclado a pies y seguimiento del objetivo. Textos siguen al lanzador. Los atlas y bases visibles se preparan una vez al iniciar el cliente, distribuidos entre frames de carga antes de conectar. Meditación original en bucle; al cambiar de modo se actualiza la meditación activa. El modo de un hechizo ya lanzado se conserva hasta terminarlo. No se alteraron WAV, ganancias, mezcla, Stream, voces ni latencia: se cambia una variable para aislar el costo visual.
+Un AnimatedSprite2D por impacto; frames, atlas, bases visibles y materiales cacheados/compartidos. El shader usa el color de la textura, preserva alfa, no consulta la pantalla ni vecinos, no contiene bucles, y no genera geometría por frame. No añade nodos de partículas ni glow con múltiples capas. Shader estático: el acabado no sigue animándose al pausar. Atlas y shader se preparan durante la carga antes de conectar; la compilación gráfica se omite en headless. El anclaje a pies, seguimiento del objetivo y palabras del lanzador se conservan. La animación de meditación se pausa al ocultarse.
 
-Mostrar rendimiento se activa inicialmente en web y se puede apagar. Muestra FPS de Godot, p95 de intervalos reales entre frames (hasta600 muestras, reiniciadas al cambiar de modo) y llamadas de dibujo del cuadro. No envía datos ni mide ping; las pausas o cambio de pestaña también afectan estos tiempos. Un p95 alto indica cuadros lentos, no prueba una causa específica.
+`tests/web_fx_render_compare.gd` mantiene una referencia de la implementación vieja y compara baseline/modern(original procedural)/original/modern_light. Linux GL Compatibility, Mesa llvmpipe, Xvfb,1280×800, dos avatares y dos Apocalipsis;30frames de calentamiento y120 muestras por modo. Sin HUD, audio, red ni navegador. Datos en `docs/hosting/native-fx-comparison-light.json`.
 
-## Evidencia nativa
+| Modo | Mediana draw calls |
+|---|---:|
+| Procedural anterior |1222|
+| Original AO |6|
+| Moderna ligera |6|
 
-Runner: `tests/web_fx_render_compare.gd`, con `AO_UI_CAPTURE_DIR` apuntando a una carpeta. Usa GL Compatibility/Mesa llvmpipe/Xvfb,1280×800, dos avatares y dos Apocalipsis animados;30frames de calentamiento y120 muestras por modo. Baseline vacío. No incluye audio, servidor, HUD ni navegador. JSON en `docs/hosting/native-fx-comparison.json`.
+Esto mide trabajo de dibujo de esa escena. Los tiempos de cuadro del JSON dependen del render por software/carga del contenedor y no representan Chrome/Opera. El shader puede tener distinto costo de GPU aun con igual número de llamadas. La prueba final en el navegador del jugador sigue pendiente; no se ejecutó browser E2E en esta entrega.
 
-Mediana de llamadas de dibujo:1222 moderno frente a6 original. Este resultado muestra una reducción importante del trabajo de dibujo de esa escena concreta. Los tiempos de cuadro nativos bajo render por software y carga compartida no son estimaciones de Chrome/Opera ni porcentajes garantizados de mejora en la PC del usuario. No se usó este benchmark para prometer FPS ni aforo.
+FPS/p95 de hasta600 intervalos reales y draw calls siguen disponibles con Mostrar rendimiento. La ventana se limpia al cambiar de modo; no se usa latencia de red como FPS.
 
-## Prueba web requerida
+## HUD compacto
 
-1. Actualizar `work/arena-lobbies`, cerrar cualquier segundo cliente con sonido, reiniciar dedicado de prueba y recargar la misma web privada con Ctrl+F5.
-2. En el mismo navegador, arena y tamaño de ventana: dejar Original AO, activar medidor, jugar30–60s y probar doble Apocalipsis, Descarga, Tormenta y curaciones. Observar primer lanzamiento y lanzamientos repetidos.
-3. Alternar Moderna y repetir, dejando unos segundos de calentamiento tras cambiar. Comparar medidor, fluidez y sonido sin cambiar otras opciones simultáneamente.
-4. Si ambos fallan, repetir cada modo con General0% sólo como prueba de asociación. Silenciar no necesariamente detiene el trabajo del mezclador, por lo que no equivale a una prueba estricta sin reproducción de audio.
+Tres filas de inventario visibles y mínimo18 casilleros. Se ocultan filas vacías posteriores; las42 posiciones del servidor se conservan para no perder objetos o diseños guardados. Si un objeto ocupa una posición posterior, se hace accesible con scroll. Recursos12px debajo del panel activo, vida sobre maná, sin espacio reservado al estado si está vacío. Menú/Desconectar tienen su propio cuadro12px debajo. El lateral termina debajo de sus botones, sin el antiguo fondo vacío. El libro de hechizos conserva su espacio para jugar con Lanzar.
 
-La evaluación de Sample frente a Stream queda separada: Godot documenta que Sample reduce la dependencia del hilo principal en web sin threads, pero tiene límites de efectos de bus y reproducción. Cambiarlo ahora a la vez impediría atribuir la mejora a los gráficos y exigiría validar pausas/volumen. Referencia: https://docs.godotengine.org/en/stable/tutorials/export/exporting_for_web.html
+## Ajuste del bot
 
-## Validación
+Se mantienen las rojas del jugador en27HP y su cadencia. El bot pasa de280 a320ms entre pociones, reacción inicial160–240ms. Con una roja que lo deja por debajo de45%HP, retrasa ofensiva350ms: prioriza recuperar antes de volver a presionar. La curación mágica se considera bajo45%HP, con45% de decisión y revisión cada4,5–5,5s; no se encadena dentro de1,6s después de una roja. Si usa curación, posterga pociones1,6s. Remover y los combos legales por clase se conservan. No se cambian velocidad, daño o defensas.
 
-242 comprobaciones de atlas/caché/independencia/duración/anclaje/factory/audio/meditación/medidor;128 assets;210 identidad moderna;15 audio;25 HUD;26 lobby;49 gestos. 116 comprobaciones GUI nativas contra PCK exportado (85host/17guest/14solo) verifican además los controles reales del selector/medidor y flujo PvP/bot. El runner aísla datos/cachés de los procesos para evitar escrituras simultáneas de caché de shaders.
+Pruebas:144 comprobaciones de modo moderno/atlas/material compartido/factory/anclaje;242 de original;45 de compromiso de recuperación del bot;72 de práctica y27 de tácticas. La simulación de intercambio con flechas registra15 flechas,8 represalias y44 pociones del bot: sigue atacando y recuperándose, sin demostrar dificultad adecuada para todos los jugadores. 119 comprobaciones GUI (88host/17guest/14solo) de HUD y controles sobre PCK exportado con clientes nativos, más tests de sitio/integridad. Se revisaron capturas de los efectos y HUD. La valoración de estética, dificultad y rendimiento real de navegador requiere feedback del jugador.
 
-El intento de navegador automatizado agotó el tiempo de la herramienta antes de obtener una página; no se comprobó rendimiento en navegador. La prueba final de Chrome/Opera sigue pendiente. No se amplió la audiencia de la demo ni se añadieron servicios pagos.
+## Probar
+
+GitHub Desktop → work/arena-lobbies → Pull. Reiniciar el dedicado actualizado, recargar la web privada con Ctrl+F5 y elegir Menú → Magia → Moderna ligera. Comparar misma arena/ventana/navegador y un solo cliente con sonido, usando doble Apocalipsis, Descarga, Tormenta, curación y meditación. También sigue disponible Original AO. No se amplió audiencia ni contrataron servicios.
+
+Referencia del shader: https://docs.godotengine.org/en/stable/tutorials/shaders/shader_reference/canvas_item_shader.html

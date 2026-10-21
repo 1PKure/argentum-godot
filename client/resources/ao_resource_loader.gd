@@ -738,3 +738,4 @@ func prewarm_combat_fx() -> void:
 		await get_tree().process_frame
 	var meditation := create_fx_sprite(120, true, true)
 	if meditation != null: meditation.free()
+	await ArenaSpellFinish.prewarm(get_tree())
