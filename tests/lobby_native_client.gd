@@ -279,7 +279,18 @@ func _layout_and_controls() -> void:
 	await _click(hud._menu_button)
 	await _click(hud._volume_sliders.effects)
 	_check(ArenaAudioMix.volume("effects") == hud._volume_sliders.effects.value and ArenaAudioMix.volume("effects") < 100,"real menu slider changes effects volume immediately")
+	var choice = hud._menu_panel.find_child("SpellVisualMode",true,false)
+	var metrics = hud._menu_panel.find_child("PerformanceMetrics",true,false)
+	_check(choice != null and metrics != null,"visual selector and performance switch exist")
+	await _click(choice)
+	_check(ArenaVisualSettings.uses_original_fx(),"real click selects original atlas FX")
+	await _click(metrics)
+	_check(ArenaVisualSettings.metrics,"real checkbox enables performance meter")
+	await process_frame
+	_check(Rect2(Vector2.ZERO,root.get_visible_rect().size).encloses(hud._menu_card.get_global_rect()),"menu fits with visual controls")
 	await _capture("menu-audio.png")
+	await _click(choice)
+	_check(not ArenaVisualSettings.uses_original_fx(),"real click restores modern FX")
 	hud._volume_sliders.effects.value = 100
 	await _click(hud._menu_close_button)
 	var input := root.get_node("InputBindings")

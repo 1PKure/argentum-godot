@@ -303,6 +303,9 @@ func _build_interface() -> void:
 	add_child(backdrop)
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_frame = _control(self,"ArenaInterface",Rect2(Vector2.ZERO,DESIGN_SIZE))
+	var metrics := ArenaPerformanceOverlay.new()
+	metrics.position = Vector2(30, 240)
+	_frame.add_child(metrics)
 	_header_art = _surface(_frame,PALETTE.PANEL,PALETTE.BORDER)
 	_world_art = _surface(_frame,Color("0b1119"),PALETTE.BORDER)
 	_side_art = _surface(_frame,PALETTE.PANEL,PALETTE.BORDER)
@@ -568,6 +571,7 @@ func _build_menu() -> void:
 		_controls_panel.open_panel()
 		set_menu_opened(false)
 	)
+	_build_visual_controls(content)
 	_build_audio_controls(content)
 	content.add_child(HSeparator.new())
 	_menu_credits = Label.new()
@@ -1267,3 +1271,36 @@ func _close_chat() -> void:
 	_chat_input.clear()
 	_notify_modal_state()
 	_fit_interface()
+
+
+func _build_visual_controls(parent: VBoxContainer) -> void:
+	var row := HBoxContainer.new()
+	parent.add_child(row)
+	var label := Label.new()
+	label.text = "Magia"
+	label.custom_minimum_size.x = 75
+	row.add_child(label)
+	var choice := Button.new()
+	choice.name = "SpellVisualMode"
+	choice.focus_mode = Control.FOCUS_NONE
+	choice.text = "Original AO" if ArenaVisualSettings.uses_original_fx() else "Moderna"
+	choice.tooltip_text = "Alternar gráficos originales y modernos de hechizos y meditación."
+	choice.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(choice)
+	var feedback := Label.new()
+	feedback.add_theme_font_size_override("font_size", 11)
+	feedback.hide()
+	parent.add_child(feedback)
+	choice.pressed.connect(func() -> void:
+		var error := ArenaVisualSettings.set_original_fx(not ArenaVisualSettings.uses_original_fx())
+		choice.text = "Original AO" if ArenaVisualSettings.uses_original_fx() else "Moderna"
+		feedback.text = "No se pudo guardar la preferencia." if error != OK else "Se aplica al próximo hechizo."
+		feedback.show()
+	)
+	var metrics := CheckBox.new()
+	metrics.name = "PerformanceMetrics"
+	metrics.focus_mode = Control.FOCUS_NONE
+	metrics.text = "Mostrar rendimiento"
+	metrics.button_pressed = ArenaVisualSettings.metrics
+	metrics.toggled.connect(func(enabled: bool) -> void: ArenaVisualSettings.metrics = enabled)
+	row.add_child(metrics)

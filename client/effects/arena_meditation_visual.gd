@@ -2,7 +2,8 @@ class_name ArenaMeditationVisual
 extends Node2D
 ## A warm ivory/gold whirlwind inspired by the approved rising spiral.
 ## Broad, luminous bands wrap the feet and torso before curling upward.
-## No blue/red light, source sprite or gameplay timing is used.
+## Modern mode keeps warm colors; original mode restores the AO atlas for A/B.
+## This renderer never changes gameplay timing.
 
 const RIBBON_COUNT := 14
 const HEIGHT := 150.0
@@ -10,6 +11,8 @@ const MAX_RADIUS := 36.0
 const IVORY := Color("fff3cf")
 const GOLD := Color("efc96c")
 var _elapsed := 0.0
+var _original := false
+var _legacy: AnimatedSprite2D
 
 
 func _ready() -> void:
@@ -17,13 +20,15 @@ func _ready() -> void:
 	set_meta("procedural_only", true)
 	set_meta("foot_anchored", true)
 	set_meta("concept", "golden_rising_whirlwind")
+	_sync_profile()
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	visibility_changed.connect(func() -> void: set_process(visible))
 
 
 func _process(delta: float) -> void:
+	_sync_profile()
 	_elapsed += delta
-	queue_redraw()
+	if not _original: queue_redraw()
 
 
 func set_age(seconds: float) -> void:
@@ -47,6 +52,7 @@ func ribbon_points(index: int, seconds: float) -> PackedVector2Array:
 
 
 func _draw() -> void:
+	if _original: return
 	var pulse := 0.94 + sin(_elapsed * 2.0) * 0.04
 	_ellipse(22, GOLD, pulse * 0.62, 1.6)
 	_ellipse(30, IVORY, pulse * 0.35, 1.0)
@@ -92,3 +98,21 @@ func _ellipse(radius: float, color: Color, alpha: float, width: float) -> void:
 		var angle := i*TAU/48
 		points.append(Vector2(cos(angle)*radius,sin(angle)*radius*0.28))
 	_stroke(points,color,width,alpha)
+
+
+func _sync_profile() -> void:
+	var original := ArenaVisualSettings.uses_original_fx()
+	if original == _original: return
+	_original = original
+	set_meta("modern_fx", not original)
+	set_meta("procedural_only", not original)
+	if original:
+		_legacy = get_tree().root.get_node("AOResources").create_fx_sprite(120, true, true)
+		if _legacy != null:
+			_legacy.scale = Vector2.ONE * 1.5 # Source 32px tile to arena 48px tile.
+			add_child(_legacy)
+			_legacy.play()
+	elif _legacy != null:
+		_legacy.queue_free()
+		_legacy = null
+	queue_redraw()

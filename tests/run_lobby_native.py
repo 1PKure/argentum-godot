@@ -36,7 +36,9 @@ failed=False
 def spawn(label,args):
     file=(output/(label+'.log')).open('w')
     files.append(file)
-    process=subprocess.Popen(args,cwd=repo,env=env,stdout=file,stderr=subprocess.STDOUT)
+    process_env=env.copy()
+    process_env['XDG_DATA_HOME']=str(output/'userdata'/label)
+    process=subprocess.Popen(args,cwd=repo,env=process_env,stdout=file,stderr=subprocess.STDOUT)
     processes.append(process)
     return process
 

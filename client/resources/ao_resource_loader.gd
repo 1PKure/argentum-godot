@@ -30,6 +30,7 @@ var _heads: Dictionary = {}
 
 var _texture_cache: Dictionary = {}
 var _fx_visible_bottoms: Dictionary = {}
+var _fx_frame_cache: Dictionary = {}
 var _equipment_frames: Dictionary = {}
 var _equipment_icons: Dictionary = {}
 
@@ -530,30 +531,32 @@ func get_equipment_frames(kind: String, id: int) -> SpriteFrames:
 
 
 func create_fx_sprite(fx_id: int, looping: bool = true, ground_visible_pixels: bool = false) -> AnimatedSprite2D:
-	var fx: Dictionary = AODataFile.read_sections(DATA_PATH + "FXs.ini").get("FX%d" % fx_id, {})
-	var animation := get_grh_animation(int(fx.get("Animacion", "0")))
-	if animation.is_empty():
-		return null
-	var frames := SpriteFrames.new()
-	frames.set_animation_speed("default", animation.fps)
-	frames.set_animation_loop("default", looping)
-	for frame: Dictionary in animation.frames:
-		if not ResourceLoader.exists(GRAPHICS_PATH + "%d.png" % int(frame.file_num)):
-			return null
-		var texture := AtlasTexture.new()
-		texture.atlas = get_texture(int(frame.file_num))
-		texture.region = frame.region
-		frames.add_frame("default", texture)
+	var key := "%d:%s" % [fx_id, looping]
+	if not _fx_frame_cache.has(key):
+		var fx: Dictionary = AODataFile.read_sections(DATA_PATH + "FXs.ini").get("FX%d" % fx_id, {})
+		var animation := get_grh_animation(int(fx.get("Animacion", "0")))
+		if animation.is_empty(): return null
+		var frames := SpriteFrames.new()
+		frames.set_animation_speed("default", animation.fps)
+		frames.set_animation_loop("default", looping)
+		for frame: Dictionary in animation.frames:
+			if not ResourceLoader.exists(GRAPHICS_PATH + "%d.png" % int(frame.file_num)): return null
+			var texture := AtlasTexture.new()
+			texture.atlas = get_texture(int(frame.file_num))
+			texture.region = frame.region
+			frames.add_frame("default", texture)
+		_fx_frame_cache[key] = {"frames": frames, "source_offset": Vector2(float(fx.get("OffsetX", "0")), float(fx.get("OffsetY", "0"))), "regions": animation.frames}
+	var cached: Dictionary = _fx_frame_cache[key]
 	var sprite := AnimatedSprite2D.new()
-	sprite.sprite_frames = frames
+	sprite.sprite_frames = cached.frames
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	if ground_visible_pixels:
-		sprite.set_meta("visible_bottoms", _get_fx_visible_bottoms(fx_id, animation.frames))
+		sprite.set_meta("visible_bottoms", _get_fx_visible_bottoms(fx_id, cached.regions))
 	# AO effects are grounded at the character's feet, not centered on the tile.
 	# Keep this correct even for animations with differently sized frames.
 	sprite.frame_changed.connect(_anchor_fx_frame.bind(sprite))
 	_anchor_fx_frame(sprite)
-	sprite.set_meta("source_offset", Vector2(float(fx.get("OffsetX", "0")), float(fx.get("OffsetY", "0"))))
+	sprite.set_meta("source_offset", cached.source_offset)
 	return sprite
 
 
@@ -721,3 +724,17 @@ func _parse_ini_like_file(
 		section_data[key] = value
 
 	return result
+
+
+func prewarm_combat_fx() -> void:
+	# Cache atlas frames and visible bottoms before a lobby, one FX per load frame.
+	for id: int in SpellCatalog.loadout_ids():
+		var spell := SpellCatalog.get_spell(id)
+		var fx_id := int(spell.get("fx_id", 0))
+		if fx_id == 0 and spell.get("effect", "") == "healing": fx_id = 9
+		if fx_id > 0:
+			var sprite := create_fx_sprite(fx_id, false, true)
+			if sprite != null: sprite.free()
+		await get_tree().process_frame
+	var meditation := create_fx_sprite(120, true, true)
+	if meditation != null: meditation.free()

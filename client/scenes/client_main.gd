@@ -48,6 +48,12 @@ func _ready() -> void:
 	_connection_panel.connect_requested.connect(_connect_to_server)
 	_connection_panel.cancel_requested.connect(_cancel_connection)
 
+	_connection_panel.show_connection("Preparando efectos de combate…")
+	_connection_panel.set_busy(true)
+	_connection_panel._cancel_button.hide()
+	await AOResources.prewarm_combat_fx()
+	_connection_panel.set_busy(false)
+
 	if OS.has_feature("web"):
 		_connection_panel.show_connection("Elegí el servidor e iniciá la conexión.")
 		return
