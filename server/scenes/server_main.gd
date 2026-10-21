@@ -1,6 +1,7 @@
 extends Node
 
 var lobbies := ArenaLobbyDirectory.new()
+var chat := ArenaChatService.new()
 var ranking: ArenaRankingStore
 var _ranked_peers: Dictionary = {}
 var _ranking_requests: Dictionary = {}
@@ -17,6 +18,7 @@ func _ready() -> void:
 	RankingNetwork.profile_requested.connect(_on_ranking_profile)
 	RankingNetwork.snapshot_requested.connect(_on_ranking_snapshot)
 	print("Starting Argentum lobby server...")
+	ChatNetwork.message_requested.connect(_on_chat_message)
 	LobbyNetwork.command_requested.connect(_on_lobby_command)
 	LobbyNetwork.pause_requested.connect(_on_pause_requested)
 	LobbyNetwork.status_requested.connect(_send_lobby_state)
@@ -90,6 +92,8 @@ func _on_peer_connected(peer_id: int) -> void:
 func _on_peer_disconnected(peer_id: int) -> void:
 	var room := lobbies.room_for(peer_id)
 	lobbies.disconnect_peer(peer_id)
+	chat.forget_peer(peer_id)
+	chat.prune(lobbies.rooms.keys())
 	_ranked_peers.erase(peer_id)
 	_ranking_requests.erase(peer_id)
 	_ranking_reads.erase(peer_id)
@@ -120,6 +124,7 @@ func _on_lobby_command(peer_id: int, operation: String, payload: Dictionary, req
 			PlayerNetwork.send_snapshot_to(peer_id,[])
 		if old_room != null and old_room != room and lobbies.rooms.has(old_room.id): _publish_room(old_room,true)
 		_broadcast_lobby_states()
+	chat.prune(lobbies.rooms.keys())
 	LobbyNetwork.send_result(peer_id,request,result)
 
 func _on_pause_requested(peer_id: int, value: bool, request: int) -> void:
@@ -149,7 +154,9 @@ func _publish_room(room: ArenaLobbyRoom, snapshot: bool) -> void:
 		# Room identity arrives first, so clients discard the old map revision/input before the new snapshot.
 		_send_lobby_state(peer_id)
 		ArenaNetwork.send_state(peer_id,room.arena.status())
-		if snapshot: PlayerNetwork.send_snapshot_to(peer_id,room.registry.get_snapshot())
+		if snapshot:
+			PlayerNetwork.send_snapshot_to(peer_id,room.registry.get_snapshot())
+			ChatNetwork.send_history(peer_id,room.id,chat.history(room.id))
 		BotNetwork.send_status(peer_id,room.bot.status())
 
 func _stats(room: ArenaLobbyRoom, state: Dictionary) -> void:
@@ -359,3 +366,15 @@ func _flush_ranking_awards() -> void:
 	if changed:
 		for peer_id: int in multiplayer.get_peers():
 			if _can_send(peer_id): RankingNetwork.send_snapshot(peer_id,ranking.snapshot())
+
+func _on_chat_message(peer_id: int, room_id: int, text: String, request: int) -> void:
+	if not _can_send(peer_id): return
+	var room := lobbies.room_for(peer_id)
+	if room == null or room.id != room_id:
+		ChatNetwork.acknowledge(peer_id,request,false,"Entrá a la sala actual para conversar.")
+		return
+	var player := room.registry.get_player(peer_id)
+	var result := chat.submit(room.id,room.members,peer_id,player.display_name,text,request,Time.get_ticks_msec())
+	if result.ok:
+		for recipient: int in _recipients(room): ChatNetwork.deliver(recipient,result.message)
+	ChatNetwork.acknowledge(peer_id,request,bool(result.ok),str(result.get("error","")))

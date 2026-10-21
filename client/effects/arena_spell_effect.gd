@@ -3,6 +3,7 @@ extends Node2D
 
 const BloodImpact := preload("res://client/effects/arena_blood_impact.gd")
 
+var managed_words := false
 var event: Dictionary
 var origin := Vector2.ZERO
 var target := Vector2.ZERO
@@ -111,7 +112,7 @@ func _update_anchors() -> void:
 	# two players move in different directions. Never rebind a reused peer ID.
 	var has_origin := is_instance_valid(origin_avatar) and not origin_avatar.is_queued_for_deletion()
 	var has_target := is_instance_valid(target_avatar) and not target_avatar.is_queued_for_deletion()
-	_words.visible = has_origin
+	_words.visible = has_origin and not managed_words
 	_text.visible = has_target
 	if has_origin:
 		origin = origin_avatar.position

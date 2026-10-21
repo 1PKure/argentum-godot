@@ -83,7 +83,7 @@ func _run() -> void:
 	root.add_child(main)
 	hud = main._hud
 	controller = main._spell_controller
-	_check(await _wait(func() -> bool: return net.available),"exported PCK negotiates protocol23")
+	_check(await _wait(func() -> bool: return net.available),"exported PCK negotiates protocol24")
 	if not net.available: await _finish(); return
 	var ranking := root.get_node("RankingNetwork")
 	_check(await _wait(func() -> bool: return ranking.registered),"ranking profile registered with dedicated server")
@@ -119,6 +119,12 @@ func _run() -> void:
 	else: await _guest()
 	await _finish()
 func _host() -> void:
+	var chat := root.get_node("ChatNetwork")
+	await _click(main._lobby_panel._chat.input)
+	main._lobby_panel._chat.input.text = "Hola desde el lobby"
+	await _tap(KEY_ENTER)
+	_check(await _wait(func() -> bool: return chat.messages.size()>=2 and not chat.pending),"real lobby chat Enter exchanges messages with second player")
+	_check(main._lobby_panel._chat.input.text.is_empty(),"confirmed lobby send clears draft")
 	_check(await _wait(func() -> bool: return _find_button(main._lobby_panel,"Ver preset") != null),"preset action is rendered before clicking")
 	await _capture("lobby-waiting.png")
 	await _click(_find_button(main._lobby_panel,"Ver preset"))
@@ -140,6 +146,26 @@ func _host() -> void:
 	await create_timer(0.7).timeout
 	_check(main._local_input.is_processing() and not controller.input_blocked,"actual gameplay input is active after Ya")
 	var local_id := root.multiplayer.get_unique_id()
+	await _tap(KEY_ENTER)
+	_check(hud._chat_input.visible and hud._chat_input.has_focus() and controller.input_blocked and not main._local_input.is_processing(),"Enter opens combat chat and blocks combat controls")
+	var typing_cell: Vector2i = hud._players[local_id].grid_position
+	var typing_casts := spells.size()
+	var typing_potions := drinks.size()
+	await _tap(KEY_1)
+	_key(KEY_D,true)
+	_key(KEY_SPACE,true)
+	await create_timer(0.3).timeout
+	_key(KEY_D,false)
+	_key(KEY_SPACE,false)
+	_check(hud._players[local_id].grid_position==typing_cell and spells.size()==typing_casts and drinks.size()==typing_potions,"typing WASD, macros and Space never moves, casts or drinks")
+	await _tap(KEY_ESCAPE)
+	_check(not hud._chat_input.visible and not hud._menu_panel.visible and not controller.input_blocked,"Escape cancels draft and restores combat without opening Menu")
+	await _click(hud._chat_button)
+	hud._chat_input.text = "Mensaje en combate"
+	await _tap(KEY_ENTER)
+	_check(await _wait(func() -> bool: return not hud._chat_input.visible and chat.messages.size()>=3),"combat Enter sends server chat and resumes gameplay")
+	_check(main._world._speech.entries.has(main._world._avatars[local_id].get_instance_id()),"live message appears above speaker")
+	await _capture("combat-chat.png")
 	var old_cell: Vector2i = hud._players[local_id].grid_position
 	_key(KEY_D,true)
 	await create_timer(0.32).timeout
@@ -156,6 +182,7 @@ func _host() -> void:
 	await _mouse(main._world.get_global_transform()*(avatar.position+Vector2(0,-25)))
 	_check(await _wait(func() -> bool: return not spells.is_empty()),"world click resolves a real spell on server")
 	_check(hud._players[local_id].current_mana < mana_before,"spell spends authoritative mana")
+	_check(main._world._speech.entries[main._world._avatars[local_id].get_instance_id()].kind=="spell","real cast replaces chat overhead with spell words")
 	await _tap(KEY_1)
 	var aimed: int = controller.aimed_spell_id
 	var mana_spent: int = hud._players[local_id].current_mana
@@ -225,12 +252,19 @@ func _host() -> void:
 	await _click(main._lobby_panel._create_button)
 	_check(await _wait(func() -> bool: return str(net.room.get("arena_id",""))=="desert" and not net.pending),"GUI creates a different arena on same connection")
 	_check(int(root.get_node("ArenaNetwork").state.revision)==0 and main._world._arena_id=="desert","new map loads even with same revisionzero")
+	_check(chat.messages.is_empty(),"leaving/joining another room clears old chat history")
 	_mark("host-second-room")
 	_check(await _wait(func() -> bool: return FileAccess.file_exists(_path("guest-done"))),"remaining guest confirms own room unchanged")
 	await _click(_find_button(main._lobby_panel,"Salir de la sala"))
 	await _wait(func() -> bool: return net.room.is_empty() and not net.pending)
 	_mark("host-done")
 func _guest() -> void:
+	var chat := root.get_node("ChatNetwork")
+	_check(await _wait(func() -> bool: return chat.messages.size()>=1),"guest receives host lobby message")
+	await _click(main._lobby_panel._chat.input)
+	main._lobby_panel._chat.input.text = "Hola, te leo"
+	await _click(main._lobby_panel._chat.send_button)
+	_check(await _wait(func() -> bool: return not chat.pending and chat.messages.size()>=2),"guest replies using real Enviar button")
 	_check(await _wait(func() -> bool: return FileAccess.file_exists(_path("host-skins-open"))),"host reviews Skins before round")
 	await _click(_find_button(main._lobby_panel,"Listo"))
 	_check(await _wait(func() -> bool: return str(net.room.phase)=="fighting"),"guest GUI Listo completes countdown")

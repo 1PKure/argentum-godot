@@ -40,6 +40,7 @@ var _biome_ambient: ArenaBiomeAmbient
 var _arena_ground: ArenaGround
 var _arena_props: Array[Node2D] = []
 var _arena_revision := -1
+var _speech: ArenaSpeechLayer
 var _spell_effects: Array[Node2D] = []
 var _melee_audio: Array[AudioStreamPlayer] = []
 var _blood_impacts: Array[Node2D] = []
@@ -58,6 +59,9 @@ func _ready() -> void:
 	# Run after PlayerAvatar interpolation so following never lags a render frame.
 	process_priority = 100
 	y_sort_enabled = true
+	_speech = ArenaSpeechLayer.new()
+	add_child(_speech)
+	ChatNetwork.message_received.connect(_on_chat_message)
 	SpellNetwork.spell_resolved.connect(_on_spell_resolved)
 	PlayerNetwork.basic_attack_resolved.connect(_on_melee_resolved)
 	ArenaNetwork.changed.connect(_on_arena_state)
@@ -148,8 +152,10 @@ func _on_spell_resolved(event: Dictionary) -> void:
 	var caster: PlayerAvatar = _avatars.get(int(event.get("caster_id",0)))
 	if caster != null and str(event.get("action","")) != "shot":
 		caster.play_spell_cast()
+		_speech.say(caster,str(event.get("words","")),"spell",1.25)
 	var effect := ArenaSpellEffect.new()
 	effect.event = event
+	effect.managed_words = true
 	effect.origin = _grid_to_world(Vector2i(int(event.origin_x), int(event.origin_y)))
 	effect.target = _grid_to_world(Vector2i(int(event.target_x), int(event.target_y)))
 	effect.origin_avatar = _avatars.get(int(event.caster_id))
@@ -561,6 +567,7 @@ func clear_session() -> void:
 
 
 func _clear_players() -> void:
+	if _speech != null: _speech.clear()
 	for avatar in _avatars.values():
 		avatar.queue_free()
 
@@ -572,3 +579,7 @@ func _clear_players() -> void:
 func set_pixel_scale(source_pixel_scale: float) -> void:
 	scale = Vector2.ONE * source_pixel_scale / VISUAL_SCALE
 	_update_camera()
+
+func _on_chat_message(message: Dictionary) -> void:
+	var avatar: PlayerAvatar = _avatars.get(int(message.get("sender_id",0)))
+	if avatar != null: _speech.say(avatar,str(message.text))

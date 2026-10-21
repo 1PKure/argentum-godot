@@ -17,6 +17,7 @@ var _countdown: RoundCountdown
 var _active := false
 var _feedback := ""
 var _create_button: Button
+var _chat: ArenaChatPanel
 var _ranking: RankingPanel
 var _nickname: LineEdit
 var _entering := false
@@ -38,10 +39,16 @@ func _ready() -> void:
 	var card := PanelContainer.new()
 	card.custom_minimum_size = Vector2(640,0)
 	center.add_child(card)
+	var body := HBoxContainer.new()
+	body.add_theme_constant_override("separation",16)
+	card.add_child(body)
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(0,500)
+	scroll.custom_minimum_size = Vector2(608,500)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	card.add_child(scroll)
+	body.add_child(scroll)
+	_chat = ArenaChatPanel.new()
+	body.add_child(_chat)
+	_chat.hide()
 	_content = VBoxContainer.new()
 	_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_content.add_theme_constant_override("separation",14)
@@ -128,6 +135,7 @@ func _refresh() -> void:
 	_browser.visible = room.is_empty()
 	_create_button.disabled = not LobbyNetwork.available or LobbyNetwork.pending or _entering
 	_room_content.visible = not room.is_empty()
+	_chat.visible = not room.is_empty()
 	_message.text = _feedback if not _feedback.is_empty() else ("Conectando con el directorio de salas…" if not LobbyNetwork.available else "")
 	for child in _rooms.get_children():
 		_rooms.remove_child(child)

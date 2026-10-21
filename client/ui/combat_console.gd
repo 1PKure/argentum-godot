@@ -6,6 +6,7 @@ signal message_added(entry: Dictionary)
 const MAX_MESSAGES := 200
 const CHANNEL_COLORS := {
 	"system": Color("aab3c2"),
+	"chat": Color("c3daf7"),
 	"damage": Color("ff9992"),
 	"healing": Color("9de5a5"),
 	"mana": Color("9bc9ff"),
@@ -51,7 +52,7 @@ func clear_session() -> void:
 
 func _matches_filter(entry: Dictionary) -> bool:
 	if channel_filter == "combat":
-		return entry.channel != "system"
+		return entry.channel not in ["system","chat"]
 	return channel_filter == "all" or entry.channel == "system"
 
 

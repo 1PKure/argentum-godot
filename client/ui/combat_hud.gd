@@ -28,6 +28,8 @@ var _inventory_panel: Control
 var _inventory_scroll: ScrollContainer
 var _inventory_grid: GridContainer
 var _spell_panel: Control
+var _chat_input: LineEdit
+var _chat_button: Button
 var _menu_panel: Control
 var _menu_card: PanelContainer
 var _menu_close_button: Button
@@ -327,6 +329,36 @@ func _build_interface() -> void:
 		button.button_pressed = index == 0
 		button.pressed.connect(console.set_channel_filter.bind(["all","combat","system"][index]))
 		_filter_buttons.append(button)
+	_chat_button = _text_button(_frame,"Chat",Rect2())
+	_chat_button.pressed.connect(_open_chat)
+	_chat_input = LineEdit.new()
+	_chat_input.max_length = ArenaChatService.MAX_LENGTH
+	_chat_input.placeholder_text = "Mensaje a la sala · Enter para enviar · Esc para cancelar"
+	_chat_input.theme = PALETTE.create_theme()
+	_frame.add_child(_chat_input)
+	_chat_input.hide()
+	_chat_input.text_submitted.connect(func(_value: String) -> void: ChatNetwork.send(_chat_input.text))
+	_chat_input.focus_exited.connect(func() -> void:
+		if not ChatNetwork.pending: _close_chat()
+	)
+	ChatNetwork.message_received.connect(func(message: Dictionary) -> void:
+		console.append_message("%s: %s" % [message.nickname,message.text],"chat")
+	)
+	ChatNetwork.completed.connect(func(ok: bool,message: String) -> void:
+		if not _chat_input.visible: return
+		_chat_input.editable = true
+		if ok: _close_chat()
+		else:
+			console.append_message(message,"system")
+			_chat_input.grab_focus()
+	)
+	LobbyNetwork.changed.connect(func() -> void:
+		if not LobbyNetwork.gameplay_active(): _close_chat()
+	)
+	ChatNetwork.changed.connect(func() -> void:
+		_chat_input.editable = not ChatNetwork.pending
+		if LobbyNetwork.room.is_empty(): _close_chat()
+	)
 	_controls_hint = _label(_frame,"",Rect2(),13)
 	_controls_hint.add_theme_color_override("font_color",PALETTE.IVORY)
 	_minimap = ArenaMinimap.new()
@@ -604,6 +636,7 @@ func is_modal_open() -> bool:
 
 
 func set_menu_opened(opened: bool) -> void:
+	if opened: _close_chat()
 	if _menu_panel.visible == opened:
 		return
 	_menu_panel.visible = opened
@@ -647,6 +680,18 @@ func set_round_paused(paused: bool) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if event is InputEventKey:
+		if _chat_input != null and _chat_input.visible:
+			if event.pressed and event.keycode == KEY_ESCAPE:
+				_close_chat()
+				get_viewport().set_input_as_handled()
+			return
+		var focus := get_viewport().gui_get_focus_owner()
+		if focus is LineEdit or focus is TextEdit: return
+		if event.pressed and not event.echo and event.keycode in [KEY_ENTER,KEY_KP_ENTER] and LobbyNetwork.gameplay_active() and not is_modal_open():
+			_open_chat()
+			get_viewport().set_input_as_handled()
+			return
 	if _book_move_id != 0:
 		if event is InputEventKey and event.pressed and InputBindings.matches(event,"menu"):
 			_cancel_inventory_move()
@@ -824,7 +869,11 @@ func _fit_interface() -> void:
 		_filter_buttons[index].position = Vector2(144+index*82,96)
 		_filter_buttons[index].size = Vector2(78,27)
 	console.position = Vector2(32,132)
-	console.size = Vector2(side_x-64,72)
+	console.size = Vector2(side_x-64,36 if _chat_input.visible else 72)
+	_chat_button.position = Vector2(side_x-110,96)
+	_chat_button.size = Vector2(78,27)
+	_chat_input.position = Vector2(32,170)
+	_chat_input.size = Vector2(side_x-64,34)
 	_controls_hint.position = Vector2(32,height-100)
 	_controls_hint.size = Vector2(side_x-64,22)
 	_macro_back.position = Vector2((side_x-556)*0.5,height-76)
@@ -1137,7 +1186,7 @@ func _release_text_focus() -> void:
 
 
 func is_gameplay_blocked() -> bool:
-	return not LobbyNetwork.gameplay_active() or is_modal_open() or bool(ArenaNetwork.state.get("transitioning",false)) or (str(BotNetwork.state.get("phase", "")) == "countdown" and int(BotNetwork.state.get("owner_id", 0)) == _local_peer_id and _local_peer_id != 0)
+	return (_chat_input != null and _chat_input.visible) or not LobbyNetwork.gameplay_active() or is_modal_open() or bool(ArenaNetwork.state.get("transitioning",false)) or (str(BotNetwork.state.get("phase", "")) == "countdown" and int(BotNetwork.state.get("owner_id", 0)) == _local_peer_id and _local_peer_id != 0)
 
 func _open_skins() -> void:
 	var state: PlayerState = _players.get(_local_peer_id)
@@ -1201,3 +1250,19 @@ func _move_book_spell(source: int, target: int) -> void:
 func _apply_book_order() -> void:
 	for index in range(_book_order.size()):
 		_spell_list.move_child(_spell_buttons[_book_order[index]],index)
+
+func _open_chat() -> void:
+	if LobbyNetwork.room.is_empty() or not LobbyNetwork.gameplay_active() or is_modal_open(): return
+	_chat_input.show()
+	_chat_input.editable = not ChatNetwork.pending
+	_chat_input.grab_focus()
+	_notify_modal_state()
+	_fit_interface()
+
+func _close_chat() -> void:
+	if _chat_input == null or not _chat_input.visible: return
+	_chat_input.hide()
+	_chat_input.release_focus()
+	_chat_input.clear()
+	_notify_modal_state()
+	_fit_interface()

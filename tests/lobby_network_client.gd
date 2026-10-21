@@ -44,7 +44,7 @@ func _run() -> void:
 	root.get_node("SpellNetwork").spell_resolved.connect(func(data: Dictionary) -> void: fx.append(int(data.caster_id)))
 	main = load("res://client/scenes/client_main.tscn").instantiate()
 	root.add_child(main)
-	_check(await _wait(func() -> bool: return net.available),"protocol23 capabilities")
+	_check(await _wait(func() -> bool: return net.available),"protocol24 capabilities")
 	var ranking := root.get_node("RankingNetwork")
 	_check(await _wait(func() -> bool: return ranking.registered),"ranking profile authenticated over real WS")
 	_check(ranking.snapshot.get("entries",[]).size() >= 1 and ranking.snapshot.entries[0].nickname == "milusita","honorary ranking received from authority")
@@ -71,6 +71,21 @@ func _run() -> void:
 	_check(main._hud._players.size()==2,"room snapshot contains exactly two avatars")
 	_check(not main._local_input.is_processing(),"lobby blocks movement input")
 	_check(net.rooms.size()==2,"both rooms listed")
+	var chat := root.get_node("ChatNetwork")
+	if role=="A":
+		for entry: Dictionary in net.rooms:
+			if int(entry.id)!=int(net.room.id): chat._send.rpc_id(1,int(entry.id),"wrong room",12345)
+		await create_timer(0.1).timeout
+		_check(chat.messages.is_empty(),"stale or forged room ID cannot inject a message")
+		_check(chat.send("Hola sala [b]sin formato[/b] ñ"),"chat sends through real WS in waiting room")
+		_check(await _wait(func() -> bool: return not chat.pending and chat.messages.size()==1),"server confirms lobby chat to sender")
+		_mark("A-chat")
+	else:
+		_check(await _wait(func() -> bool: return FileAccess.file_exists(_marker("A-chat"))),"lobby chat fixture delivered")
+	await create_timer(0.2).timeout
+	_check(chat.messages.size()==(1 if role in ["A","C"] else 0),"chat is isolated to its two-member room")
+	if role=="C":
+		_check(chat.messages[0].nickname==str(net.room.members[0].name) and chat.messages[0].text.contains("[b]"),"nickname is authoritative and markup remains literal")
 	await create_timer(0.3).timeout
 	net.command("ready",{"ready":true,"revision":int(net.room.revision)})
 	_check(await _wait(func() -> bool: return str(net.room.phase)=="countdown"),"both Listo starts authoritative countdown")
@@ -81,6 +96,8 @@ func _run() -> void:
 	_mark(role+"-fighting")
 	_check(await _wait(func() -> bool: return FileAccess.file_exists(_marker("A-fighting")) and FileAccess.file_exists(_marker("B-fighting")) and FileAccess.file_exists(_marker("C-fighting")) and FileAccess.file_exists(_marker("D-fighting"))),"two simultaneous duels")
 	if role=="A":
+		_check(chat.send("Estamos jugando"),"chat also sends during authoritative fight")
+		_check(await _wait(func() -> bool: return not chat.pending and chat.messages.size()==2),"fight chat confirmed and retained after countdown")
 		var opponent: int = members[1]
 		root.get_node("SpellNetwork").request_cast(25,main._hud._players[opponent].grid_position,1)
 		await create_timer(0.6).timeout
