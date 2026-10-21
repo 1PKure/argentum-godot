@@ -308,9 +308,10 @@ func _build_interface() -> void:
 	_side_art = _surface(_frame,PALETTE.PANEL,PALETTE.BORDER)
 	_console_back = _surface(_frame,PALETTE.PANEL,PALETTE.BORDER)
 	_macro_back = _surface(_frame,PALETTE.PANEL,PALETTE.BORDER)
-	_brand = _label(_frame,"ARGENTUM",Rect2(32,20,200,30),24)
+	_brand = _label(_frame,ArenaBrand.NAME,Rect2(32,20,200,30),24)
+	_brand.tooltip_text = ArenaBrand.TAGLINE
 	_brand.add_theme_color_override("font_color",PALETTE.IVORY)
-	_brand_detail = _label(_frame,"A R E N A   /   P V P",Rect2(34,49,200,18),10)
+	_brand_detail = _label(_frame,ArenaBrand.SUBTITLE,Rect2(34,49,200,18),10)
 	_brand_detail.add_theme_color_override("font_color",PALETTE.GOLD)
 	_session_title = _label(_frame,"DUELO DE PRÁCTICA",Rect2(270,32,340,25),14)
 	_session_title.add_theme_color_override("font_color",PALETTE.MUTED)
@@ -570,7 +571,7 @@ func _build_menu() -> void:
 	_build_audio_controls(content)
 	content.add_child(HSeparator.new())
 	_menu_credits = Label.new()
-	_menu_credits.text = "Desarrollado por Matias Pulido (1PKure)\n\nCréditos de recursos: AO20 · © Noland Studios\nRecursos de terceros · CC BY-NC-ND 4.0\nPisadas: Kenney · Impact Sounds (CC0)\nEsta arena es un proyecto independiente de Matias Pulido."
+	_menu_credits.text = "AO Mini · PvP Arena\nEntrá a la arena. Que hable tu habilidad.\n\nDesarrollado por Matias Pulido (1PKure)\n\nCréditos de recursos: AO20 · © Noland Studios\nRecursos de terceros · CC BY-NC-ND 4.0\nPisadas: Kenney · Impact Sounds (CC0)\nEsta arena es un proyecto independiente de Matias Pulido."
 	_menu_credits.add_theme_font_size_override("font_size", 12)
 	_menu_credits.modulate = Color("c3b99f")
 	content.add_child(_menu_credits)

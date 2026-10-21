@@ -54,6 +54,8 @@ func _load_identity() -> void:
 	if config.save(IDENTITY_PATH) != OK: message = "No se pudo guardar tu perfil en este dispositivo."
 
 func clear_session() -> void:
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("window.dispatchEvent(new CustomEvent('argentum:connection', {detail:{connected:false}}));",true)
 	available = false
 	registered = false
 	pending = false

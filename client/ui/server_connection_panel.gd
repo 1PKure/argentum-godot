@@ -88,19 +88,19 @@ func _build_interface() -> void:
 	margin.add_child(content)
 
 	var eyebrow := Label.new()
-	eyebrow.text = "A R G E N T U M   /   A L P H A"
+	eyebrow.text = "P V P   A R E N A   /   A L P H A"
 	eyebrow.add_theme_font_size_override("font_size", 12)
 	eyebrow.modulate = PRESENTATION_THEME.GOLD
 	content.add_child(eyebrow)
 
 	var title := Label.new()
-	title.text = "Argentum Online"
+	title.text = ArenaBrand.NAME
 	title.add_theme_font_size_override("font_size", 32)
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(title)
 
 	var subtitle := Label.new()
-	subtitle.text = "Tu próxima batalla empieza acá."
+	subtitle.text = ArenaBrand.TAGLINE
 	subtitle.modulate = PRESENTATION_THEME.MUTED
 	subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(subtitle)
@@ -113,7 +113,7 @@ func _build_interface() -> void:
 	content.add_child(divider)
 
 	var section := Label.new()
-	section.text = "Arena de pruebas"
+	section.text = ArenaBrand.SUBTITLE
 	section.add_theme_font_size_override("font_size", 20)
 	content.add_child(section)
 

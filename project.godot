@@ -10,7 +10,11 @@ config_version=5
 
 [application]
 
-config/name="ArgentumGodot"
+config/name="AO Mini"
+config/description="PvP Arena · Entrá a la arena. Que hable tu habilidad."
+config/use_custom_user_dir=true
+config/custom_user_dir_name="Godot/app_userdata/ArgentumGodot"
+config/custom_user_dir_name.linux="godot/app_userdata/ArgentumGodot"
 run/main_scene="uid://crpuji0hxix8t"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"

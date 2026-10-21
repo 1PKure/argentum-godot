@@ -16,7 +16,8 @@ var _lobby_phase := ""
 
 
 func _ready() -> void:
-	print("Starting Argentum client...")
+	DisplayServer.window_set_title(ArenaBrand.TITLE)
+	print("Starting AO Mini client...")
 	_local_input.set_process(false)
 	_hud.mount_world(_world)
 	_hud.disconnect_requested.connect(_leave_lobby)

@@ -26,7 +26,7 @@ func _ready() -> void:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation",12)
 	card.add_child(column)
-	_label(column,"Ranking de la Arena",28)
+	_label(column,"Ranking · AO Mini",28)
 	_label(column,"100 puntos por victoria · PvP y bot",16)
 	var profile := HBoxContainer.new()
 	column.add_child(profile)
