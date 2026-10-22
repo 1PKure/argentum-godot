@@ -1,6 +1,7 @@
 class_name CombatHUD
 extends Control
 
+signal lobby_requested
 signal disconnect_requested
 signal connection_disconnect_requested
 signal modal_changed(blocked: bool)
@@ -87,6 +88,12 @@ var _inventory_revision := -1
 var _inventory_peer := 0
 var _pixel_scale := 1
 var _brand: Label
+var _experience_bar: ProgressBar
+var _experience_label: Label
+var _rank_label: Label
+var _round_strip: PanelContainer
+var _round_text: Label
+var _rematch_button: Button
 var _brand_detail: Label
 var _console_back: Panel
 var _macro_back: Panel
@@ -97,6 +104,9 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_inventory_layout.restore()
 	_build_interface()
+	LobbyNetwork.changed.connect(_refresh_round_strip)
+	RankingNetwork.changed.connect(_refresh_rank)
+	_refresh_rank()
 	_inventory_move_preview = TextureRect.new()
 	_inventory_move_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_inventory_move_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -373,6 +383,13 @@ func _build_interface() -> void:
 	_name_label.clip_text = true
 	_position_label = _label(_frame,"Bosque",Rect2(),13)
 	_position_label.add_theme_color_override("font_color",PALETTE.MUTED)
+	_experience_bar = _resource_bar(PALETTE.GOLD)
+	_experience_bar.max_value = 100
+	_experience_bar.value = 100
+	_experience_bar.tooltip_text = "Preset de nivel 50. Sin progresión de experiencia en la arena."
+	_experience_label = _label(_frame,"Nivel 50",Rect2(),12)
+	_experience_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_rank_label = _label(_frame,"Ranking: —",Rect2(),12)
 	_connection_label = _label(_frame,"Sin conexión",Rect2(),12)
 	_connection_label.add_theme_color_override("font_color",PALETTE.GOLD)
 	_status_label = _label(_frame,"",Rect2(),12)
@@ -435,7 +452,7 @@ func _build_interface() -> void:
 		var entry := SpellSlotButton.new()
 		entry.configure(id)
 		_spell_list.add_child(entry)
-		entry.custom_minimum_size = Vector2(244,46)
+		entry.custom_minimum_size = Vector2(244,38)
 		entry.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		entry.pressed.connect(_on_spell_selected.bind(id))
 		entry.book_move_started.connect(_begin_book_move)
@@ -459,6 +476,7 @@ func _build_interface() -> void:
 	_mana_label = _label(_frame,"—",Rect2(),13)
 	_health_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_mana_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_build_round_strip()
 	_build_menu()
 	_menu_button = _text_button(_frame,"Menú",Rect2())
 	_menu_button.pressed.connect(func() -> void: set_menu_opened(not _menu_panel.visible))
@@ -589,7 +607,14 @@ func _build_menu() -> void:
 	_stats_button.custom_minimum_size.y = 34
 	_stats_button.pressed.connect(func() -> void:
 		set_menu_opened(false)
-		_request_recovery("respawn")
+		if not LobbyNetwork.room.is_empty(): _toggle_round_ready()
+		else: _request_recovery("respawn")
+	)
+	var lobby_button := _text_button(content,"Volver al lobby",Rect2())
+	lobby_button.custom_minimum_size.y = 30
+	lobby_button.pressed.connect(func() -> void:
+		set_menu_opened(false)
+		lobby_requested.emit()
 	)
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 12)
@@ -849,6 +874,7 @@ func _update_recovery_controls() -> void:
 			labels.append("Meditando")
 		_status_label.text = " · ".join(labels)
 	_status_label.tooltip_text = _status_label.text
+	_stats_button.text = "Revancha · Listo" if not LobbyNetwork.room.is_empty() else "Reaparecer"
 	_stats_button.visible = state != null and not state.is_alive
 	_layout_resource_panels()
 
@@ -900,19 +926,27 @@ func _fit_interface() -> void:
 	_minimap.size = Vector2(168,100)
 	var book_open := _spell_panel.visible
 	_minimap.visible = not book_open
-	var tabs_y := 168.0 if book_open else 288.0
+	_experience_bar.position = Vector2(side_x+16,164)
+	_experience_bar.size = Vector2(264,18)
+	_experience_label.position = _experience_bar.position
+	_experience_label.size = _experience_bar.size
+	_rank_label.position = Vector2(side_x+16,188)
+	_rank_label.size = Vector2(264,18)
+	var tabs_y := 212.0
 	_inventory_button.position = Vector2(side_x+16,tabs_y)
 	_spell_button.position = Vector2(side_x+152,tabs_y)
 	_inventory_button.size = Vector2(128,34)
 	_spell_button.size = Vector2(128,34)
 	for panel: Control in [_inventory_panel,_spell_panel]:
-		panel.position = Vector2(side_x+16,208 if book_open else 332)
+		panel.position = Vector2(side_x+16,252)
 		panel.size = Vector2(264,height-524)
 	# Three visible rows; occupied later slots remain accessible through scrolling.
 	_inventory_panel.size.y = 128
-	_spell_panel.size.y = height-398 if book_open else height-524
+	_spell_panel.size.y = height-448 if book_open else height-524
 	_layout_spellbook()
 	_layout_resource_panels()
+	_round_strip.position = game_area.position+Vector2(16,40)
+	_round_strip.size = Vector2(420,84)
 	_menu_panel.position = Vector2.ZERO
 	_menu_panel.size = _frame.size
 	_pause_label.position = Vector2(0,16)
@@ -1161,7 +1195,8 @@ func _open_bot() -> void:
 
 func _on_bot_status() -> void:
 	var state: Dictionary = BotNetwork.state
-	_round_countdown.update_status(state, _local_peer_id)
+	if str(state.get("phase","")) in ["won","lost"] and not LobbyNetwork.room.is_empty(): _round_countdown.clear()
+	else: _round_countdown.update_status(state, _local_peer_id)
 	_notify_modal_state()
 	var phase := str(state.get("phase", "idle"))
 	var owner := int(state.get("owner_id", 0))
@@ -1330,5 +1365,61 @@ func _layout_resource_panels() -> void:
 	_mana_label.size = _mana_bar.size
 	_footer_back.position = _bottom_back.position + Vector2(0,_bottom_back.size.y+12)
 	_footer_back.size = Vector2(280,50)
-	_side_art.size.y = _footer_back.position.y+_footer_back.size.y+8-_side_art.position.y
+	_minimap.position = Vector2(_frame.size.x-260,_footer_back.position.y+_footer_back.size.y+12)
+	_minimap.size = Vector2(192,116)
+	_side_art.size.y = (_footer_back.position.y+_footer_back.size.y if _spell_panel.visible else _minimap.position.y+_minimap.size.y)+8-_side_art.position.y
 	_layout_footer_actions()
+
+
+func _build_round_strip() -> void:
+	_round_strip = PanelContainer.new()
+	_round_strip.name = "RoundResultStrip"
+	_round_strip.mouse_filter = Control.MOUSE_FILTER_STOP
+	_round_strip.add_theme_stylebox_override("panel",PALETTE.box(PALETTE.PANEL,PALETTE.GOLD,8))
+	_frame.add_child(_round_strip)
+	var content := VBoxContainer.new()
+	_round_strip.add_child(content)
+	_round_text = Label.new()
+	_round_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	content.add_child(_round_text)
+	var actions := HBoxContainer.new()
+	content.add_child(actions)
+	_rematch_button = _text_button(actions,"Revancha · Listo",Rect2())
+	_rematch_button.pressed.connect(_toggle_round_ready)
+	_text_button(actions,"Clases",Rect2()).pressed.connect(_open_classes)
+	_text_button(actions,"Arenas",Rect2()).pressed.connect(_open_arenas)
+	for button: Button in actions.get_children():
+		button.custom_minimum_size = Vector2(120,32)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_round_strip.hide()
+
+func _refresh_round_strip() -> void:
+	var room: Dictionary = LobbyNetwork.room
+	var phase := str(room.get("phase",""))
+	_round_strip.visible = not room.is_empty() and phase in ["waiting","result"]
+	if not _round_strip.visible: return
+	var ready := false
+	for member: Dictionary in room.get("members",[]):
+		if int(member.peer_id) == _local_peer_id: ready = bool(member.ready)
+	var winner := int(room.get("winner_id",0))
+	_round_text.text = ("Victoria" if winner == _local_peer_id else "Derrota" if winner != 0 else "Ronda terminada") if phase=="result" else "Prepará la próxima ronda"
+	if ready: _round_text.text += " · Esperando al rival"
+	_rematch_button.text = "Cancelar Listo" if ready else "Revancha · Listo"
+	_rematch_button.disabled = LobbyNetwork.pending or (room.get("members",[]).size()<2 and not bool(room.get("bot_enabled",false))) or bool(ArenaNetwork.state.get("transitioning",false))
+
+func _refresh_rank() -> void:
+	_rank_label.text = "Ranking: —"
+	var id := str(RankingNetwork.player.get("id",""))
+	if id.is_empty(): return
+	for entry: Dictionary in RankingNetwork.snapshot.get("entries",[]):
+		if str(entry.get("id","")) == id:
+			_rank_label.text = "Ranking #%d · %d puntos" % [int(entry.rank),int(entry.points)]
+			return
+
+
+func _toggle_round_ready() -> void:
+	if LobbyNetwork.room.is_empty(): return
+	var ready := false
+	for member: Dictionary in LobbyNetwork.room.get("members",[]):
+		if int(member.peer_id) == _local_peer_id: ready = bool(member.ready)
+	LobbyNetwork.command("ready",{"ready":not ready,"revision":int(LobbyNetwork.room.get("revision",-1))})

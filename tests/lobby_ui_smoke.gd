@@ -42,7 +42,7 @@ func _run() -> void:
 	net.room.phase = "result"
 	net.room.result_text = "Victoria"
 	net.changed.emit()
-	_check(panel._surface.visible and panel._room_content.visible,"result reopens room for rematch")
+	_check(not panel._surface.visible,"result keeps arena visible for in-place rematch")
 	for outcome in [[1,"Victoria"],[2,"Derrota"],[0,"Ronda interrumpida"]]:
 		net.room.winner_id = outcome[0]
 		net.changed.emit()

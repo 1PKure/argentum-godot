@@ -35,3 +35,12 @@ Pruebas:144 comprobaciones de modo moderno/atlas/material compartido/factory/anc
 GitHub Desktop → work/arena-lobbies → Pull. Reiniciar el dedicado actualizado, recargar la web privada con Ctrl+F5 y elegir Menú → Magia → Moderna ligera. Comparar misma arena/ventana/navegador y un solo cliente con sonido, usando doble Apocalipsis, Descarga, Tormenta, curación y meditación. También sigue disponible Original AO. No se amplió audiencia ni contrataron servicios.
 
 Referencia del shader: https://docs.godotengine.org/en/stable/tutorials/shaders/shader_reference/canvas_item_shader.html
+
+
+## Revisión tras feedback de regresión en ambos modos
+
+El usuario informó que ambos modos empeoraron en web aunque seguían funcionando localmente. La reducción de llamadas del efecto aislado no basta para declarar resuelto el rendimiento web. En esta revisión se corrigen componentes compartidos: ambiente mediante dos MultiMesh2D, sin reconstrucción de100partículas en GDScript cada cuadro; medidor desactivado inicialmente; audio web Sample sobre Master mediante Web Audio en lugar de Stream en el hilo del juego. No se volvió a cambiar el arte de hechizos.
+
+Los samples web evitan DSP no soportado: sin limitador Godot en web, con margen−3dB y las ganancias fuente conservadas. General controla Master; Efectos y Pasos se aplican a cada reproductor web activo y nuevo, con referencias débiles eliminadas al liberar. Los pasos web eligen WAV directamente, sin AudioStreamRandomizer. La pausa detiene las colas de samples y no las reinicia al volver. Nativo conserva Stream, buses y limitador. Esto cambia la ruta de reproducción, no los audios de hechizos o impactos. Referencia oficial: https://docs.godotengine.org/en/stable/tutorials/export/exporting_for_web.html
+
+Prueba nativa del ambiente aislado:2 llamadas de dibujo por bioma, sin afirmar FPS de navegador. Datos en docs/hosting/ambient-batches.json. Sample se valida con pruebas de configuración/ganancia y preferencias en nativo; la reproducción real Web Audio y su rendimiento en Chrome/Opera requieren prueba del usuario. Sin navegador automatizado en esta revisión. Mostrar rendimiento añade «audio Sample» en web para distinguir la ruta.

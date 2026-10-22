@@ -44,10 +44,18 @@ const CAST_GESTURE_SECONDS := 0.30
 var _equipment_action := ""
 var _equipment_action_elapsed := 0.0
 var _visual_is_ghost := false
+var _living_body_id := DEFAULT_BODY_ID
+var _ghost_sprite: Sprite2D
+const GHOST_TEXTURE := preload("res://client/characters/art/arena_ghost.svg")
 
 
 func _ready() -> void:
 	
+	_ghost_sprite = Sprite2D.new()
+	_ghost_sprite.texture = GHOST_TEXTURE
+	_ghost_sprite.position = Vector2(0,-4)
+	_ghost_sprite.visible = false
+	add_child(_ghost_sprite)
 	scale = Vector2.ONE * VISUAL_SCALE
 	
 	body.texture_filter = (
@@ -105,7 +113,8 @@ func set_loadout(id: int, equipped: Dictionary, skin_id: String = "preset") -> v
 	_equipped_items = equipped.duplicate()
 	_skin_id = skin_id
 	var skin := SkinCatalog.get_skin(skin_id, id)
-	set_body_id(int(skin.body_id) if not skin.is_empty() and int(skin.body_id) > 0 else int(profile.body_id))
+	_living_body_id = int(skin.body_id) if not skin.is_empty() and int(skin.body_id) > 0 else int(profile.body_id)
+	set_body_id(_living_body_id)
 	for kind: String in ["weapon", "shield", "helmet"]:
 		if not _equipment.has(kind):
 			var sprite := AnimatedSprite2D.new()
@@ -118,6 +127,8 @@ func set_loadout(id: int, equipped: Dictionary, skin_id: String = "preset") -> v
 		if frames != null:
 			_equipment[kind].sprite_frames = frames
 	_sync_equipment()
+	if _visual_is_ghost:
+		for sprite: AnimatedSprite2D in _equipment.values(): sprite.hide()
 
 
 func _sync_equipment() -> void:
@@ -520,18 +531,17 @@ func _get_animation_name(
 func set_ghost_mode(
 	enabled: bool
 ) -> void:
+	if _visual_is_ghost == enabled: return
 	_visual_is_ghost = enabled
-	if enabled: _clear_equipment_gesture()
-	var color := (
-		GHOST_MODULATE
-		if enabled
-		else NORMAL_MODULATE
-	)
-
-	body.modulate = color
-	head.modulate = color
-	for sprite: AnimatedSprite2D in _equipment.values():
-		sprite.modulate = color
+	_clear_equipment_gesture()
+	_ghost_sprite.visible = enabled
+	body.visible = not enabled
+	if enabled: body.pause()
+	body.modulate = NORMAL_MODULATE
+	head.visible = not enabled
+	for kind: String in _equipment:
+		var sprite: AnimatedSprite2D = _equipment[kind]
+		sprite.visible = not enabled and sprite.sprite_frames != null and sprite.sprite_frames.has_animation(_get_animation_name(current_direction))
 
 func _get_direction_name(
 	direction: Vector2

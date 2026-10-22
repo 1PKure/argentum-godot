@@ -9,6 +9,8 @@ var bounds := Rect2()
 var _elapsed := 0.0
 var _foreground: Node2D
 var _seeds: Array[Vector3] = []
+var _batches: Array[MultiMeshInstance2D] = []
+const BATCH_SHADER := preload("res://client/effects/shaders/biome_batch.gdshader")
 const MAX_PARTICLES := 128
 
 
@@ -23,28 +25,25 @@ func setup(arena_id: String, world_bounds: Rect2) -> void:
 		var jitter_x := fposmod(sin(i*127.1+9.3)*43758.5453,1.0)
 		var jitter_y := fposmod(sin(i*311.7+4.9)*22641.319,1.0)
 		_seeds.append(Vector3((i%12+0.15+jitter_x*0.70)/12.0,(floori(i/12.0)+0.15+jitter_y*0.70)/rows,0.72+(i%7)*0.10))
-	queue_redraw()
-	if _foreground!=null: _foreground.queue_redraw()
+	if is_inside_tree(): _build_batches()
 
 
 func _ready() -> void:
 	z_index=-1
 	_foreground=Node2D.new()
 	_foreground.z_index=2
-	_foreground.draw.connect(func() -> void: _draw_particles(_foreground,true))
 	add_child(_foreground)
+	if bounds.has_area(): _build_batches()
 
 
 func _process(delta: float) -> void:
 	_elapsed+=delta
-	queue_redraw()
-	_foreground.queue_redraw()
+	_sync_age()
 
 
 func set_age(seconds: float) -> void:
 	_elapsed=maxf(0,seconds)
-	queue_redraw()
-	if _foreground!=null: _foreground.queue_redraw()
+	_sync_age()
 
 
 func particle_position(index: int, seconds: float) -> Vector2:
@@ -58,35 +57,44 @@ func particle_position(index: int, seconds: float) -> Vector2:
 	return bounds.position+Vector2(fposmod(seed_value.x*extent.x+seconds*drift.x*seed_value.z+sin(seconds*0.55+index)*6,extent.x),fposmod(seed_value.y*extent.y+seconds*drift.y*seed_value.z+sin(seconds*0.30+index)*2,extent.y))
 
 
-func _draw() -> void:
-	_draw_particles(self,false)
 
+func _sync_age() -> void:
+	for batch in _batches: (batch.material as ShaderMaterial).set_shader_parameter("elapsed",_elapsed)
 
-func _draw_particles(canvas: Node2D, front: bool) -> void:
-	if not bounds.has_area(): return
-	for i in range(particle_count):
-		if (i%5==0)!=front: continue
-		var at := particle_position(i,_elapsed)
-		var nearby := 1.18 if front else 0.84
-		var pulse := 0.84+sin(_elapsed*0.75+i*1.8)*0.12
-		if biome==ArenaData.LAVA:
-			var color := Color("ffd49b") if i%5==0 else Color("d7d3cd")
-			canvas.draw_circle(at,3.1*nearby,Color(color,0.07*pulse),true,-1,true)
-			canvas.draw_circle(at,1.65*nearby,Color(color,0.57*pulse),true,-1,true)
-			if i%5==0: canvas.draw_line(at-Vector2(0,3),at,Color("ffae55",0.35*pulse),1,true)
-		elif biome==ArenaData.DESERT:
-			var sand := Color("f8e4ba") if i%3 else Color("8e7043")
-			canvas.draw_line(at-Vector2(1.4,2)*nearby,at+Vector2(1.4,2)*nearby,Color(sand,0.55*pulse),1.25,true)
-		else:
-			if biome==ArenaData.FOREST:
-				var flutter := sin(_elapsed*1.3+i)*0.7
-				var direction := Vector2(cos(flutter),sin(flutter))
-				var normal := direction.rotated(PI/2)
-				var leaf := PackedVector2Array([at-direction*3.5*nearby,at-normal*1.65*nearby,at+direction*3.5*nearby,at+normal*1.65*nearby])
-				var color := Color("d7ca87") if i%3 else Color("bdd593")
-				canvas.draw_colored_polygon(leaf,Color(color,0.54*pulse))
-				if front: canvas.draw_line(at-direction*2,at+direction*2,Color("f1e7ba",0.45*pulse),0.7,true)
-			else:
-				var dust := Color("eee3c9")
-				canvas.draw_circle(at,3.5*nearby,Color(dust,0.06*pulse),true,-1,true)
-				canvas.draw_circle(at,1.45*nearby,Color(dust,0.49*pulse),true,-1,true)
+func _build_batches() -> void:
+	if _foreground == null: return
+	for batch in _batches: batch.queue_free()
+	_batches.clear()
+	for front: bool in [false,true]:
+		var selected: Array[int] = []
+		for i in range(particle_count):
+			if (i%5==0)==front: selected.append(i)
+		var data := MultiMesh.new()
+		data.transform_format = MultiMesh.TRANSFORM_2D
+		data.use_colors = true
+		data.use_custom_data = true
+		var quad := QuadMesh.new()
+		quad.size = Vector2(7,4) if biome=="forest" else Vector2(3,3)
+		data.mesh = quad
+		data.instance_count = selected.size()
+		for slot in range(selected.size()):
+			var i: int = selected[slot]
+			var seed: Vector3 = _seeds[i]
+			data.set_instance_transform_2d(slot,Transform2D.IDENTITY)
+			data.set_instance_custom_data(slot,Color(seed.x,seed.y,seed.z,float(i)))
+			var color := Color("d7ca87") if biome=="forest" else Color("f8e4ba") if biome=="desert" else Color("ffb879") if biome=="lava" else Color("eee3c9")
+			color.a = 0.52 if front else 0.38
+			data.set_instance_color(slot,color)
+		var material := ShaderMaterial.new()
+		material.shader = BATCH_SHADER
+		material.set_shader_parameter("bounds_origin",bounds.position)
+		material.set_shader_parameter("bounds_size",bounds.size)
+		material.set_shader_parameter("drift",Vector2(11,28) if biome=="desert" else Vector2(2,14) if biome=="lava" else Vector2(5,18) if biome=="forest" else Vector2(3,11))
+		material.set_shader_parameter("leaf",biome=="forest")
+		var batch := MultiMeshInstance2D.new()
+		batch.multimesh = data
+		batch.material = material
+		(_foreground if front else self).add_child(batch)
+		RenderingServer.canvas_item_set_custom_rect(batch.get_canvas_item(),true,bounds.grow(10))
+		_batches.append(batch)
+	_sync_age()

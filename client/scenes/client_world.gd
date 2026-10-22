@@ -207,7 +207,10 @@ func set_game_paused(paused: bool) -> void:
 
 
 func _pause_world_audio(node: Node, paused: bool) -> void:
-	if node is AudioStreamPlayer or node is AudioStreamPlayer2D: node.stream_paused = paused
+	if node is AudioStreamPlayer or node is AudioStreamPlayer2D:
+		if OS.has_feature("web"):
+			if paused: node.stop() # Drop one-shot tails; never restart a stopped sample on resume.
+		else: node.stream_paused = paused
 	for child in node.get_children(): _pause_world_audio(child,paused)
 
 
@@ -516,7 +519,7 @@ func _on_avatar_step(avatar: PlayerAvatar) -> void:
 	if audio == null:
 		audio = AudioStreamPlayer2D.new()
 		audio.name = "Footsteps"
-		audio.volume_db = -14.0
+		audio.volume_db = -8.0
 		audio.max_distance = TILE_SIZE * 8.0
 		audio.attenuation = 1.4
 		audio.panning_strength = 0.45
@@ -528,7 +531,7 @@ func _on_avatar_step(avatar: PlayerAvatar) -> void:
 			_footstep_count.erase(avatar.peer_id)
 		)
 	var count: int = _footstep_count.get(avatar.peer_id,0)
-	var pattern := FootstepAudio.pattern_for(_arena_id)
+	var pattern: AudioStream = FootstepAudio.stream_for(_arena_id,count+avatar.peer_id) if OS.has_feature("web") else FootstepAudio.pattern_for(_arena_id)
 	if audio.stream != pattern: audio.stream = pattern
 	audio.pitch_scale = 1.0
 	_last_footstep[avatar.peer_id] = now

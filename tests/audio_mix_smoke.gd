@@ -26,7 +26,7 @@ func _run() -> void:
 	ArenaAudioMix.route(two,1,&"Footsteps")
 	check(two.bus==&"Footsteps","positional footsteps have their own volume bus")
 	check(two.playback_type==AudioServer.PLAYBACK_TYPE_STREAM,"spatial audio uses stable Stream transport on web too")
-	check(ProjectSettings.get_setting("audio/driver/output_latency.web")==80 and ProjectSettings.get_setting("audio/general/default_playback_type.web")==0,"single-thread web reserves buffer and uses Stream rather than unsupported Sample effects")
+	check(ProjectSettings.get_setting("audio/driver/output_latency.web")==80 and ProjectSettings.get_setting("audio/general/default_playback_type.web")==1,"single-thread web uses browser Sample playback; native keeps Stream")
 	ArenaAudioMix.route(two,3)
 	check(two.max_polyphony==3,"footfall tails can overlap without being cut off")
 	one.queue_free(); two.queue_free()

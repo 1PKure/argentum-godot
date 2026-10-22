@@ -9,7 +9,7 @@ func _run() -> void:
 	ArenaAudioMix._settings_path = "user://audio_test_%s.cfg" % Crypto.new().generate_random_bytes(6).hex_encode()
 	ArenaAudioMix._levels.clear()
 	ArenaAudioMix.configure()
-	check(ArenaAudioMix.volume("footsteps")==70,"steps start slightly below previous mix")
+	check(ArenaAudioMix.volume("footsteps")==85,"footsteps default to a clearer 85 percent")
 	check(ArenaAudioMix.set_volume("effects",45)==OK,"volume preferences save")
 	check(is_equal_approx(AudioServer.get_bus_volume_db(AudioServer.get_bus_index(&"Combat")),-3+linear_to_db(0.45)),"effect gain reaches active bus immediately")
 	check(ArenaAudioMix.set_volume("footsteps",0)==OK and AudioServer.is_bus_mute(AudioServer.get_bus_index(&"Footsteps")),"zero mutes all active/new footfalls")

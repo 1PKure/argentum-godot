@@ -10,7 +10,7 @@ static func uses_original_fx() -> bool:
 	if not _loaded:
 		_loaded = true
 		_original = default_original(OS.has_feature("web"))
-		metrics = OS.has_feature("web")
+		metrics = false
 		var config := ConfigFile.new()
 		if config.load(PATH) == OK:
 			var choice: Variant = config.get_value("visual", "original_fx", _original)

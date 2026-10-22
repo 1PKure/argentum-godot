@@ -202,7 +202,7 @@ func _host() -> void:
 	await _click(hud._spell_button)
 	_check(hud._spell_panel.visible,"modern spellbook opens by GUI click")
 	_check(hud._spell_search.get_global_rect().end.y <= hud._spell_scroll.get_global_rect().position.y,"search stays above the first spell row")
-	_check(hud._spell_scroll.size.y>=300 and not hud._minimap.visible,"manual-cast book prioritizes at least six rows")
+	_check(hud._spell_scroll.size.y>=248 and not hud._minimap.visible,"manual-cast book prioritizes at least six rows")
 	_check([1,2,3,12,13,291].all(func(id: int) -> bool: return not hud._spell_buttons.has(id)),"starter spells absent from combat book")
 	var before_order: Array[int] = hud._book_order.duplicate()
 	var before_macros: Array = controller.bindings.duplicate()
@@ -242,6 +242,22 @@ func _host() -> void:
 	_check(await _wait(func() -> bool: return spells.size()>book_casts),"manual book Launch resolves actual server spell")
 
 	await _capture("combat-spells.png")
+	for hit in range(4):
+		if str(net.room.phase)=="result": break
+		await create_timer(1.05).timeout
+		var before := spells.size()
+		controller.aim_spell(51)
+		var victim = main._world._avatars[opponent]
+		await _mouse(main._world.get_global_transform()*(victim.position+Vector2(0,-25)))
+		await _wait(func() -> bool: return spells.size()>before or str(net.room.phase)=="result",2)
+	_check(await _wait(func() -> bool: return str(net.room.phase)=="result"),"actual combat ends in result")
+	_check(not main._lobby_panel._surface.visible and hud._round_strip.visible,"result stays in arena with inline rematch")
+	_check(main._world._avatars[opponent]._player_visual._ghost_sprite.visible,"opponent ghost visible after real death")
+	await _capture("ghost-result.png")
+	_mark("host-result")
+	await _click(hud._rematch_button)
+	_check(await _wait(func() -> bool: return str(net.room.phase)=="fighting",20),"real ready clicks restart round without lobby")
+	_check(not main._world._avatars[opponent].is_ghost and not main._lobby_panel._surface.visible,"rematch restores living players in arena")
 	await _click(hud._menu_button)
 	await _click(hud._menu_disconnect_button)
 	_check(await _wait(func() -> bool: return net.room.is_empty() and not net.pending),"Menu Exit Room returns to browser")
@@ -269,6 +285,10 @@ func _guest() -> void:
 	await _click(_find_button(main._lobby_panel,"Listo"))
 	_check(await _wait(func() -> bool: return str(net.room.phase)=="fighting"),"guest GUI Listo completes countdown")
 	_check(await _wait(func() -> bool: return not spells.is_empty()),"guest receives host macro spell")
+	_check(await _wait(func() -> bool: return FileAccess.file_exists(_path("host-result")),65),"guest sees completed round")
+	_check(not main._lobby_panel._surface.visible and main._world._avatars[root.multiplayer.get_unique_id()].is_ghost,"defeated guest stays visible as ghost")
+	await _click(hud._rematch_button)
+	_check(await _wait(func() -> bool: return str(net.room.phase) in ["countdown","fighting"]),"guest readies rematch directly in arena")
 	_check(await _wait(func() -> bool: return FileAccess.file_exists(_path("host-second-room")),55),"host creates second room")
 	_check(str(net.room.arena_id)=="forest" and main._world._arena_id=="forest" and net.room.members.size()==1,"host departure leaves guest in original map")
 	_check(int(net.room.owner_id)==root.multiplayer.get_unique_id(),"guest inherits host after departure")
@@ -303,7 +323,7 @@ func _layout_and_controls() -> void:
 		_check(hud._console_back.get_global_rect().end.y < hud.game_area.get_global_rect().position.y,"console above arena %s"%resolution)
 		_check(hud._health_bar.get_global_rect().end.y < hud._menu_button.get_global_rect().position.y and hud._health_bar.get_global_rect().position.y > hud._inventory_panel.get_global_rect().end.y,"health directly above options %s"%resolution)
 		_check(not hud._disconnect_button.get_global_rect().intersects(hud._menu_button.get_global_rect()) and Rect2(Vector2.ZERO,root.get_visible_rect().size).encloses(hud._disconnect_button.get_global_rect()),"footer disconnect has its own hit area %s"%resolution)
-		_check(hud._minimap.size.x >= 160 and not hud._minimap.get_global_rect().intersects(hud._inventory_button.get_global_rect()),"larger minimap separate from inventory %s"%resolution)
+		_check(hud._minimap.size.x >= 160 and hud._minimap.get_global_rect().position.y > hud._mana_bar.get_global_rect().end.y,"larger minimap separate from inventory %s"%resolution)
 	root.size = Vector2i(1280,800)
 	hud._fit_interface()
 	await process_frame

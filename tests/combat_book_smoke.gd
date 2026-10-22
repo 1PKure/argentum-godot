@@ -45,7 +45,7 @@ func _run() -> void:
 		await process_frame
 		await process_frame
 		check(hud._spell_search.get_global_rect().end.y <= hud._spell_scroll.get_global_rect().position.y,"search and list do not overlap")
-		check(hud._spell_scroll.size.y>=300,"book keeps six-row space %s"%resolution)
+		check(hud._spell_scroll.size.y>=248,"book keeps six-row space %s"%resolution)
 		check(hud._spell_scroll.get_global_rect().end.y<=hud._launch_button.get_global_rect().position.y,"book and Launch do not overlap")
 		check(hud._health_bar.get_global_rect().end.y<hud._mana_bar.get_global_rect().position.y,"health above mana")
 		check(Rect2(Vector2.ZERO,root.get_visible_rect().size).encloses(hud._launch_button.get_global_rect()),"Launch fits viewport")

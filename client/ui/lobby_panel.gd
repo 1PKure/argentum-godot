@@ -5,6 +5,8 @@ signal disconnect_requested
 signal presets_requested
 signal skins_requested
 const Palette := preload("res://client/ui/arena_presentation_theme.gd")
+var _arena_view := false
+var _view_room_id := 0
 var _surface: Control
 var _content: VBoxContainer
 var _browser: VBoxContainer
@@ -131,7 +133,12 @@ func _refresh() -> void:
 	if not _active: return
 	var room: Dictionary = LobbyNetwork.room
 	var phase := str(room.get("phase",""))
-	_surface.visible = phase not in ["countdown","fighting"]
+	var room_id := int(room.get("id",0))
+	if room_id != _view_room_id:
+		_view_room_id = room_id
+		_arena_view = false
+	if phase in ["countdown","fighting"]: _arena_view = true
+	_surface.visible = room.is_empty() or not _arena_view
 	if not _surface.visible: _ranking.close()
 	_browser.visible = room.is_empty()
 	_create_button.disabled = not LobbyNetwork.available or LobbyNetwork.pending or _entering
@@ -253,3 +260,8 @@ func _class_selector(parent: Node) -> OptionButton:
 	for id: int in ClassCatalog.all_ids(): selector.add_item(str(ClassCatalog.get_profile(id).name),id)
 	parent.add_child(selector)
 	return selector
+
+
+func show_room() -> void:
+	_arena_view = false
+	_refresh()

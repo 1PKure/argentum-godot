@@ -21,6 +21,7 @@ func _ready() -> void:
 	_local_input.set_process(false)
 	_hud.mount_world(_world)
 	_hud.disconnect_requested.connect(_leave_lobby)
+	_hud.lobby_requested.connect(func() -> void: _lobby_panel.show_room())
 	_hud.connection_disconnect_requested.connect(_disconnect_from_arena)
 	_lobby_panel = LobbyPanel.new()
 	add_child(_lobby_panel)
