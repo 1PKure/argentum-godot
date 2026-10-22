@@ -38,9 +38,9 @@ func _run()->void:
     last_cast=now
     if int(event.result.event.spell_id)==31:
      heals.append(now)
-     check(manager._potion_due>=now+700,"Healing commits to a potion pause")
+     check(manager._potion_due>=now+550,"Healing commits to a potion pause")
  check(not heals.is_empty(),"A pressured bot actually uses Heal while taking red potions")
- for i in range(1,heals.size()):check(heals[i]-heals[i-1]>=4200,"Healing has a real cooldown")
+ for i in range(1,heals.size()):check(heals[i]-heals[i-1]>=3400,"Healing has a real cooldown")
  check(legal,"Defensive healing shares normal cast cadence")
  print("Healing casts under pressure: ",heals.size())
  registry.queue_free();await process_frame

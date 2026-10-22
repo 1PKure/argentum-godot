@@ -244,17 +244,13 @@ func _inventory_result(room: ArenaLobbyRoom, peer_id: int, result: Dictionary) -
 	else: _stats(room,result.state)
 
 func _on_bot_command(peer_id: int, enabled: bool, class_id: int, request: int) -> void:
-	# The old practice window may configure a bot, but only Listo starts its round.
 	var room := lobbies.room_for(peer_id)
-	var result := ArenaLobbyRoom.error("Configurá el bot desde la sala.")
-	if room != null and room.members[0] == peer_id and room.members.size() == 1 and room.phase in ["waiting","result"] and not ClassCatalog.get_profile(class_id).is_empty():
-		room.bot.remove_bot(false)
-		room.bot_enabled = enabled
-		room.bot_class = class_id
-		room.invalidate_ready()
-		_publish_room(room,true)
-		_broadcast_lobby_states()
-		result = {"ok":true}
+	var result := ArenaLobbyRoom.error("Entrá primero a una sala individual.")
+	if room != null:
+		result = room.configure_practice(peer_id,enabled,class_id,true)
+		if result.ok:
+			_publish_room(room,true)
+			_broadcast_lobby_states()
 	BotNetwork.send_result(peer_id,request,result)
 
 func _on_arena_selection(peer_id: int, id: String, revision: int, request: int) -> void:

@@ -60,14 +60,9 @@ func command(peer_id: int, operation: String, payload: Dictionary, request_id: i
 			return room.set_ready(peer_id,bool(payload.get("ready",false)),int(payload.get("revision",-1)),now)
 		"bot":
 			if room == null or room.members[0] != peer_id: return ArenaLobbyRoom.error("Sólo el anfitrión puede configurar el bot.")
-			if room.phase not in ["waiting","result"]: return ArenaLobbyRoom.error("La ronda ya comenzó.")
-			if room.members.size() != 1: return ArenaLobbyRoom.error("El bot sólo está disponible si estás solo.")
 			var class_id := int(payload.get("class_id",ClassCatalog.DEFAULT_CLASS))
-			if ClassCatalog.get_profile(class_id).is_empty(): return ArenaLobbyRoom.error("Clase desconocida.")
-			room.bot.remove_bot(false)
-			room.bot_enabled = bool(payload.get("enabled",false))
-			room.bot_class = class_id
-			room.invalidate_ready()
+			var restarting := room.phase in ["countdown","fighting"]
+			return room.configure_practice(peer_id,bool(payload.get("enabled",false)),class_id,restarting,now)
 		_:
 			return ArenaLobbyRoom.error("Acción de sala desconocida.")
 	return {"ok":true}

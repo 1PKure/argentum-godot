@@ -244,7 +244,7 @@ func _test_training_behavior() -> void:
 					drinks.append(now)
 					colors[str(action.result.event.action)] = true
 		both_colors = both_colors and colors.size() == 2
-		quick_potions = quick_potions and drinks.size() >= 10 and drinks[0] >= 51460 and drinks[0] <= 51540
+		quick_potions = quick_potions and drinks.size() >= 10 and drinks[0] >= 51420 and drinks[0] <= 51500
 		for index in range(1, drinks.size()):
 			legal_potions = legal_potions and drinks[index] - drinks[index - 1] >= RecoveryRules.POTION_INTERVAL_MSEC
 			quick_potions = quick_potions and drinks[index] - drinks[index - 1] <= 320
@@ -268,7 +268,7 @@ func _test_training_behavior() -> void:
 	_check(static_hits >= 80, "Stationary opponents receive sustained combat pressure across eight seeds")
 	_check(moving_hits >= 40 and moving_hits < total_attempts, "Moving opponents can be hit and can also evade delayed perception")
 	_check(legal_casts, "All attacks and defensive spells respect the same slower bot spell interval")
-	_check(legal_potions and quick_potions, "Bot repeats potions at 300 ms with a human reaction window and no click+Use advantage")
+	_check(legal_potions and quick_potions, "Bot repeats potions at 280 ms with a human reaction window and no click+Use advantage")
 	_check(both_colors, "Under pressure the bot recovers health and mana instead of starving one resource")
 	_check(recovery_windows, "Wounded melee bots defend and recover through the real attack-potion gap")
 

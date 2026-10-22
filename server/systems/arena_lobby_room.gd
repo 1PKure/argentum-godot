@@ -138,6 +138,20 @@ func start_round(now: int) -> void:
 		round_id = bot.round_id
 	revision += 1
 
+# Solo practice may be reset while paused or fighting. Cancellation awards no win.
+func configure_practice(peer_id: int, enabled: bool, class_id: int, restart: bool = false, wall_time: int = -1) -> Dictionary:
+	if members.size()!=1 or members[0]!=peer_id:
+		return error("El bot sólo está disponible en una sala individual del anfitrión.")
+	if ClassCatalog.get_profile(class_id).is_empty(): return error("Clase desconocida.")
+	var now := game_time(wall_time)
+	if paused: set_paused(peer_id,false,wall_time)
+	bot.remove_bot(false)
+	bot_enabled = enabled
+	bot_class = class_id
+	invalidate_ready()
+	if enabled and restart: start_round(now)
+	return {"ok":true}
+
 func settle_round() -> bool:
 	if phase != "fighting": return false
 	if bot_enabled:

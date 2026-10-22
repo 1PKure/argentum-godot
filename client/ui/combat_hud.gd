@@ -1,7 +1,6 @@
 class_name CombatHUD
 extends Control
 
-signal lobby_requested
 signal disconnect_requested
 signal connection_disconnect_requested
 signal modal_changed(blocked: bool)
@@ -609,12 +608,6 @@ func _build_menu() -> void:
 		set_menu_opened(false)
 		if not LobbyNetwork.room.is_empty(): _toggle_round_ready()
 		else: _request_recovery("respawn")
-	)
-	var lobby_button := _text_button(content,"Volver al lobby",Rect2())
-	lobby_button.custom_minimum_size.y = 30
-	lobby_button.pressed.connect(func() -> void:
-		set_menu_opened(false)
-		lobby_requested.emit()
 	)
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 12)
@@ -1313,8 +1306,8 @@ func _build_visual_controls(parent: VBoxContainer) -> void:
 	var choice := Button.new()
 	choice.name = "SpellVisualMode"
 	choice.focus_mode = Control.FOCUS_NONE
-	choice.text = "Original AO" if ArenaVisualSettings.uses_original_fx() else "Moderna ligera"
-	choice.tooltip_text = "Alternar gráficos originales y modernos ligeros de hechizos y meditación."
+	choice.text = "Original AO" if ArenaVisualSettings.uses_original_fx() else "Moderna"
+	choice.tooltip_text = "Alternar gráficos originales y la animación moderna precalculada."
 	choice.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(choice)
 	var feedback := Label.new()
@@ -1322,8 +1315,13 @@ func _build_visual_controls(parent: VBoxContainer) -> void:
 	feedback.hide()
 	parent.add_child(feedback)
 	choice.pressed.connect(func() -> void:
+		if ArenaVisualSettings.uses_original_fx():
+			choice.disabled = true
+			choice.text = "Cargando…"
+			await ArenaBakedSpellAtlas.prewarm(get_tree())
+			choice.disabled = false
 		var error := ArenaVisualSettings.set_original_fx(not ArenaVisualSettings.uses_original_fx())
-		choice.text = "Original AO" if ArenaVisualSettings.uses_original_fx() else "Moderna ligera"
+		choice.text = "Original AO" if ArenaVisualSettings.uses_original_fx() else "Moderna"
 		feedback.text = "No se pudo guardar la preferencia." if error != OK else "Se aplica al próximo hechizo."
 		feedback.show()
 	)

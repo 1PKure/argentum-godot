@@ -12,7 +12,7 @@ const COMMAND_INTERVAL_MSEC := 400
 const MOVE_INTERVAL_MSEC := MovementRules.PRACTICE_BOT_MOVE_INTERVAL_MSEC
 const CAST_INTERVAL_MSEC := 1250
 const ATTACK_INTERVAL_MSEC := 650
-const POTION_INTERVAL_MSEC := 300
+const POTION_INTERVAL_MSEC := 280
 var registry: PlayerRegistry
 var owner_id := 0
 var phase := "idle"
@@ -244,10 +244,10 @@ func tick(now: int = -1) -> Array[Dictionary]:
 	if not removing and now >= _next_offense:
 		var healed := false
 		if now >= _next_heal and bot.current_health < bot.max_health * 0.55 and now >= _next_spell:
-			_next_heal = now + _rng.randi_range(4200, 5200)
+			_next_heal = now + _rng.randi_range(3400, 4200)
 			if _rng.randf() < 0.60:
 				healed = _cast(31, bot.grid_position, now, actions)
-				if healed: _potion_due = maxi(_potion_due,now+700)
+				if healed: _potion_due = maxi(_potion_due,now+550)
 		if not healed:
 			_attack(bot, ranged, caster, now, actions)
 	if not target.is_alive:
@@ -324,7 +324,7 @@ func _tick_potions(bot: PlayerState, now: int, actions: Array[Dictionary]) -> vo
 		_potion_due = 0
 		return
 	if _potion_due == 0:
-		_potion_due = now + _rng.randi_range(140, 210)
+		_potion_due = now + _rng.randi_range(120, 180)
 		return
 	if now < _potion_due:
 		return
