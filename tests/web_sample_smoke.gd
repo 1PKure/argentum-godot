@@ -12,6 +12,7 @@ func _run()->void:
 	var player:=AudioStreamPlayer.new();root.add_child(player)
 	player.volume_db=-12
 	ArenaAudioMix.route(player)
+	check(AudioServer.bus_count==1 and AudioServer.get_bus_name(0)==&"Master","web configuration never creates or reroutes buses")
 	check(player.playback_type==AudioServer.PLAYBACK_TYPE_SAMPLE and player.bus==&"Master","web uses browser samples on Master")
 	check(is_equal_approx(player.volume_db,-15),"web gains preserve source and combat headroom")
 	ArenaAudioMix.route(player)

@@ -80,7 +80,7 @@ func _test_caster(class_id: int) -> void:
 	_check(pairs>=2,"Caster%d rebuilds mana and returns to a heavy pair (%d pairs)" % [class_id,pairs])
 	_check(legal and ledger,"Caster%d pays real costs, recovers real mana and respects intervals" % class_id)
 	_check(not offensive.has(53) if class_id==6 else high_blue,"Druid never borrows Apocalypse; mage replenishes beyond the old65%% mana ceiling")
-	if class_id==1: _check(offensive.has(51) and offensive.has(41),"Mana-limited mage uses Discharge then economical Firestorm before rebuilding")
+	if class_id==1: _check(offensive.has(51) and offensive.count(41)<=2,"Mage uses Discharge and saves mana instead of repeating Firestorm")
 	print("Caster%d sequence: %s" % [class_id,str(offensive)])
 
 func _test_hybrid(class_id: int) -> void:

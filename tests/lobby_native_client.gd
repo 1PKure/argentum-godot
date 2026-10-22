@@ -328,7 +328,7 @@ func _layout_and_controls() -> void:
 	hud._fit_interface()
 	await process_frame
 	await process_frame
-	_check(hud._inventory_slots.filter(func(slot: Control) -> bool: return slot.visible).size()==18,"compact inventory exposes three rows")
+	_check(hud._inventory_slots.filter(func(slot: Control) -> bool: return slot.visible).size()>=24 and hud._inventory_panel.size.y>128,"inventory grows into the available HUD height")
 	_check(hud._bottom_back.position.y-hud._inventory_panel.position.y-hud._inventory_panel.size.y==12,"resources sit directly below inventory")
 	_check(hud._footer_back.position.y>hud._bottom_back.position.y+hud._bottom_back.size.y,"footer buttons have their own panel")
 	hud._inventory_layout.actions[41]="item:126"

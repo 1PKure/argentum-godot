@@ -940,8 +940,8 @@ func _fit_interface() -> void:
 	for panel: Control in [_inventory_panel,_spell_panel]:
 		panel.position = Vector2(side_x+16,252)
 		panel.size = Vector2(264,height-524)
-	# Three visible rows; occupied later slots remain accessible through scrolling.
-	_inventory_panel.size.y = 128
+	# Fill the right rail; resources and map share the same bottom anchor.
+	_inventory_panel.size.y = maxf(128,height-550)
 	_spell_panel.size.y = height-448 if book_open else height-524
 	_layout_spellbook()
 	_layout_resource_panels()
@@ -1337,7 +1337,8 @@ func _build_visual_controls(parent: VBoxContainer) -> void:
 
 
 func _compact_inventory_slots() -> void:
-	var last := 17
+	var rows := maxi(3,floori((_inventory_panel.size.y+4)/44.0))
+	var last := mini(_inventory_slots.size(),rows*6)-1
 	for index in range(_inventory_layout.actions.size()):
 		if not _inventory_layout.actions[index].is_empty(): last = maxi(last,index)
 	var shown := mini(_inventory_slots.size(),ceili((last+1)/6.0)*6)
@@ -1347,8 +1348,14 @@ func _compact_inventory_slots() -> void:
 func _layout_resource_panels() -> void:
 	if _bottom_back == null or _footer_back == null: return
 	var panel := _spell_panel if _spell_panel.visible else _inventory_panel
-	var resource_y := panel.position.y + panel.size.y + 12
 	var has_status := not _status_label.text.is_empty()
+	var bottom := _frame.size.y-24.0
+	var resource_height := 96.0 if has_status else 72.0
+	var map_height := 144.0 if not _spell_panel.visible else 0.0
+	var resource_y := bottom-50.0-12.0-resource_height-(map_height+12.0 if map_height>0 else 0.0)
+	panel.size.y = maxf(128,resource_y-12.0-panel.position.y)
+	_compact_inventory_slots()
+	if _spell_panel.visible: _layout_spellbook()
 	var bar_offset := 26.0 if has_status else 8.0
 	_bottom_back.position = Vector2(_frame.size.x-304,resource_y)
 	_bottom_back.size = Vector2(280,96 if has_status else 72)
@@ -1365,8 +1372,8 @@ func _layout_resource_panels() -> void:
 	_mana_label.size = _mana_bar.size
 	_footer_back.position = _bottom_back.position + Vector2(0,_bottom_back.size.y+12)
 	_footer_back.size = Vector2(280,50)
-	_minimap.position = Vector2(_frame.size.x-260,_footer_back.position.y+_footer_back.size.y+12)
-	_minimap.size = Vector2(192,116)
+	_minimap.position = Vector2(_frame.size.x-296,_footer_back.position.y+_footer_back.size.y+12)
+	_minimap.size = Vector2(264,144)
 	_side_art.size.y = (_footer_back.position.y+_footer_back.size.y if _spell_panel.visible else _minimap.position.y+_minimap.size.y)+8-_side_art.position.y
 	_layout_footer_actions()
 

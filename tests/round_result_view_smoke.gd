@@ -32,6 +32,8 @@ func _run()->void:
 	check(ghost._player_visual._equipment.values().all(func(sprite:AnimatedSprite2D)->bool:return not sprite.visible),"ghost hides living equipment")
 	check(hud._experience_bar.value==100 and hud._experience_label.text.contains("50"),"full level-50 preset bar")
 	check(hud._minimap.position.y>hud._footer_back.position.y+hud._footer_back.size.y,"minimap sits at lower right")
+	check(is_equal_approx(hud._minimap.position.y+hud._minimap.size.y,hud._frame.size.y-24),"right HUD reaches viewport bottom with a consistent margin")
+	check(hud._inventory_panel.size.y>128,"inventory expands into the formerly empty rail")
 	if not OS.get_environment("AO_UI_CAPTURE_DIR").is_empty():
 		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png(OS.get_environment("AO_UI_CAPTURE_DIR").path_join("ghost-result.png"))

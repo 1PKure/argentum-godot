@@ -7,7 +7,7 @@ const DEFAULT_BINDINGS: Array[int] = [1, 2, 12, 13]
 const CAST_INTERVAL_MSEC := 950 # Arena tuning; previous: 1000 ms.
 const ATTACK_SPELL_GAP_MSEC := 600 # Previous: 650 ms.
 const SPELL_ATTACK_GAP_MSEC := 600
-const ARENA_DAMAGE_MULTIPLIERS := {51: 0.92, 53: 0.92}
+const ARENA_DAMAGE_MULTIPLIERS := {41: 0.90, 51: 0.92, 53: 0.92}
 # Every enabled entry has a real server handler. Other entries stay consultable.
 const STATUS_HANDLERS := [11, 25, 26, 27, 28, 29, 112, 132, 133, 263, 350]
 const PERIODIC_HANDLERS := [242, 243, 268, 269]

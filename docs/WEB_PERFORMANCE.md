@@ -44,3 +44,41 @@ El usuario informó que ambos modos empeoraron en web aunque seguían funcionand
 Los samples web evitan DSP no soportado: sin limitador Godot en web, con margen−3dB y las ganancias fuente conservadas. General controla Master; Efectos y Pasos se aplican a cada reproductor web activo y nuevo, con referencias débiles eliminadas al liberar. Los pasos web eligen WAV directamente, sin AudioStreamRandomizer. La pausa detiene las colas de samples y no las reinicia al volver. Nativo conserva Stream, buses y limitador. Esto cambia la ruta de reproducción, no los audios de hechizos o impactos. Referencia oficial: https://docs.godotengine.org/en/stable/tutorials/export/exporting_for_web.html
 
 Prueba nativa del ambiente aislado:2 llamadas de dibujo por bioma, sin afirmar FPS de navegador. Datos en docs/hosting/ambient-batches.json. Sample se valida con pruebas de configuración/ganancia y preferencias en nativo; la reproducción real Web Audio y su rendimiento en Chrome/Opera requieren prueba del usuario. Sin navegador automatizado en esta revisión. Mostrar rendimiento añade «audio Sample» en web para distinguir la ruta.
+
+
+## Audio web sin salida: buses creados al iniciar
+
+El cambio a Sample dejó una regresión concreta: configure() aún llamaba a
+_ensure_bus() antes de salir por la rama web. En Godot4.7.2, add_bus(bus_count)
+puede desordenar los buses de JavaScript y desconectar Master de destination.
+Referencia primaria: https://github.com/godotengine/godot/issues/119026
+
+La rama web ahora retorna antes de crear o enviar buses: solo Master existente,
+sin DSP; Efectos/Pasos conservan sus ganancias por reproductor. Nativo sigue
+usando Combat/Footsteps/limitador. La regresión automatizada inicia con un solo
+bus y verifica que configure()/route()/sliders nunca agreguen otro.
+La página ya permite autoplay en el iframe. No se alteraron WAV ni el motor.
+
+El navegador de validación de esta revisión no dispone de WebGL2, por lo que
+el arranque real de Godot no pudo validarse allí. La salida audible y fluidez
+siguen requiriendo comprobación en Chrome/Opera del usuario.
+
+## HUD hasta el borde inferior y ajuste moderado de bot
+
+El minimapa264×144 se alinea24px sobre el borde inferior; recursos y acciones
+se apilan encima. El inventario crece con el alto disponible y muestra las
+filas que caben, conservando scroll para las42 posiciones del servidor. En el
+libro, el espacio se usa para más hechizos y los recursos quedan abajo.
+
+Tormenta de Fuego recibe un multiplicador0.90 en el daño final, para todos los
+lanzadores. Apocalipsis y Descarga mantienen el balance anterior. El bot
+conserva movimiento y cadencia de magia1250ms; las pociones pasan320→300ms,
+reacción140–210ms. Una roja de emergencia cede220ms de ofensiva, de modo que
+no la postergue continuamente hasta dejar de estar herido. Curar se considera
+bajo55%HP, probabilidad60%, revisión4.2–5.2s; comparte intervalo de magia y
+posterga pociones700ms después de un éxito. No recibe curación o maná gratis.
+
+Tras la pareja fuerte, el mago usa una Descarga si puede pagarla; Tormenta solo
+si no alcanza ese coste. Luego guarda maná para otra pareja en vez de repetir
+Tormenta. Druida conserva su repertorio legal; los semimágicos no cambian táctica.
+La simulación no reemplaza el feedback de dificultad real.

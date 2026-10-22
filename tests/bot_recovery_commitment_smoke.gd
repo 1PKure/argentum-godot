@@ -21,13 +21,13 @@ func _run() -> void:
 		for action:Dictionary in manager.tick(now):
 			if action.kind=="recovery" and action.result.event.action=="health_potion":
 				reds.append(now)
-				if bot.current_health<bot.max_health*.45:check(manager._next_offense>=now+350,"Emergency red commits to recovery")
+				if bot.current_health<bot.max_health*.45:check(manager._next_offense>=now+220,"Emergency red commits to recovery")
 			if action.kind=="cast":
 				var id:=int(action.result.event.spell_id)
-				if id==31 and not reds.is_empty():check(now-reds[-1]>=1600,"No instant heal spell after red potion")
+				if id==31 and not reds.is_empty():check(manager._potion_due>=now+700,"Heal pauses potion recovery rather than stacking both instantly")
 				spells.append({"id":id,"time":now})
 	check(reds.size()>=3,"Pressure produces actual health potions")
-	for index in range(1,reds.size()):check(reds[index]-reds[index-1]>=320,"Bot potions have slightly slower cadence")
+	for index in range(1,reds.size()):check(reds[index]-reds[index-1]>=300,"Bot potions respect their recovery cadence")
 	check(spells.any(func(event:Dictionary)->bool:return event.id in [53,51,41,39]),"Bot still attacks between recovery windows")
 	check(RecoveryRules.get_potion("health_potion").min==27,"Human red potion remains 27HP")
 	registry.queue_free();await process_frame

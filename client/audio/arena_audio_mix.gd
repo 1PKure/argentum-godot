@@ -20,12 +20,16 @@ static func configure() -> void:
 			for key: String in DEFAULTS:
 				var value: Variant = config.get_value("volume",key,DEFAULTS[key])
 				if (value is float or value is int) and is_finite(float(value)): _levels[key] = clampf(float(value),0,100)
+	# Runtime add_bus() corrupts the Sample bus graph on Godot 4.7.2 web.
+	# Keep the browser on its existing Master; mix logical channels per source.
+	if _platform_web:
+		_apply_level(AudioServer.get_bus_index(&"Master"),float(_levels.master),0)
+		return
 	var bus := _ensure_bus(BUS,&"Master")
 	var steps := _ensure_bus(FOOTSTEPS,BUS)
 	_apply_level(AudioServer.get_bus_index(&"Master"),float(_levels.master),0)
 	_apply_level(bus,float(_levels.effects),BUS_HEADROOM_DB)
 	_apply_level(steps,float(_levels.footsteps),0)
-	if _platform_web: return # Browser samples bypass unsupported Godot DSP.
 	var master := AudioServer.get_bus_index(&"Master")
 	for index in range(AudioServer.get_bus_effect_count(master)):
 		if AudioServer.get_bus_effect(master,index) is AudioEffectHardLimiter: return

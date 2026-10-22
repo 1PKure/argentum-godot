@@ -12,7 +12,7 @@ const COMMAND_INTERVAL_MSEC := 400
 const MOVE_INTERVAL_MSEC := MovementRules.PRACTICE_BOT_MOVE_INTERVAL_MSEC
 const CAST_INTERVAL_MSEC := 1250
 const ATTACK_INTERVAL_MSEC := 650
-const POTION_INTERVAL_MSEC := 320
+const POTION_INTERVAL_MSEC := 300
 var registry: PlayerRegistry
 var owner_id := 0
 var phase := "idle"
@@ -243,11 +243,11 @@ func tick(now: int = -1) -> Array[Dictionary]:
 	# A defensive spell uses the same global cast interval as an attack.
 	if not removing and now >= _next_offense:
 		var healed := false
-		if now >= _next_heal and now - _last_red_at >= 1600 and bot.current_health < bot.max_health * 0.45:
-			_next_heal = now + _rng.randi_range(4500, 5500)
-			if _rng.randf() < 0.45:
+		if now >= _next_heal and bot.current_health < bot.max_health * 0.55 and now >= _next_spell:
+			_next_heal = now + _rng.randi_range(4200, 5200)
+			if _rng.randf() < 0.60:
 				healed = _cast(31, bot.grid_position, now, actions)
-				if healed: _potion_due = maxi(_potion_due,now+1600)
+				if healed: _potion_due = maxi(_potion_due,now+700)
 		if not healed:
 			_attack(bot, ranged, caster, now, actions)
 	if not target.is_alive:
@@ -324,7 +324,7 @@ func _tick_potions(bot: PlayerState, now: int, actions: Array[Dictionary]) -> vo
 		_potion_due = 0
 		return
 	if _potion_due == 0:
-		_potion_due = now + _rng.randi_range(160, 240)
+		_potion_due = now + _rng.randi_range(140, 210)
 		return
 	if now < _potion_due:
 		return
@@ -338,7 +338,7 @@ func _tick_potions(bot: PlayerState, now: int, actions: Array[Dictionary]) -> vo
 			_last_red_at = now
 			# Emergency recovery is a defensive choice; do not weave free offense into it.
 			if bot.current_health < bot.max_health * 0.45:
-				_next_offense = maxi(_next_offense,now+350)
+				_next_offense = maxi(_next_offense,now+220)
 		_potion_due = now + maxi(RecoveryRules.POTION_INTERVAL_MSEC, POTION_INTERVAL_MSEC)
 	else:
 		# A normal attack/potion gap can block this; retain the pending decision.
@@ -445,13 +445,12 @@ func _combo_spell(bot: PlayerState, now: int) -> int:
 		_fallback_used = false
 		return heavy
 	_combo_rebuilding = true
-	# One strong fallback, then cheaper pressure lets real blue potions build
-	# the next pair rather than spending every recovered MP immediately.
+	# One fallback per rebuild: Discharge first, Firestorm only if too low.
+	# Then save blue-potion mana for the next heavy pair, without cheap spam.
+	if _fallback_used: return 0
 	if bot.class_id == 1:
-		if not _fallback_used: return _affordable(bot,[51,41,39,3])
-		return _affordable(bot,[41,39,3])
-	if not _fallback_used: return _affordable(bot,[113,43,3])
-	return _affordable(bot,[43,3])
+		return _affordable(bot,[51,41,39,3])
+	return _affordable(bot,[113,43,3])
 
 func _record_combo_spell(bot: PlayerState, spell: int, now: int) -> void:
 	if spell == _heavy_spell(bot):
