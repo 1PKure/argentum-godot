@@ -31,7 +31,7 @@ func _run()->void:
  for i in range(1500):
   var now:=24000+i*20
   registry.advance_runtime(now)
-  if i%30==0:bot.current_health=maxi(70,bot.current_health-45)
+  if i%30==0:bot.current_health=maxi(70,bot.current_health-90)
   for event:Dictionary in manager.tick(now):
    if event.kind=="cast":
     if last_cast:legal=legal and now-last_cast>=ArenaPracticeBot.CAST_INTERVAL_MSEC

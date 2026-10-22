@@ -44,6 +44,8 @@ InputBindings="*res://autoload/input_bindings.gd"
 RankingNetwork="*res://autoload/ranking_network.gd"
 ChatNetwork="*res://autoload/chat_network.gd"
 
+UIClickAudio="*res://autoload/ui_click_audio.gd"
+
 [display]
 
 window/size/viewport_width=1280

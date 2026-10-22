@@ -43,6 +43,7 @@ var _combo_step := 0
 var _combo_until := 0
 var _combo_rebuilding := false
 var _fallback_used := false
+var _semi_combos := 0
 var _semi_step := 0
 var _semi_until := 0
 var _next_melee := 0
@@ -127,7 +128,7 @@ func _start_round(peer_id: int, class_id: int, now: int) -> Dictionary:
 	_cast_request = 0
 	_recovery_request = 0
 	_shot_request = 0
-	_ready_at = _starts_at + _rng.randi_range(600, 850)
+	_ready_at = _starts_at + (_rng.randi_range(450,650) if class_id==1 else _rng.randi_range(600,850))
 	_next_observation = _ready_at
 	_observed_cell = owner.grid_position
 	_observed_rooted = false
@@ -144,6 +145,7 @@ func _start_round(peer_id: int, class_id: int, now: int) -> Dictionary:
 	_combo_until = 0
 	_combo_rebuilding = false
 	_fallback_used = false
+	_semi_combos = 0
 	_semi_step = 0
 	_semi_until = 0
 	_next_melee = _ready_at
@@ -260,7 +262,7 @@ func tick(now: int = -1) -> Array[Dictionary]:
 		if direction != -1:
 			var moved := registry.try_move_player(BOT_ID, direction, now)
 			if moved != null:
-				_next_move = now + MOVE_INTERVAL_MSEC
+				_next_move = now + _move_interval(bot)
 				_remember_move(direction, moved.grid_position)
 				actions.append({"kind": "move", "state": moved.to_dictionary()})
 	return actions
@@ -290,7 +292,7 @@ func _attack(bot: PlayerState, ranged: bool, caster: bool, now: int, actions: Ar
 				spell = 25
 				_next_control = now + _rng.randi_range(14000, 18000)
 		var cell := _observed_cell
-		if _rng.randf() < 0.06:
+		if _rng.randf() < (0.04 if bot.class_id==1 else 0.06):
 			cell += MovementRules.get_offset(_rng.randi_range(0, 3))
 		# An inaccurate click costs the opportunity too; no free rapid retries.
 		var interval := maxi(SpellCatalog.CAST_INTERVAL_MSEC, CAST_INTERVAL_MSEC) if caster else maxi(CombatRules.RANGED_ATTACK_COOLDOWN_MSEC, ATTACK_INTERVAL_MSEC)
@@ -444,6 +446,12 @@ func _combo_spell(bot: PlayerState, now: int) -> int:
 		_combo_rebuilding = false
 		_fallback_used = false
 		return heavy
+	# After the opening heavy pair, the mage can press with a real
+	# Apocalypse+Discharge budget instead of idling until two Apocalypses.
+	var mixed_cost := cost + int(SpellCatalog.get_spell(51).mana)
+	if bot.class_id==1 and _combo_rebuilding and bot.current_mana>=mixed_cost:
+		_fallback_used=false
+		return heavy
 	_combo_rebuilding = true
 	# One fallback per rebuild: Discharge first, Firestorm only if too low.
 	# Then save blue-potion mana for the next heavy pair, without cheap spam.
@@ -480,8 +488,9 @@ func _semi_attack(bot: PlayerState, now: int, actions: Array[Dictionary]) -> voi
 		var missing := finish_cost-bot.current_mana
 		# Keep a finishing opportunity when only one/two real blues are missing.
 		if ClassCatalog.can_cast(bot.class_id,51) and missing > 0 and missing <= maxi(1,roundi(bot.max_mana*0.05))*2 and bot.current_health >= bot.max_health*0.55 and now < _semi_until-1000: return
-		var spell := _affordable(bot,[51,43,3])
+		var spell := _semi_finish_spell(bot)
 		if spell > 0 and _cast(spell,_observed_cell,now,actions):
+			_semi_combos = _semi_combos+1 if spell==51 else 0
 			_semi_step = 0
 			_next_offense = now + SpellCatalog.SPELL_ATTACK_GAP_MSEC
 			return
@@ -503,9 +512,21 @@ func _semi_attack(bot: PlayerState, now: int, actions: Array[Dictionary]) -> voi
 	if _semi_step == 1 and now < _semi_until-3000: return
 	if clear and distance >= 2 and now >= _next_spell:
 		_next_offense = now + 300
-		if _rng.randf() < 0.32:
-			var spell := _affordable(bot,[51,43,3])
-			if spell > 0 and _cast(spell,_observed_cell,now,actions): _semi_step = 0
+		if _semi_combos>=2 and _rng.randf() < 0.20:
+			var spell := _semi_finish_spell(bot)
+			if spell > 0 and _cast(spell,_observed_cell,now,actions):
+				if spell!=51: _semi_combos=0
+				_semi_step = 0
+
+
+func _move_interval(bot: PlayerState) -> int:
+	return 140 if _is_semimagic(bot) else MOVE_INTERVAL_MSEC
+
+func _semi_finish_spell(bot: PlayerState) -> int:
+	if _affordable(bot,[51])==51: return 51
+	# Cheap pressure is earned by several actual melee/Discharge chains.
+	# Never substitute Electric Arrow or Magic Missiles for a finisher.
+	return _affordable(bot,[39,41]) if _semi_combos>=3 else 0
 
 
 func _distance(a: Vector2i, b: Vector2i) -> int:

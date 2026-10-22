@@ -379,15 +379,19 @@ func _layout_and_controls() -> void:
 	input.reset_defaults()
 
 func _solo() -> void:
+	var click_before: int = root.get_node("UIClickAudio").played_count
 	main._lobby_panel._name.text = "Pause native"
 	await _click(main._lobby_panel._create_button)
 	_check(await _wait(func() -> bool: return not net.room.is_empty() and not net.pending),"solo creates room")
+	_check(root.get_node("UIClickAudio").played_count>click_before,"actual lobby Create button plays UI click")
 	await _click(_find_button(main._lobby_panel,"Añadir bot"))
 	_check(await _wait(func() -> bool: return bool(net.room.get("bot_enabled",false)) and not net.pending),"actual Add Bot enables bot")
 	await _click(_find_button(main._lobby_panel,"Listo"))
 	_check(await _wait(func() -> bool: return str(net.room.get("phase",""))=="fighting"),"solo Ready starts round")
+	click_before=root.get_node("UIClickAudio").played_count
 	await _click(hud._menu_button)
 	_check(await _wait(func() -> bool: return net.is_paused() and not net.pause_pending),"actual Menu pauses the server bot room")
+	_check(root.get_node("UIClickAudio").played_count>click_before,"actual game Menu button plays UI click")
 	var id: int = root.multiplayer.get_unique_id()
 	var before := {}
 	for peer in hud._players: before[peer] = hud._players[peer].to_dictionary()

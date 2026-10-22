@@ -6,6 +6,8 @@ func check(ok:bool,label:String)->void:
 	checks+=1
 	if not ok:failures+=1;print("FAIL: ",label)
 func _run()->void:
+	# Native UI audio initializes desktop buses before this simulated web test.
+	AudioServer.bus_count=1
 	ArenaAudioMix._settings_path="user://sample_test.cfg"
 	ArenaAudioMix._levels.clear()
 	ArenaAudioMix._platform_web=true
