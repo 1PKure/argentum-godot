@@ -70,7 +70,7 @@ func _run() -> void:
 	for member: Dictionary in net.room.members: members.append(int(member.peer_id))
 	_check(main._hud._players.size()==2,"room snapshot contains exactly two avatars")
 	_check(not main._local_input.is_processing(),"lobby blocks movement input")
-	_check(net.rooms.size()==2,"both rooms listed")
+	_check(await _wait(func() -> bool: return net.rooms.size()==2),"both rooms listed")
 	var chat := root.get_node("ChatNetwork")
 	if role=="A":
 		for entry: Dictionary in net.rooms:

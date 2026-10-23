@@ -360,3 +360,21 @@ func _remove_file(path: String) -> void:
 func _error(message: String) -> Dictionary:
 	last_error = message
 	return {"ok": false, "message": message}
+
+
+# Server-to-server persistence only. Never publish this payload through RankingNetwork.
+func export_private_payload() -> Dictionary:
+	return {"schema":SCHEMA,"revision":revision,"updated_at":updated_at,"players":_players.duplicate(true),"awards":_awards.duplicate(true)}
+
+func accept_private_payload(payload: Dictionary) -> bool:
+	# Reuse the same full ledger/identity validation as local recovery.
+	if DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(storage_path).get_base_dir())!=OK:return false
+	var verification := storage_path+".verify"
+	if _write_verified(verification,JSON.stringify(payload))!=OK:return false
+	var checked := _read_payload(verification)
+	_remove_file(verification)
+	if checked.is_empty():return false
+	if _persist_payload(checked)!=OK:return false
+	_apply_payload(checked)
+	available=true
+	return true

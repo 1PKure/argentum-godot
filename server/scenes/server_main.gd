@@ -3,6 +3,8 @@ extends Node
 var lobbies := ArenaLobbyDirectory.new()
 var chat := ArenaChatService.new()
 var ranking: ArenaRankingStore
+var _ranking_remote: ArenaRankingRemote
+var _flushing_awards := false
 var _ranked_peers: Dictionary = {}
 var _ranking_requests: Dictionary = {}
 var _ranking_reads: Dictionary = {}
@@ -15,6 +17,13 @@ func _ready() -> void:
 	for argument: String in OS.get_cmdline_user_args():
 		if argument.begins_with("--ranking-path="): ranking_path = argument.trim_prefix("--ranking-path=")
 	ranking = ArenaRankingStore.new(ranking_path)
+	if not OS.get_environment("AO_STORE_URL").is_empty():
+		_ranking_remote=ArenaRankingRemote.new()
+		add_child(_ranking_remote)
+		if not await _ranking_remote.initialize(ranking,OS.get_environment("AO_STORE_URL"),OS.get_environment("AO_STORE_TOKEN")):
+			push_error("Remote ranking initialization failed; dedicated will not accept players.")
+			get_tree().quit(1)
+			return
 	RankingNetwork.profile_requested.connect(_on_ranking_profile)
 	RankingNetwork.snapshot_requested.connect(_on_ranking_snapshot)
 	print("Starting Argentum lobby server...")
@@ -309,10 +318,12 @@ func _on_ranking_profile(peer_id: int, identity: String, secret: String, nicknam
 		elif room != null and room.phase in ["countdown","fighting"]:
 			result = {"ok":false,"message":"El nombre se cambia entre rondas."}
 		else:
-			result = ranking.register(identity,secret,nickname)
+			result = await _ranking_remote.register(identity,secret,nickname) if _ranking_remote!=null else ranking.register(identity,secret,nickname)
+			if not _can_send(peer_id):return
+			room=lobbies.room_for(peer_id)
 			if result.ok:
 				_ranked_peers[peer_id] = {"id":identity.to_lower(),"nickname":str(result.player.nickname)}
-				if room != null:
+				if room != null and room.phase not in ["countdown","fighting"]:
 					_apply_ranking_names(room)
 					_publish_room(room,true)
 					_broadcast_lobby_states()
@@ -352,13 +363,17 @@ func _track_ranking_round(room: ArenaLobbyRoom) -> void:
 	_flush_ranking_awards()
 
 func _flush_ranking_awards() -> void:
+	if _flushing_awards:return
+	_flushing_awards=true
 	var changed := false
 	for round_id: String in _pending_awards.keys():
 		var award: Dictionary = _pending_awards[round_id]
-		var result := ranking.record_victory(round_id,str(award.id),str(award.mode))
+		var previous_revision:=ranking.revision
+		var result: Dictionary = await _ranking_remote.record_victory(round_id,str(award.id),str(award.mode)) if _ranking_remote!=null else ranking.record_victory(round_id,str(award.id),str(award.mode))
 		if result.ok:
 			_pending_awards.erase(round_id)
-			changed = changed or bool(result.get("awarded",false))
+			changed = changed or bool(result.get("awarded",false)) or ranking.revision>previous_revision
+	_flushing_awards=false
 	if changed:
 		for peer_id: int in multiplayer.get_peers():
 			if _can_send(peer_id): RankingNetwork.send_snapshot(peer_id,ranking.snapshot())
