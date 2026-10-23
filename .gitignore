@@ -27,3 +27,6 @@ __pycache__/
 hosting/node_modules/
 hosting/.env
 hosting/.env.local
+
+# Private VPS runtime configuration
+hosting/vps/.env
