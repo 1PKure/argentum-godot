@@ -140,11 +140,12 @@ func _test_bot_movement() -> void:
 	bot.grid_position = Vector2i(10, 5)
 	registry._last_move_time[501] = 1000
 	registry._last_move_time[502] = 1000
-	_check(registry.try_move_player(502, MovementRules.Direction.EAST, 1111) == null, "Bot movement rejects one millisecond before its bounded tolerance")
-	_check(registry.try_move_player(502, MovementRules.Direction.EAST, 1112) == bot and registry._last_move_time[502] == 1132, "Bot movement uses its own132 ms authoritative interval")
-	_check(registry.try_move_player(501, MovementRules.Direction.EAST, 1112) == null, "A human cannot use the bot's slightly faster movement interval")
+	var bot_boundary:=1000+MovementRules.PRACTICE_BOT_MOVE_INTERVAL_MSEC-MovementRules.MOVE_TIMING_TOLERANCE_MSEC
+	_check(registry.try_move_player(502, MovementRules.Direction.EAST, bot_boundary-1) == null, "Bot movement rejects one millisecond before its bounded tolerance")
+	_check(registry.try_move_player(502, MovementRules.Direction.EAST, bot_boundary) == bot and registry._last_move_time[502] == 1000+MovementRules.PRACTICE_BOT_MOVE_INTERVAL_MSEC, "Bot movement uses its configured authoritative movement interval")
+	_check(registry.try_move_player(501, MovementRules.Direction.EAST, bot_boundary) == null, "A human cannot use the bot's slightly faster movement interval")
 	_check(registry.try_move_player(501, MovementRules.Direction.EAST, 1120) == human and registry._last_move_time[501] == 1140, "Human movement retains its unchanged140 ms cadence")
-	_check(registry.try_move_player(502, MovementRules.Direction.WEST, 1112) == null, "Faster bot movement cannot stack two turns at the same clock")
+	_check(registry.try_move_player(502, MovementRules.Direction.WEST, bot_boundary) == null, "Faster bot movement cannot stack two turns at the same clock")
 	for interval: int in [MovementRules.MOVE_INTERVAL_MSEC, MovementRules.PRACTICE_BOT_MOVE_INTERVAL_MSEC]:
 		var accepted := 0
 		var last := 1000

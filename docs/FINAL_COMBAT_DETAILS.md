@@ -59,3 +59,27 @@ resultados: recuperar maná y no disparar UIClickAudio.
 
 
 Preparación web: las cuatro casillas decorativas de cada mapa quedan abiertas, conservando sus gráficos y límites exteriores. Pisadas suben3dB en el emisor (−8→−5), sin modificar WAV ni preferencias guardadas. El Mago reevalúa un presupuesto de combo vacío cada120ms en lugar de esperar1150ms, sin adelantar lanzamientos reales. Detalles de conexión/ranking opcional en WEB_DEPLOYMENT.md.
+
+
+## Persecución semimágica, Asesino y cierre para web
+
+Semimágicas: Paralizar cada3–4s al tener objetivo no enraizado en alcance,
+con maná para Paralizar+Remover en vez de exigir además Descarga. Pueden
+reemplazar una persecución fallida por otra raíz; conservan el remate de un
+golpe real. Si el rival huye sin raíz, ahorran la oportunidad de combo al aire
+para volver a controlarlo. Costos, puntería retrasada y reloj mágico se mantienen.
+
+Asesino:8% de apuñalada sobre impacto físico con arma,28% pegando desde la
+casilla detrás del objetivo según su orientación autoritativa. Daño×1,35. No
+aplica a arco/hechizos, no ignora evasión/escudo ni permite repetir el golpe
+antes de1200ms. La consola de los participantes diferencia apuñalada de golpe.
+
+Pociones para TODOS:320ms por vía y240ms de mínimo combinado clic/Usar,
+antes280/200; se conservan27HP,5%MP y600ms tras golpe. Máximos teóricos de
+curación con rojas:84,4HP/s en una vía y112,5HP/s alternando, antes96,4/135.
+El bot decide cada280ms (antes250) alternando las mismas vías legales. Cambiar
+de color o alternar Q/E/Espacio no crea otra vía.
+
+Ranking nuevo por etapa en archivo separado; homenaje intacto y anterior
+archivado, sin borrado en cada reinicio. Ver RANKING.md. La web sigue privada y
+el dedicado local hasta resolver hosting gratuito/persistencia remota.

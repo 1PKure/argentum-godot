@@ -21,6 +21,6 @@ Alpha incluye clases/presets, combate manual/macros, pociones/meditación, cáma
 
 **Hosting del dedicado** para jugar sin mantener la PC de Mati encendida: evaluar sólo opciones gratuitas y WSS. La web actual conserva su audiencia privada. Cuentas y base de datos siguen siendo opcionales; los lobbies no las requieren.
 
-**Especialidades de clase**, como la puñalada del Asesino desde atrás, después de estabilizar el flujo de duelos. Es una etapa distinta del balance numérico aprobado.
+**Especialidades de clase**: la apuñalada del Asesino ya está implementada (8% normal/28% espalda,×1,35 sobre impacto). Otras especialidades pueden definirse después del test web.
 
 **Pruebas con jugadores y red real**: bot, lectura de efectos, movimiento/latencia, recuperación, resultados y rendimiento en navegador.

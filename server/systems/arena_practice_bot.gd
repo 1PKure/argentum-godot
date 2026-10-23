@@ -12,7 +12,7 @@ const COMMAND_INTERVAL_MSEC := 400
 const MOVE_INTERVAL_MSEC := MovementRules.PRACTICE_BOT_MOVE_INTERVAL_MSEC
 const CAST_INTERVAL_MSEC := 1150
 const ATTACK_INTERVAL_MSEC := 650
-const POTION_INTERVAL_MSEC := 250
+const POTION_INTERVAL_MSEC := 280
 var registry: PlayerRegistry
 var owner_id := 0
 var phase := "idle"
@@ -486,12 +486,15 @@ func _semi_attack(bot: PlayerState, now: int, actions: Array[Dictionary]) -> voi
 	var adjacent := absi(bot.grid_position.x-_observed_cell.x)+absi(bot.grid_position.y-_observed_cell.y)==1
 	if now > _semi_until and _semi_step != 0: _semi_step = 0
 	var clear := distance <= 8 and CombatRules.has_clear_shot(registry.get_arena_id(),bot.grid_position,_observed_cell)
-	if clear and _semi_step == 0 and now >= _next_control and not _observed_rooted:
-		var opener_cost := int(SpellCatalog.get_spell(25).mana) + int(SpellCatalog.get_spell(51).mana)
+	# A fleeing opponent needs control before more ranged pressure. Preserve a
+	# committed post-melee finisher; otherwise re-root once the reaction clock allows.
+	var chasing := distance >= 2 and not _observed_rooted
+	if clear and (_semi_step == 0 or (chasing and _semi_step != 2)) and now >= _next_control and not _observed_rooted:
+		var opener_cost := int(SpellCatalog.get_spell(25).mana) + int(SpellCatalog.get_spell(27).mana)
 		if bot.current_mana >= mini(bot.max_mana,opener_cost) and _cast(25,_observed_cell,now,actions):
 			_semi_step = 1
 			_semi_until = now + 6000
-			_next_control = now + _rng.randi_range(5000,6500)
+			_next_control = now + _rng.randi_range(3000,4000)
 			_next_offense = now + SpellCatalog.SPELL_ATTACK_GAP_MSEC
 			return
 	if _semi_step == 2 and clear:
@@ -523,6 +526,10 @@ func _semi_attack(bot: PlayerState, now: int, actions: Array[Dictionary]) -> voi
 		else: _next_offense = now + 100
 		return
 	if _semi_step == 1 and now < _semi_until-3000: return
+	# Do not spend air-combo mana chasing an unrooted ranged opponent.
+	if chasing:
+		_next_offense = maxi(_next_spell,now+THINK_MSEC)
+		return
 	if clear and distance >= 2 and now >= _next_spell:
 		_next_offense = now + 300
 		if _semi_combos>=2 and _rng.randf() < 0.20:

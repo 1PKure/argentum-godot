@@ -54,3 +54,17 @@ static func has_clear_shot(arena_id: String, origin: Vector2i, target: Vector2i)
 			if not ArenaData.is_walkable(arena_id, Vector2i(point.x, previous.y)) or not ArenaData.is_walkable(arena_id, Vector2i(previous.x, point.y)):
 				return false
 	return true
+
+
+const ASSASSIN_STAB_CHANCE_PERCENT := 8.0
+const ASSASSIN_REAR_STAB_CHANCE_PERCENT := 28.0
+const ASSASSIN_STAB_DAMAGE_MULTIPLIER := 1.35
+
+static func is_behind(attacker: Vector2i, target: Vector2i, target_facing: int) -> bool:
+	var relative := attacker-target
+	var forward := MovementRules.get_offset(target_facing)
+	return absi(relative.x)+absi(relative.y)==1 and relative.x*forward.x+relative.y*forward.y<0
+
+static func stab_chance(class_id: int, weapon_id: int, attacker: Vector2i, target: Vector2i, target_facing: int) -> float:
+	if class_id!=4 or weapon_id<=0: return 0.0
+	return ASSASSIN_REAR_STAB_CHANCE_PERCENT if is_behind(attacker,target,target_facing) else ASSASSIN_STAB_CHANCE_PERCENT

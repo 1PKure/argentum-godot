@@ -88,7 +88,7 @@ El servidor omite **current_mana** del rival en snapshots, movimiento y estadís
 
 El Mago permite explorar las 38 magias concedibles; otros presets restringen sus listas y costes al maná de la clase. La entrada 247 Disparo de NPC no se concede como magia: el arco tiene su propia acción física.
 
-La identidad de clases se trabaja después: **Asesino con apuñalada por la espalda**, seguida de especialidades a definir y validar para las otras clases. Todavía no hay apuñalada, invisibilidad, mascotas, profesiones ni tiradas específicas de evasión/bloqueo. Esta tanda prepara controles, equipo y datos para esas mecánicas; no simula sus resultados.
+El Asesino incorpora apuñalada autoritativa:8% sobre golpe acertado,28% desde la casilla detrás del objetivo según su orientación, daño físico×1,35. Requiere arma equipada y no evita evasión/escudo ni el intervalo de1200ms. Las demás especialidades quedan pendientes. Todavía no hay apuñalada, invisibilidad, mascotas, profesiones ni tiradas específicas de evasión/bloqueo. Esta tanda prepara controles, equipo y datos para esas mecánicas; no simula sus resultados.
 
 ## Validación
 

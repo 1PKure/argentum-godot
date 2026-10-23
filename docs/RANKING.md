@@ -1,7 +1,7 @@
 # Ranking de la arena
 
 `ArenaRankingStore` es el registro del servidor dedicado. Guarda estado privado
-en `user://arena_ranking_v1.json`; no publica una web ni abre un endpoint HTTP.
+en `user://arena_ranking_web_alpha_v1.json`; no publica una web ni abre un endpoint HTTP.
 Una instancia del servidor administra el archivo y todas sus salas.
 
 ## Identidad y apodos
@@ -107,3 +107,17 @@ normal hay que conservar el directorio de datos `user://` del servidor y su arch
 `.bak` entre actualizaciones; reemplazar el ejecutable/proyecto no exige borrarlos.
 
 Crear y Unirse piden un nick y esperan confirmación del registro antes de entrar. La autenticación automática inicial sólo prepara la identidad; no obliga a abrir Ranking. El Ranking permite renombrar después y la sala muestra el nombre confirmado. Un nombre vacío, reservado o duplicado deja al usuario en el directorio con feedback, sin crear salas a medias.
+
+
+## Inicio limpio para la etapa web
+
+El dedicado usa ahora arena_ranking_web_alpha_v1.json. Al actualizar y reiniciar
+Start-PrivateWebTest.cmd comienza ese registro con el homenaje a milusita; no se
+importan los puntos de las pruebas anteriores. La identidad local y el nick se
+pueden registrar otra vez normalmente, con cero puntos. Skins/atajos no se borran.
+Los archivos arena_ranking_v1.json y su .bak permanecen intactos como archivo
+privado de la etapa anterior. No publicarlos: contienen identidad y ledger.
+El nuevo archivo se conserva en cada reinicio: no es un borrado recurrente.
+Un --ranking-path explícito sigue eligiendo su propia ubicación y no se resetea.
+No hay acceso remoto a los datos de la PC del usuario: el cambio se aplica cuando
+arranque el dedicado actualizado, no por recargar sólo la página.

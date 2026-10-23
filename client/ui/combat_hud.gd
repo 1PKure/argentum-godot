@@ -257,9 +257,9 @@ func _on_basic_attack_event(event: Dictionary) -> void:
 			console.append_message("%s el golpe de %s." % ["Bloqueaste" if str(event.outcome)=="blocked" else "Esquivaste",event.caster_name],"damage")
 		return
 	if _local_peer_id == int(event.caster_id):
-		console.append_message("Golpeaste a %s · %d." % [event.target_name, event.amount], "damage")
+		console.append_message(("Apuñalaste a %s · %d." if bool(event.get("stabbed",false)) else "Golpeaste a %s · %d.") % [event.target_name, event.amount], "damage")
 	elif _local_peer_id == int(event.target_id):
-		console.append_message("%s te golpeó · %d." % [event.caster_name, event.amount], "damage")
+		console.append_message(("%s te apuñaló · %d." if bool(event.get("stabbed",false)) else "%s te golpeó · %d.") % [event.caster_name, event.amount], "damage")
 
 
 func start_session(peer_id: int) -> void:

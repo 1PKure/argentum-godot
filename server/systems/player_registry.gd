@@ -259,8 +259,15 @@ func try_basic_attack(
 
 	var outcome := _roll_physical_outcome(target)
 	var previous_health := target.current_health
+	var stabbed := false
+	var rear_attack := false
 	if outcome == "hit":
 		var rolled := ClassCatalog.roll_physical_damage(attacker.class_id, target.class_id, attacker.equipped_items, target.equipped_items, _physical_rng)
+		var chance := CombatRules.stab_chance(attacker.class_id,int(attacker.equipped_items.get("weapon",0)),attacker.grid_position,target.grid_position,target.facing_direction)
+		if chance>0 and _physical_rng.randf()*100.0<chance:
+			stabbed = true
+			rear_attack = CombatRules.is_behind(attacker.grid_position,target.grid_position,target.facing_direction)
+			rolled = maxi(1,roundi(rolled*CombatRules.ASSASSIN_STAB_DAMAGE_MULTIPLIER))
 		if not target.apply_damage(rolled):
 			return null
 	var damage := previous_health - target.current_health
@@ -283,7 +290,7 @@ func try_basic_attack(
 			% target.display_name
 		)
 
-	basic_attack_resolved.emit({"caster_id": attacker.peer_id, "caster_name": attacker.display_name, "target_id": target.peer_id, "target_name": target.display_name, "amount": damage, "outcome": outcome})
+	basic_attack_resolved.emit({"caster_id": attacker.peer_id, "caster_name": attacker.display_name, "target_id": target.peer_id, "target_name": target.display_name, "amount": damage, "outcome": outcome, "stabbed": stabbed, "rear_attack": rear_attack})
 	return target
 
 

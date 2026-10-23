@@ -70,7 +70,7 @@ func _test_caster(class_id: int) -> void:
 				last_potion=now
 				if action.result.event.action=="mana_potion":
 					expected+=int(action.result.event.amount)
-					high_blue=high_blue or mana_before>=bot.max_mana*0.65
+					high_blue=high_blue or (manager._combo_rebuilding and mana_before+int(action.result.event.amount)>=int(SpellCatalog.get_spell(heavy).mana)+int(SpellCatalog.get_spell(51).mana))
 		ledger = ledger and bot.current_mana==expected and bot.current_mana>=0 and bot.current_mana<=bot.max_mana
 	var pairs := 0
 	for i in range(1,offensive.size()):
@@ -79,7 +79,7 @@ func _test_caster(class_id: int) -> void:
 	_check(offensive.size()>=6 and offensive.slice(0,2)==[heavy,heavy],"Caster%d opens with its two strongest legal spells" % class_id)
 	_check(pairs>=2,"Caster%d rebuilds mana and returns to a heavy pair (%d pairs)" % [class_id,pairs])
 	_check(legal and ledger,"Caster%d pays real costs, recovers real mana and respects intervals" % class_id)
-	_check(not offensive.has(53) if class_id==6 else high_blue,"Druid never borrows Apocalypse; mage replenishes beyond the old65%% mana ceiling")
+	_check(not offensive.has(53) if class_id==6 else high_blue,"Druid never borrows Apocalypse; mage rebuilds a real heavy+Discharge budget with slower potions")
 	if class_id==1: _check(offensive.has(51) and offensive.count(41)<=2,"Mage uses Discharge and saves mana instead of repeating Firestorm")
 	print("Caster%d sequence: %s" % [class_id,str(offensive)])
 

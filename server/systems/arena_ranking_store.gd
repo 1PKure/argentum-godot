@@ -1,7 +1,9 @@
 class_name ArenaRankingStore
 extends RefCounted
 
-const DEFAULT_STORAGE_PATH := "user://arena_ranking_v1.json"
+# New competition storage resets test standings once, without deleting the archive.
+const LEGACY_STORAGE_PATH := "user://arena_ranking_v1.json"
+const DEFAULT_STORAGE_PATH := "user://arena_ranking_web_alpha_v1.json"
 const SCHEMA := 1
 const POINTS_PER_WIN := 100
 const PUBLIC_LIMIT := 50

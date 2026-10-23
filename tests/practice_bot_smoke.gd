@@ -268,7 +268,7 @@ func _test_training_behavior() -> void:
 	_check(static_hits >= 80, "Stationary opponents receive sustained combat pressure across eight seeds")
 	_check(moving_hits >= 40 and moving_hits < total_attempts, "Moving opponents can be hit and can also evade delayed perception")
 	_check(legal_casts, "All attacks and defensive spells respect the same slower bot spell interval")
-	_check(legal_potions and quick_potions, "Bot repeats potions at 250 ms with a human reaction window and legal click/Use lanes")
+	_check(legal_potions and quick_potions, "Bot repeats potions at 280 ms with a human reaction window and legal click/Use lanes")
 	_check(both_colors, "Under pressure the bot recovers health and mana instead of starving one resource")
 	_check(recovery_windows, "Wounded melee bots defend and recover through the real attack-potion gap")
 

@@ -43,7 +43,7 @@ Las mediciones de atlas nativo no sustituyen un perfil de FPS en navegador.
 
 ## Fuera del cierre actual
 
-Especialidades futuras (p.ej. puñalada por espalda), nuevas skins/mapas y
+Otras especialidades futuras (apuñalada del Asesino ya implementada), nuevas skins/mapas y
 ajustes finos de balance siguen como iteraciones posteriores. PvE está
 descartado. No hacen falta más rediseños de HUD ni nuevas mecánicas para
 comenzar la etapa de web. Capacidad de un proveedor y costo cero sostenible

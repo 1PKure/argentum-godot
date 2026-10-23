@@ -25,7 +25,7 @@ func _run()->void:
     if previous:intervals.append(now-previous)
     lanes[source]=now;previous=now
  check(lanes.size()==2 and legal,"Bot uses two legal potion lanes without bypassing per-lane cooldowns")
- check(intervals.has(250) and intervals.all(func(gap:int)->bool:return gap>=RecoveryRules.POTION_COMBINED_MIN_MSEC),"Recovery is slightly faster, retaining the human shared floor")
+ check(intervals.has(ArenaPracticeBot.POTION_INTERVAL_MSEC) and intervals.all(func(gap:int)->bool:return gap>=RecoveryRules.POTION_COMBINED_MIN_MSEC),"Bot recovery obeys the slower global potion floor")
  # A fresh root with spell ready retains perception delay, without instant removal.
  manager.request(801,true,1,2,20000);manager.tick(23000)
  bot=registry.get_player(ArenaPracticeBot.BOT_ID)
