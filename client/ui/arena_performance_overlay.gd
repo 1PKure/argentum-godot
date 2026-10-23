@@ -35,5 +35,7 @@ func _process(delta: float) -> void:
 	var ordered := intervals.duplicate()
 	ordered.sort()
 	var p95: float = ordered[maxi(0, ceili(ordered.size() * 0.95) - 1)]
-	text = "%s · %d FPS · p95 %.1f ms · draw %d" % [_mode, Engine.get_frames_per_second(), p95, Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)]
+	text = "%s · %d FPS · fotograma p95 %.1f ms · draw %d" % [_mode, Engine.get_frames_per_second(), p95, Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)]
 	if OS.has_feature("web"): text += " · audio Sample"
+
+	text += "\n" + NetworkDiagnostics.ping_text() + "\n" + NetworkDiagnostics.movement_text()

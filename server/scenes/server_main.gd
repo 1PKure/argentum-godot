@@ -50,6 +50,11 @@ func _ready() -> void:
 	NetworkManager.peer_connected.connect(_on_peer_connected)
 	NetworkManager.peer_disconnected.connect(_on_peer_disconnected)
 	PlayerNetwork.move_requested.connect(_on_move_requested)
+	NetworkDiagnostics.move_requested.connect(func(peer_id: int, direction: int, sequence: int) -> void:
+		var started := Time.get_ticks_usec()
+		var accepted := _on_move_requested(peer_id,direction)
+		NetworkDiagnostics.send_move_receipt(peer_id,sequence,accepted,Time.get_ticks_usec()-started)
+	)
 	PlayerNetwork.basic_attack_requested.connect(_on_basic_attack_requested)
 	PlayerNetwork.debug_damage_requested.connect(func(_peer_id: int) -> void: pass)
 	PlayerNetwork.debug_mana_spend_requested.connect(func(_peer_id: int) -> void: pass)
@@ -176,11 +181,12 @@ func _moved(room: ArenaLobbyRoom, state: Dictionary) -> void:
 	var recipients := _recipients(room)
 	if not recipients.is_empty(): PlayerNetwork.broadcast_player_moved(state,recipients)
 
-func _on_move_requested(peer_id: int, direction: int) -> void:
+func _on_move_requested(peer_id: int, direction: int) -> bool:
 	var room := lobbies.room_for(peer_id)
-	if room == null or room.paused or room.phase != "fighting": return
+	if room == null or room.paused or room.phase != "fighting": return false
 	var player := room.registry.try_move_player(peer_id,direction,room.game_time())
 	if player != null: _moved(room,player.to_dictionary())
+	return player != null
 
 func _on_basic_attack_requested(peer_id: int) -> void:
 	var room := lobbies.room_for(peer_id)
