@@ -30,3 +30,29 @@ La prueba de audio comprueba conexiones únicas, controles transitorios,
 deshabilitados, listas, PCM y margen de amplitud. La reproducción audible
 final en el navegador requiere feedback del usuario; no se asume por tests
 con salida Dummy. Gráficos/HUD permanecen aprobados.
+
+## Cierre de gameplay alpha: presión y recuperación
+
+Ajuste posterior al feedback de dificultad: magia del bot1150–1250ms
+(antes1250–1350), remover con reacción520–700ms (antes650–850), siempre
+esperando también su reloj mágico compartido. Pociones: decisión100–150ms;
+cadencia250ms alternando los canales clic/Usar legales del jugador. Cada
+canal conserva280ms y el mínimo compartido200ms; no se cambia la curación,
+el maná recuperado ni los intervalos del jugador. Si un golpe bloquea una
+poción se conserva la decisión pendiente.
+
+Las semimágicas buscan Paralizar cada5–6,5s cuando el rival no está ya
+inmovilizado; conservan140ms por paso. Estar defendiendo con una poción
+pendiente ya no cancela indefinidamente el golpe si tienen al menos30%HP.
+El remate sigue siendo Descarga, con los600ms reales entre acciones. Los
+fallbacks de fuego siguen reservados para después de varios combos.
+El Mago conserva124ms por paso y sus pares de Apocalipsis/Descarga; con
+55%HP o más intercala azules durante la recuperación. Una curación no
+interrumpe un combo ya iniciado salvo que la vida caiga por debajo de35%.
+No se aumentan daño, precisión, recursos ni velocidad de movimiento.
+
+El clic de interfaz baja2dB. Los botones de pociones omiten ese clic según
+su contenido actual, también después de moverlos; la acción de beber y su
+feedback propio se conservan. Equipar objetos y los demás menús mantienen
+el clic. La prueba GUI usa un clic real sobre una azul para comprobar ambos
+resultados: recuperar maná y no disparar UIClickAudio.

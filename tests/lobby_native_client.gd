@@ -186,7 +186,9 @@ func _host() -> void:
 	await _tap(KEY_1)
 	var aimed: int = controller.aimed_spell_id
 	var mana_spent: int = hud._players[local_id].current_mana
+	var potion_click_before: int = root.get_node("UIClickAudio").played_count
 	await _click(hud._inventory_slots[1])
+	_check(root.get_node("UIClickAudio").played_count==potion_click_before,"actual inventory potion click has no generic UI sound")
 	_check(await _wait(func() -> bool: return hud._players[local_id].current_mana > mana_spent),"inventory blue click drinks potion")
 	_check(controller.aimed_spell_id==aimed and hud._inventory_panel.visible,"inventory potion preserves macro cursor and inventory tab")
 	drinks.clear()

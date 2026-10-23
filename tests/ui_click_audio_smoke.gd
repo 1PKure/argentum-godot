@@ -27,6 +27,21 @@ func _run()->void:
  var popup:=PopupMenu.new();root.add_child(popup);await process_frame
  ui._last_click=-1000
  popup.id_pressed.emit(1);check(ui.played_count==before+1,"Dropdown selections share click sound")
+ # Reconfigure a real inventory slot after moving its contents.
+ var layout:=ArenaInventoryLayout.new()
+ var slot=load("res://client/ui/inventory_slot_button.gd").new();root.add_child(slot)
+ var uses:Array[String]=[];slot.item_used.connect(func(action:String)->void:uses.append(action))
+ for index:int in [0,1]:
+  slot.configure(index,layout);ui._last_click=-1000;before=ui.played_count
+  slot.pressed.emit()
+  check(ui.played_count==before and uses[-1]==layout.actions[index],"Potion%d still uses item without generic UI click"%index)
+ layout.actions[0]="item:126";slot.configure(0,layout)
+ ui._last_click=-1000;before=ui.played_count;slot.pressed.emit()
+ check(ui.played_count==before+1,"Same slot clicks again when its potion is replaced by equipment")
+ layout.move_item(1,0,"mana_potion");slot.configure(0,layout)
+ ui._last_click=-1000;before=ui.played_count;slot.pressed.emit()
+ check(ui.played_count==before and uses[-1]=="mana_potion","Moved potion remains silent in destination slot")
+ slot.queue_free()
  var stream:AudioStreamWAV=ui._player.stream
  check(stream.format==AudioStreamWAV.FORMAT_16_BITS and not stream.stereo and stream.get_length()<.06,"Click is a short reusable PCM sample")
  var peak:=0.0

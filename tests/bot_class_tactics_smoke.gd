@@ -66,7 +66,7 @@ func _test_caster(class_id: int) -> void:
 					offensive.append(id)
 					times.append(now)
 			elif action.kind=="recovery" and str(action.result.event.action).ends_with("potion"):
-				legal = legal and (last_potion==0 or now-last_potion>=RecoveryRules.POTION_INTERVAL_MSEC)
+				legal = legal and (last_potion==0 or now-last_potion>=ArenaPracticeBot.POTION_INTERVAL_MSEC)
 				last_potion=now
 				if action.result.event.action=="mana_potion":
 					expected+=int(action.result.event.amount)

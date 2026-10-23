@@ -27,11 +27,11 @@ No se agregan bloqueos de poción → golpe ni poción ↔ hechizo. Se conservan
 | Acción | Cadencia del bot |
 | --- | ---: |
 | Paso, también en la interpolación visual | 120 ms (igual al jugador) |
-| Magia ofensiva, Curación y Remover | 1250–1350 ms |
+| Magia ofensiva, Curación y Remover | 1150–1250 ms |
 | Golpe | 1200–1300 ms |
 | Arco | 1200–1300 ms |
-| Poción, una sola vía | 280 ms |
-| Reacción inicial a una raíz | 650–850 ms |
+| Poción, alternando clic/Usar con límites autoritativos | 250 ms |
+| Reacción inicial a una raíz | 520–700 ms |
 
 La reacción a una raíz se suma a las restricciones vigentes: Remover no saltea la pausa de magia del bot. Se conservan recargas, maná y validaciones del servidor. El bot no usa clic + Usar. Empieza a beber cuando faltan 27 HP, reacciona en 100–160 ms y prioriza rojas bajo 65% de vida, manteniendo movimiento y recuperación en paralelo. Ver [BOTS.md](BOTS.md).
 

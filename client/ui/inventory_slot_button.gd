@@ -37,6 +37,7 @@ func configure(index: int, inventory: ArenaInventoryLayout) -> void:
 	slot_index = index
 	layout = inventory
 	action = inventory.actions[index]
+	set_meta("ui_click_silent", action in ["health_potion", "mana_potion"])
 	icon = null
 	if _finished_item != null: _finished_item.hide()
 	for state: String in ["icon_normal_color","icon_hover_color","icon_pressed_color","icon_focus_color"]:

@@ -27,7 +27,7 @@ func _run() -> void:
 				if id==31 and not reds.is_empty():check(manager._potion_due>=now+550,"Heal pauses potion recovery rather than stacking both instantly")
 				spells.append({"id":id,"time":now})
 	check(reds.size()>=3,"Pressure produces actual health potions")
-	for index in range(1,reds.size()):check(reds[index]-reds[index-1]>=280,"Bot potions respect their recovery cadence")
+	for index in range(1,reds.size()):check(reds[index]-reds[index-1]>=ArenaPracticeBot.POTION_INTERVAL_MSEC,"Bot potions respect their recovery cadence")
 	check(spells.any(func(event:Dictionary)->bool:return event.id in [53,51,41,39]),"Bot still attacks between recovery windows")
 	check(RecoveryRules.get_potion("health_potion").min==27,"Human red potion remains 27HP")
 	registry.queue_free();await process_frame

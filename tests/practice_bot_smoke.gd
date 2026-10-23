@@ -86,7 +86,7 @@ func _run() -> void:
 				mana_recovered += int(action.result.event.amount)
 		for action: Dictionary in actions:
 			if action.kind == "cast" and int(action.result.event.spell_id) == 27:
-				removed_legally = step * 150 >= 650 and bot.current_mana == before - int(SpellCatalog.get_spell(27).mana) + mana_recovered
+				removed_legally = step * 150 >= 520 and bot.current_mana == before - int(SpellCatalog.get_spell(27).mana) + mana_recovered
 	_check(removed_legally and bot.active_effects.is_empty(), "Delayed Remove uses the permitted spell and real mana cost")
 	request_id += 1
 	_start(manager, 301, true, 1, request_id, 150000)
@@ -97,7 +97,7 @@ func _run() -> void:
 	_check(bot.is_meditating and bot.current_health == 100 and bot.current_mana == 0, "Depleted bot starts normal meditation and waits before its first potion")
 	manager.tick(151600)
 	_check(bot.is_meditating and bot.current_health == 127 and bot.current_mana == 0, "Delayed red potion preserves meditation and restores normal HP")
-	manager.tick(151879)
+	manager.tick(151849)
 	_check(bot.current_health == 127, "Bot cannot repeat a potion before its recovery interval")
 	manager.tick(152000)
 	_check(bot.is_meditating and bot.current_health == 154, "Bot repeats potion recovery close to the normal player cadence")
@@ -244,9 +244,9 @@ func _test_training_behavior() -> void:
 					drinks.append(now)
 					colors[str(action.result.event.action)] = true
 		both_colors = both_colors and colors.size() == 2
-		quick_potions = quick_potions and drinks.size() >= 10 and drinks[0] >= 51420 and drinks[0] <= 51500
+		quick_potions = quick_potions and drinks.size() >= 10 and drinks[0] >= 51400 and drinks[0] <= 51500
 		for index in range(1, drinks.size()):
-			legal_potions = legal_potions and drinks[index] - drinks[index - 1] >= RecoveryRules.POTION_INTERVAL_MSEC
+			legal_potions = legal_potions and drinks[index] - drinks[index - 1] >= ArenaPracticeBot.POTION_INTERVAL_MSEC
 			quick_potions = quick_potions and drinks[index] - drinks[index - 1] <= 320
 		# A melee bot has to leave the attack->potion window to actually recover.
 		_start(manager, 301, true, 3, 2, 60000)
@@ -268,7 +268,7 @@ func _test_training_behavior() -> void:
 	_check(static_hits >= 80, "Stationary opponents receive sustained combat pressure across eight seeds")
 	_check(moving_hits >= 40 and moving_hits < total_attempts, "Moving opponents can be hit and can also evade delayed perception")
 	_check(legal_casts, "All attacks and defensive spells respect the same slower bot spell interval")
-	_check(legal_potions and quick_potions, "Bot repeats potions at 280 ms with a human reaction window and no click+Use advantage")
+	_check(legal_potions and quick_potions, "Bot repeats potions at 250 ms with a human reaction window and legal click/Use lanes")
 	_check(both_colors, "Under pressure the bot recovers health and mana instead of starving one resource")
 	_check(recovery_windows, "Wounded melee bots defend and recover through the real attack-potion gap")
 
@@ -293,12 +293,12 @@ func _test_spell_rhythm() -> void:
 		for action: Dictionary in manager.tick(now):
 			if action.kind == "cast":
 				if last_cast > 0:
-					legal = legal and now - last_cast >= 1250
+					legal = legal and now - last_cast >= ArenaPracticeBot.CAST_INTERVAL_MSEC
 				last_cast = now
 				if int(action.result.event.spell_id) == 27:
 					removed_at = now
-	_check(rooted_at > 0 and removed_at - rooted_at >= 650, "The first root remains for at least 650 ms before the bot can Remove")
-	_check(removed_at > 0 and legal, "Remove and offensive casts share the bot's 1250 ms floor instead of bypassing it")
+	_check(rooted_at > 0 and removed_at - rooted_at >= 520, "The first root remains for at least 520 ms before the bot can Remove")
+	_check(removed_at > 0 and legal, "Remove and offensive casts share the bot's 1150 ms floor instead of bypassing it")
 	# Recovery starts on the first useful red, without spending scarce turns on blue.
 	_start(manager, 301, true, 1, 2, 30000)
 	bot = registry.get_player(ArenaPracticeBot.BOT_ID)

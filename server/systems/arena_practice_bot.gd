@@ -10,9 +10,9 @@ const COUNTDOWN_MSEC := 3000
 const THINK_MSEC := 120
 const COMMAND_INTERVAL_MSEC := 400
 const MOVE_INTERVAL_MSEC := MovementRules.PRACTICE_BOT_MOVE_INTERVAL_MSEC
-const CAST_INTERVAL_MSEC := 1250
+const CAST_INTERVAL_MSEC := 1150
 const ATTACK_INTERVAL_MSEC := 650
-const POTION_INTERVAL_MSEC := 280
+const POTION_INTERVAL_MSEC := 250
 var registry: PlayerRegistry
 var owner_id := 0
 var phase := "idle"
@@ -30,6 +30,7 @@ var _next_offense := 0
 var _next_spell := 0
 var _potion_due := 0
 var _last_potion := ""
+var _last_potion_source := "use"
 var _root_due := 0
 var _root_observed := false
 var _defending := false
@@ -168,6 +169,7 @@ func remove_bot(notify: bool = true) -> void:
 	_next_heal = 0
 	_last_red_at = -100000
 	_last_potion = ""
+	_last_potion_source = "use"
 	_potion_due = 0
 	_root_due = 0
 	_root_observed = false
@@ -226,7 +228,7 @@ func tick(now: int = -1) -> Array[Dictionary]:
 		_next_choice = 0
 	var rooted := bot.active_effects.has("Paralizado") or bot.active_effects.has("Inmovilizado")
 	if rooted and not _root_observed:
-		_root_due = now + _rng.randi_range(650, 850)
+		_root_due = now + _rng.randi_range(520, 700)
 	_root_observed = rooted
 	var removing := rooted and ClassCatalog.can_cast(bot.class_id, 27) and bot.current_mana >= int(SpellCatalog.get_spell(27).mana)
 	if removing and now >= _root_due and now >= _next_spell:
@@ -245,7 +247,9 @@ func tick(now: int = -1) -> Array[Dictionary]:
 	# A defensive spell uses the same global cast interval as an attack.
 	if not removing and now >= _next_offense:
 		var healed := false
-		if now >= _next_heal and bot.current_health < bot.max_health * 0.55 and now >= _next_spell:
+		# Finish a committed pair unless healing is urgent; do not waste its second cast.
+		var finishing_combo := _combo_step == 1 or _semi_step == 2
+		if now >= _next_heal and bot.current_health < bot.max_health * 0.55 and now >= _next_spell and (not finishing_combo or bot.current_health < bot.max_health * 0.35):
 			_next_heal = now + _rng.randi_range(3400, 4200)
 			if _rng.randf() < 0.60:
 				healed = _cast(31, bot.grid_position, now, actions)
@@ -326,12 +330,14 @@ func _tick_potions(bot: PlayerState, now: int, actions: Array[Dictionary]) -> vo
 		_potion_due = 0
 		return
 	if _potion_due == 0:
-		_potion_due = now + _rng.randi_range(120, 180)
+		_potion_due = now + _rng.randi_range(100, 150)
 		return
 	if now < _potion_due:
 		return
 	var action := "health_potion" if red else "mana_potion"
-	if red and blue and bot.current_health >= bot.max_health * 0.65:
+	# Casters keep real blue recovery under moderate pressure, while low HP favors reds.
+	var blue_threshold := 0.55 if bot.class_id in [1,6] else 0.65
+	if red and blue and bot.current_health >= bot.max_health * blue_threshold:
 		if bot.current_mana < bot.max_mana * 0.2 or _last_potion == "health_potion":
 			action = "mana_potion"
 	if _recover(action, now, actions):
@@ -341,7 +347,7 @@ func _tick_potions(bot: PlayerState, now: int, actions: Array[Dictionary]) -> vo
 			# Emergency recovery is a defensive choice; do not weave free offense into it.
 			if bot.current_health < bot.max_health * 0.45:
 				_next_offense = maxi(_next_offense,now+220)
-		_potion_due = now + maxi(RecoveryRules.POTION_INTERVAL_MSEC, POTION_INTERVAL_MSEC)
+		_potion_due = now + maxi(RecoveryRules.POTION_COMBINED_MIN_MSEC, POTION_INTERVAL_MSEC)
 	else:
 		# A normal attack/potion gap can block this; retain the pending decision.
 		_potion_due = now + 40
@@ -480,7 +486,7 @@ func _semi_attack(bot: PlayerState, now: int, actions: Array[Dictionary]) -> voi
 		if bot.current_mana >= mini(bot.max_mana,opener_cost) and _cast(25,_observed_cell,now,actions):
 			_semi_step = 1
 			_semi_until = now + 6000
-			_next_control = now + _rng.randi_range(7500,10000)
+			_next_control = now + _rng.randi_range(5000,6500)
 			_next_offense = now + SpellCatalog.SPELL_ATTACK_GAP_MSEC
 			return
 	if _semi_step == 2 and clear:
@@ -497,7 +503,9 @@ func _semi_attack(bot: PlayerState, now: int, actions: Array[Dictionary]) -> voi
 		if now < _next_spell: return
 		_semi_step = 0
 	if adjacent and now >= _next_melee:
-		if _defending and _potion_due != 0: return
+		# A pending potion must not indefinitely cancel the melee/Discharge chain.
+		# Actual attack/recovery gaps are still enforced by PlayerRegistry.
+		if bot.current_health < bot.max_health * 0.30 and _potion_due != 0: return
 		bot.facing_direction = _direction(_observed_cell-bot.grid_position)
 		_next_melee = now + maxi(CombatRules.BASIC_ATTACK_COOLDOWN_MSEC,ATTACK_INTERVAL_MSEC) + _rng.randi_range(0,100)
 		var target := registry.try_basic_attack(BOT_ID,now)
@@ -555,8 +563,13 @@ func _cast(spell_id: int, target: Vector2i, now: int, actions: Array[Dictionary]
 
 func _recover(action: String, now: int, actions: Array[Dictionary]) -> bool:
 	_recovery_request += 1
-	var result := registry.try_recovery_action(BOT_ID, action, _recovery_request, now)
+	# Alternate the same click/Use lanes available to a human. Each lane and
+	# the shared floor remain validated by the authoritative registry.
+	var potion := action.ends_with("potion")
+	var source := ("click" if _last_potion_source == "use" else "use") if potion else "direct"
+	var result := registry.try_recovery_action(BOT_ID, action, _recovery_request, now, source)
 	if result.ok:
+		if potion: _last_potion_source = source
 		actions.append({"kind": "recovery", "result": result})
 	return bool(result.ok)
 

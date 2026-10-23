@@ -9,7 +9,7 @@ func _ready() -> void:
 	_player=AudioStreamPlayer.new()
 	_player.name="UIClickPlayer"
 	_player.stream=_make_click()
-	_player.volume_db=-10
+	_player.volume_db=-12
 	add_child(_player)
 	ArenaAudioMix.route(_player,3)
 	get_tree().node_added.connect(_node_added)
@@ -22,10 +22,14 @@ func _node_added(node: Node) -> void:
 func _wire(node: Node) -> void:
 	if not is_instance_valid(node): return
 	if node is BaseButton:
-		var callback:=_play
+		var callback:=_button_clicked.bind(node)
 		if not node.pressed.is_connected(callback):node.pressed.connect(callback)
 	elif node is PopupMenu:
 		if not node.id_pressed.is_connected(_popup_clicked):node.id_pressed.connect(_popup_clicked)
+func _button_clicked(button: BaseButton)->void:
+	# Read current contents: potion slots can move or become equipment slots.
+	if button.get_meta("ui_click_silent",false):return
+	_play()
 func _popup_clicked(_id: int)->void:
 	_play()
 func _play()->void:

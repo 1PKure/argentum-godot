@@ -12,7 +12,7 @@ Prototipo multijugador real en Godot 4.7 Standard, con cliente web y dedicado au
 6. Ambos humanos marcan Listo; en práctica, basta el dueño con bot habilitado. Cuenta 3→2→1→¡YA!, combate, resultado y revancha.
 7. Menú → Salir de la sala vuelve al directorio conservando conexión. El botón Desconectar del HUD o del directorio cierra la conexión.
 
-Cliente y dedicado deben usar la misma revisión y **protocolo 18**. `tools/Start-PrivateWebTest.cmd` importa el proyecto antes de iniciar WSS. [Guía WSS](docs/WEB_TEST.md).
+Cliente y dedicado deben usar la misma revisión y **protocolo 24**. `tools/Start-PrivateWebTest.cmd` importa el proyecto antes de iniciar WSS. [Guía WSS](docs/WEB_TEST.md).
 
 ## Salas y escenarios
 
@@ -58,3 +58,5 @@ Ranking desde el lobby:100puntos por victoria confirmada PvP/bot, contadores sep
 
 
 Chat de sala integrado: panel lateral en el lobby y Enter/botónChat en combate; Enter envía y Escape cancela. Al escribir se bloquean movimiento, macros y pociones sin pausar al rival. Mensajes sobre personaje4s, separados cuando se acercan y reemplazados por las palabras del hechizo confirmado. Historial temporal de30mensajes por sala, nombre tomado del servidor,160caracteres, límite800ms y aislamiento por sala incluso para solicitudes atrasadas. Protocolo24; actualizar cliente/dedicado juntos. [Chat](docs/CHAT.md).
+
+Revisión para cerrar gameplay alpha y pasar a la web: [estado, límites y prioridades](docs/ALPHA_READINESS.md). Último ajuste de bot/pociones/clics: [detalles](docs/FINAL_COMBAT_DETAILS.md#cierre-de-gameplay-alpha-presión-y-recuperación).
