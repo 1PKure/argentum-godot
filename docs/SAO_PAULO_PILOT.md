@@ -1,3 +1,5 @@
+> Plan inicial de ubicación. El usuario eligió y desplegó Santiago de Chile; el estado real y la validación están en [CHILE_PILOT.md](CHILE_PILOT.md). No se creó una instancia en São Paulo.
+
 # Prueba del dedicado en São Paulo
 
 El usuario autorizó un servidor Vultr High Frequency de 1 vCPU / 1 GB en São Paulo por US$9 mensuales de cómputo. La prueba busca comparar los 167–178 ms de RTT observados desde Argentina con el mismo juego en otra ubicación. La disponibilidad de stock y el total final deben comprobarse en el panel antes de contratar; no agregar backups automáticos, discos, IP adicionales u otros complementos pagos sin aprobación.

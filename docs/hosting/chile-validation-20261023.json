@@ -1,0 +1,74 @@
+{
+  "environment": "Work native headless clients through supported HTTPS proxy to Chile public TLS/WSS",
+  "rendering_audio_tested": false,
+  "independent_accounts": 1,
+  "checks": {
+    "health_before": true,
+    "ranking_before": true,
+    "ranking_requires_invitation": true,
+    "wrong_ticket_rejected": true,
+    "wrong_origin_rejected": true,
+    "lobby_and_bot_suite": true,
+    "eight_clients_four_rooms": true,
+    "ninth_connection_rejected": true,
+    "soak_all_clients_pass": true,
+    "no_movement_or_probe_timeouts": true,
+    "all_clients_confirmed_movement": true,
+    "reconnect_after_full_capacity": true,
+    "existing_ranking_entries_unchanged": true,
+    "qa_has_no_awarded_points": true,
+    "no_bridge_failures": true,
+    "health_after": true,
+    "no_native_errors": true
+  },
+  "duration_seconds": 300,
+  "spell_events": 1078,
+  "confirmed_moves": 14470,
+  "blocked_moves": 26,
+  "move_timeouts": 0,
+  "probe_timeouts": 0,
+  "chat_rtt_ms": {
+    "samples": 1560,
+    "p50": 214.0,
+    "p95": 290.0
+  },
+  "ping_samples_ms": {
+    "samples": 480,
+    "p50": 227.607,
+    "p95": 283.319
+  },
+  "move_samples_ms": {
+    "samples": 480,
+    "p50": 206.071,
+    "p95": 282.872
+  },
+  "server_samples_ms": {
+    "samples": 480,
+    "p50": 0.162,
+    "p95": 0.229
+  },
+  "passed": true,
+  "restart": {
+    "ranking_identical_after_restart": true,
+    "wss_after_restart": true,
+    "revision": 12,
+    "entries": 3
+  },
+  "lobby_checks": 124,
+  "user_browser_observation": {
+    "source": "User approval and screenshot 2026-10-23 19:03",
+    "fps": 180,
+    "ping_rtt_ms": 33,
+    "ping_rtt_p95_ms": 39,
+    "movement_confirmation_p50_ms": 34,
+    "movement_confirmation_p95_ms": 39,
+    "movement_timeouts": 0
+  },
+  "vps_resource_snapshot": {
+    "arena_cpu_percent_one_core": 6.57,
+    "arena_memory_mib": 214.6,
+    "tls_cpu_percent_one_core": 0.98,
+    "tls_memory_mib": 47.11,
+    "scope": "One sample during eight-peer workload; not a peak or sustained average."
+  }
+}
