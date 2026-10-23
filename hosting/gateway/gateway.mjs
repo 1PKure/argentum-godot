@@ -31,7 +31,7 @@ export async function createGateway({store,port=10000,gamePort=7777,internalPort
   server.requestTimeout=10000;server.headersTimeout=10000;
   server.on('upgrade',(req,socket,head)=>{
     let url;try{url=new URL(req.url,'http://localhost');}catch{socket.destroy();return;}
-    const reject=(code,message)=>{socket.end(`HTTP/1.1 ${code} ${message}\r\nConnection: close\r\n\r\n`);};
+    const reject=(code,message)=>{if(process.env.AO_DIAGNOSTICS==='true')console.log('Gateway upgrade rejected:',code,message);socket.end(`HTTP/1.1 ${code} ${message}\r\nConnection: close\r\n\r\n`);};
     if(req.method!=='GET' || url.pathname!=='/game' || (!publicAccess && !equal(url.searchParams.get('ticket'),pilotKey)))return reject(403,'Forbidden');
     if(req.headers.origin && !origins.includes(req.headers.origin))return reject(403,'Forbidden');
     if(!ready)return reject(503,'Unavailable');
@@ -41,6 +41,7 @@ export async function createGateway({store,port=10000,gamePort=7777,internalPort
     const cleanup=()=>{sockets.delete(socket);socket.destroy();upstream.destroy();};
     socket.on('error',cleanup);upstream.on('error',cleanup);socket.on('close',cleanup);upstream.on('close',()=>socket.end());
     upstream.on('connect',()=>{
+      if(process.env.AO_DIAGNOSTICS==='true')console.log('Gateway upgrade accepted; header names:',Object.keys(req.headers).join(','));
       // The pilot ticket stops here; it is not forwarded or logged by Godot.
       const headers=Object.entries(req.headers).filter(([name])=>!['host','authorization','cookie'].includes(name.toLowerCase())).map(([name,value])=>`${name}: ${value}`).join('\r\n');
       upstream.write(`GET / HTTP/1.1\r\nHost: 127.0.0.1:${gamePort}\r\n${headers}\r\n\r\n`);

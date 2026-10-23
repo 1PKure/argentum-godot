@@ -8,7 +8,7 @@ export function verifyPublicWebSocket(host,ticket){
     let opened=false;
     const timer=setTimeout(()=>socket.close(),12000);timer.unref();
     socket.addEventListener('open',()=>{opened=true;console.log('Public WSS deployment check passed.');socket.close();});
-    socket.addEventListener('error',()=>{});
+    socket.addEventListener('error',event=>{console.log('Public WSS check error:',String(event.message||'network error').replaceAll(ticket||'__none__','[redacted]').replace(/wss?:\/\/\S+/g,'[url]').slice(0,160));});
     socket.addEventListener('close',()=>{
       clearTimeout(timer);
       if(!opened && attempts<6)setTimeout(attempt,10000).unref();
