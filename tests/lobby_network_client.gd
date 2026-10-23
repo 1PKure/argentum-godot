@@ -70,7 +70,7 @@ func _run() -> void:
 	for member: Dictionary in net.room.members: members.append(int(member.peer_id))
 	_check(main._hud._players.size()==2,"room snapshot contains exactly two avatars")
 	_check(not main._local_input.is_processing(),"lobby blocks movement input")
-	_check(net.rooms.size()==2,"both rooms listed")
+	_check(await _wait(func() -> bool: return net.rooms.size()==2),"both rooms listed")
 	var chat := root.get_node("ChatNetwork")
 	if role=="A":
 		for entry: Dictionary in net.rooms:
@@ -152,16 +152,24 @@ func _solo(net: Node) -> void:
 	_check(str(bot_network.state.round_id)==str(net.room.round_id),"room and bot share authoritative round ID")
 	_check(await _wait(func() -> bool: return str(net.room.phase)=="fighting" and str(bot_network.state.phase)=="active"),"solo countdown enters active bot round")
 	_check(main._local_input.is_processing() and main._hud._players.size()==2,"player and bot playable")
+	var diagnostics := root.get_node("NetworkDiagnostics")
+	_check(await _wait(func() -> bool: return diagnostics.measured_moves),"dedicated advertises real ping and measured movement")
+	var confirmed_before: int = diagnostics.confirmed
+	diagnostics.request_move(MovementRules.Direction.EAST)
+	_check(await _wait(func() -> bool: return diagnostics.confirmed > confirmed_before),"actual room movement returns an accepted correlated acknowledgment")
+	print("Movement diagnostics [S]: ping RTT %d ms; movement p95 %.1f ms; server handler p95 %.1f ms" % [diagnostics.last_ping_ms,diagnostics.percentile(diagnostics.move_samples,0.95),diagnostics.percentile(diagnostics.server_samples,0.95)])
 	net.request_pause(true)
 	_check(await _wait(func() -> bool: return net.is_paused() and not net.pause_pending),"server confirms solo bot pause")
 	_check(not net.gameplay_active(),"pause blocks gameplay")
 	await create_timer(0.1).timeout
 	var observed := received.size()
-	root.get_node("PlayerNetwork").request_move(MovementRules.Direction.EAST)
+	var blocked_before: int = diagnostics.blocked
+	diagnostics.request_move(MovementRules.Direction.EAST)
 	root.get_node("PlayerNetwork").request_basic_attack()
 	root.get_node("RecoveryNetwork").request_action("red")
 	await create_timer(1.5).timeout
 	_check(received.size() == observed,"server freezes bot and rejects player actions while paused")
+	_check(diagnostics.blocked > blocked_before,"paused movement is measured as blocked, not network loss")
 	net.request_pause(false)
 	_check(await _wait(func() -> bool: return not net.is_paused() and not net.pause_pending),"server confirms resume")
 	_check(net.gameplay_active(),"resume restores gameplay")

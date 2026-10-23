@@ -1,0 +1,11 @@
+.git
+.godot
+builds
+outputs
+.env
+**/.env*
+*.log
+*.tmp
+**/node_modules
+**/tests
+docs

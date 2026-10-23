@@ -71,6 +71,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if is_local_player: NetworkDiagnostics.record_queue(_movement_waypoints.size())
 	var remaining_distance := _move_speed * maxf(delta, 0.0)
 	var moved_this_frame := false
 	# Preserve each confirmed turn. Carry unused frame time to the next segment

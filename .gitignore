@@ -22,3 +22,11 @@ mono_crash.*.json
 # Python QA runners
 __pycache__/
 *.py[cod]
+
+# Dedicated runtime secrets and QA dependencies
+hosting/node_modules/
+hosting/.env
+hosting/.env.local
+
+# Private VPS runtime configuration
+hosting/vps/.env

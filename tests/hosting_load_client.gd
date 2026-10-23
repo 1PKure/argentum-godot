@@ -22,6 +22,7 @@ func _run() -> void:
 		if arg.begins_with("--load-count="): count=int(arg.trim_prefix("--load-count="))
 		if arg.begins_with("--load-folder="): folder=arg.trim_prefix("--load-folder=")
 		if arg.begins_with("--load-seconds="): seconds=float(arg.trim_prefix("--load-seconds="))
+	if not OS.get_environment("AO_QA_URL").is_empty(): url = OS.get_environment("AO_QA_URL")
 	var network := root.get_node("NetworkManager")
 	var lobby := root.get_node("LobbyNetwork")
 	var ranking := root.get_node("RankingNetwork")
@@ -29,6 +30,7 @@ func _run() -> void:
 	var players := root.get_node("PlayerNetwork")
 	var spells := root.get_node("SpellNetwork")
 	var recovery := root.get_node("RecoveryNetwork")
+	var diagnostics := root.get_node("NetworkDiagnostics")
 	players.snapshot_received.connect(func(snapshot: Array) -> void:
 		states.clear()
 		for state: Dictionary in snapshot: states[int(state.peer_id)] = state
@@ -80,10 +82,12 @@ func _run() -> void:
 			chat.send("Prueba de carga %d"%index)
 			next_chat=elapsed+1500
 		if elapsed>=next_move:
-			players.request_move(MovementRules.Direction.EAST if (move_index+index)%2==0 else MovementRules.Direction.WEST)
+			var direction := MovementRules.Direction.EAST if (move_index+index)%2==0 else MovementRules.Direction.WEST
+			if diagnostics.measured_moves: diagnostics.request_move(direction)
+			else: players.request_move(direction)
 			move_index+=1;next_move=elapsed+150
 		await create_timer(0.05).timeout
-	var success: bool = lobby.room.get("phase","")=="fighting" and events>0 and delays.size()>0
+	var success: bool = lobby.room.get("phase","")=="fighting" and events>0 and delays.size()>0 and network.is_network_connected()
 	var done := FileAccess.open(folder.path_join("done-%d"%index),FileAccess.WRITE)
 	done.store_string("done");done.close()
 	await wait_for(func() -> bool: return FileAccess.file_exists(folder.path_join("stop")))
@@ -93,6 +97,8 @@ func _run() -> void:
 	finish(success,"")
 func finish(ok: bool, failure: String) -> void:
 	var result := {"ok":ok,"index":index,"failure":failure,"chat_rtt_ms":delays,"spell_events":events}
+	var diagnostics := root.get_node("NetworkDiagnostics")
+	result.merge({"confirmed_moves":diagnostics.confirmed,"blocked_moves":diagnostics.blocked,"move_timeouts":diagnostics.move_timeouts,"probe_timeouts":diagnostics.probe_timeouts,"ping_samples_ms":diagnostics.ping_samples,"move_samples_ms":diagnostics.move_samples,"server_samples_ms":diagnostics.server_samples})
 	var file := FileAccess.open(folder.path_join("client-%d.json"%index),FileAccess.WRITE)
 	file.store_string(JSON.stringify(result));file.close()
 	root.get_node("NetworkManager").stop()

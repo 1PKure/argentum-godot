@@ -29,7 +29,9 @@ driver/mix_rate.web=48000
 
 [autoload]
 
+
 NetworkManager="*uid://f63okkehfaww"
+NetworkDiagnostics="*res://autoload/network_diagnostics.gd"
 PlayerNetwork="*uid://q1b820kls4vu"
 DevServerLauncher="*uid://c5lbr7cu8i63u"
 AOResources="*uid://cqc86kpi0ald7"
