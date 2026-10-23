@@ -21,6 +21,9 @@ static func get_skin(id: String, class_id: int = ClassCatalog.DEFAULT_CLASS) -> 
 	for index in range(ENTRIES.size()):
 		if ENTRIES[index].id == id:
 			var entry: Dictionary = ENTRIES[index].duplicate()
+			if index == 0 and class_id == 1:
+				entry.name = "Azul"
+				entry.body_id = 117
 			if index > 0:
 				entry.merge(variants[index - 1], true)
 			return entry

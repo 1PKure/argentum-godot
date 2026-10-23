@@ -26,9 +26,10 @@ func _ready() -> void:
 	_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_card.custom_minimum_size = Vector2(300, 140)
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.025, 0.03, 0.04, 0.92)
+	style.bg_color = Color(0.075,0.10,0.15,0.96)
 	style.border_color = Color("d6b66a")
-	style.set_border_width_all(2)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(12)
 	style.content_margin_left = 20
 	style.content_margin_right = 20
 	style.content_margin_top = 12
@@ -49,6 +50,7 @@ func _ready() -> void:
 	content.add_child(detail)
 	_audio = AudioStreamPlayer.new()
 	_audio.volume_db = -14
+	ArenaAudioMix.route(_audio)
 	add_child(_audio)
 	_tick_sound = _tone(520.0, 0.09)
 	_go_sound = _tone(880.0, 0.22)

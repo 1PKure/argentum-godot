@@ -47,6 +47,7 @@ func _run() -> void:
 	_check(ClassCatalog.magic_damage(100, 1, 1) != 100, "Weapon magic bonus and helmet resistance affect spell damage")
 	var registry = load("res://server/systems/player_registry.gd").new()
 	root.add_child(registry)
+	registry._physical_rng.seed = 1 # This fixture verifies actual arrow damage, not avoidance.
 	var player: PlayerState = registry.add_player(801)
 	var target: PlayerState = registry.add_player(802)
 	var original := player.to_dictionary()
@@ -64,7 +65,7 @@ func _run() -> void:
 	_check(not registry.try_recovery_action(801, "meditate", 2, 10000).ok, "Hunter cannot meditate")
 	player.grid_position = Vector2i(1, 2)
 	target.grid_position = Vector2i(3, 2)
-	_check(not registry.try_ranged_attack(801, target.grid_position, 1, 10000).ok, "Aimed arrows are blocked by terrain")
+	_check(CombatRules.has_clear_shot(registry.get_arena_id(), player.grid_position, target.grid_position), "Aimed arrows cross decorative terrain")
 	player.grid_position = Vector2i(4, 5)
 	target.grid_position = Vector2i(13, 5)
 	_check(not registry.try_ranged_attack(801, target.grid_position, 2, 10000).ok, "Aimed arrows respect eight-tile range")

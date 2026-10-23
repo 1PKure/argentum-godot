@@ -1,6 +1,9 @@
 class_name ArenaSpellEffect
 extends Node2D
 
+const BloodImpact := preload("res://client/effects/arena_blood_impact.gd")
+
+var managed_words := false
 var event: Dictionary
 var origin := Vector2.ZERO
 var target := Vector2.ZERO
@@ -8,7 +11,7 @@ var origin_avatar: Node2D
 var target_avatar: Node2D
 var _elapsed := 0.0
 var _lifetime := 1.1
-var _sprite: AnimatedSprite2D
+var _sprite: ArenaSpellVisual
 var _text: Label
 var _words: Label
 var _audio: AudioStreamPlayer
@@ -31,7 +34,6 @@ func _ready() -> void:
 	process_priority = 50
 	var spell := SpellCatalog.get_spell(int(event.spell_id))
 	_is_shot = event.get("action", "") == "shot"
-	var fx_id := 0 if _is_shot else int(spell.fx_id)
 	if _is_shot:
 		_lifetime = 0.65
 		_projectile = Sprite2D.new()
@@ -39,20 +41,16 @@ func _ready() -> void:
 		_projectile.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		_projectile.scale = Vector2.ONE * ClientWorld.VISUAL_SCALE
 		add_child(_projectile)
-	# Minor heal has no FXgrh in the DAT; reuse AO20's healing visual.
-	if fx_id == 0 and spell.effect == "healing":
-		fx_id = 9
-	if fx_id > 0:
-		_sprite = AOResources.create_fx_sprite(fx_id, false, true)
-		if _sprite != null:
-			var frames := _sprite.sprite_frames
-			_lifetime = maxf(_lifetime, frames.get_frame_count("default") / frames.get_animation_speed("default"))
-			_sprite.scale = Vector2.ONE * ClientWorld.VISUAL_SCALE
-			add_child(_sprite)
-			_sprite.play()
+	else:
+		_sprite = ArenaLegacySpellVisual.new() if ArenaVisualSettings.uses_original_fx() else ArenaModernSpellVisual.new()
+		_sprite.configure(spell)
+		_lifetime = _sprite.lifetime
+		add_child(_sprite)
 	var value := ("+" if spell.effect == "healing" else "−") + str(event.amount)
 	if spell.effect in ["status", "periodic"]:
 		value = str(event.get("status_message", spell.name))
+	if _is_shot and str(event.get("outcome","")) in ["evaded","blocked"]:
+		value = "Bloqueó" if str(event.outcome)=="blocked" else "Esquivó"
 	_text = _make_label(value, target + Vector2(-80, -75), 16)
 	_text.size.x = 160
 	_text.modulate = Color("a8f0a4") if spell.effect == "healing" else Color("ffb49c")
@@ -68,20 +66,26 @@ func _ready() -> void:
 		_audio = AudioStreamPlayer.new()
 		_audio.stream = load(sound_path)
 		_audio.volume_db = -12.0
+		ArenaAudioMix.route(_audio)
 		add_child(_audio)
 		if _is_shot:
 			_lifetime = maxf(_lifetime, SHOT_TRAVEL_SECONDS + _audio.stream.get_length() + 0.05)
 		else:
+			# Keep the original sound tail even when the new visual burst is shorter.
+			# Visual opacity uses its own duration, so this never leaves text or FX behind.
+			_lifetime = maxf(_lifetime, _audio.stream.get_length() + 0.05)
 			_audio.play()
 
 
 func _process(delta: float) -> void:
 	_elapsed += delta
 	_update_anchors()
+	if _sprite != null and _elapsed < _sprite.lifetime + 0.1:
+		_sprite.set_age(_elapsed)
 	if _is_shot and not _shot_sound_played and _elapsed >= SHOT_TRAVEL_SECONDS:
 		_shot_sound_played = true
 		if is_instance_valid(target_avatar) and not target_avatar.is_queued_for_deletion():
-			if _audio != null:
+			if _audio != null and int(event.get("amount",0)) > 0:
 				_audio.play()
 			if int(event.get("amount", 0)) > 0:
 				_blood_active = true
@@ -90,7 +94,7 @@ func _process(delta: float) -> void:
 		_blood_age = maxf(0.0, _elapsed - SHOT_TRAVEL_SECONDS)
 		_blood_active = _blood_age < BLOOD_SECONDS and is_instance_valid(target_avatar) and not target_avatar.is_queued_for_deletion()
 		queue_redraw()
-	var fade_start := _lifetime - 0.4
+	var fade_start := (_lifetime if _is_shot else _sprite.lifetime) - 0.4
 	if _elapsed > fade_start:
 		modulate.a = maxf(0.0, 1.0 - (_elapsed - fade_start) / 0.4)
 	if _elapsed >= _lifetime:
@@ -108,7 +112,7 @@ func _update_anchors() -> void:
 	# two players move in different directions. Never rebind a reused peer ID.
 	var has_origin := is_instance_valid(origin_avatar) and not origin_avatar.is_queued_for_deletion()
 	var has_target := is_instance_valid(target_avatar) and not target_avatar.is_queued_for_deletion()
-	_words.visible = has_origin
+	_words.visible = has_origin and not managed_words
 	_text.visible = has_target
 	if has_origin:
 		origin = origin_avatar.position
@@ -126,10 +130,7 @@ func _update_anchors() -> void:
 	if _sprite != null:
 		_sprite.visible = has_target
 		if has_target:
-			# Ground the visible artwork, rather than its transparent canvas or the
-			# original renderer's vertical offset. Meditation keeps its own layout.
-			var source_offset: Vector2 = _sprite.get_meta("source_offset", Vector2.ZERO)
-			_sprite.position = target + PlayerAvatar.EFFECT_FOOT_POSITION + Vector2(source_offset.x * ClientWorld.VISUAL_SCALE, 0)
+			_sprite.position = target + PlayerAvatar.EFFECT_FOOT_POSITION
 	if not has_origin and not has_target:
 		queue_free()
 
@@ -151,22 +152,5 @@ func _make_label(value: String, at: Vector2, font_size: int) -> Label:
 
 
 func _draw() -> void:
-	if not _blood_active:
-		return
-	# Hold contrast through the first 300 ms; the old tiny, immediately faded
-	# drops disappeared into clothes at the arena's 1x source-pixel scale.
-	var fade := clampf((BLOOD_SECONDS - _blood_age) / 0.20, 0.0, 1.0)
-	if _blood_age < 0.18:
-		var tip := _blood_origin + _blood_direction * (14.0 + _blood_age * 55.0)
-		draw_line(_blood_origin, tip, Color(0.34, 0.01, 0.03, fade), 8.0, false)
-		draw_line(_blood_origin, tip, Color(0.94, 0.12, 0.19, fade), 5.0, false)
-	for index in range(12):
-		var direction := _blood_direction.rotated((index - 5.5) * 0.19)
-		var velocity := direction * (75.0 + (index % 4) * 15.0)
-		var at := _blood_origin + direction * 6.0 + velocity * _blood_age + Vector2(0, 120.0 * _blood_age * _blood_age)
-		var size_value := 6.0 if index % 3 == 0 else 4.0
-		var rect := Rect2(at.round(), Vector2.ONE * size_value)
-		var color := Color("f45151") if index % 3 == 0 else Color("c5192d")
-		color.a = fade
-		draw_rect(rect.grow(1.0), Color(0.30, 0.01, 0.03, fade))
-		draw_rect(rect, color)
+	if _blood_active:
+		BloodImpact.draw_burst(self,_blood_origin,_blood_direction,_blood_age)

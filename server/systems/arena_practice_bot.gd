@@ -10,7 +10,7 @@ const COUNTDOWN_MSEC := 3000
 const THINK_MSEC := 120
 const COMMAND_INTERVAL_MSEC := 400
 const MOVE_INTERVAL_MSEC := MovementRules.PRACTICE_BOT_MOVE_INTERVAL_MSEC
-const CAST_INTERVAL_MSEC := 1250
+const CAST_INTERVAL_MSEC := 1150
 const ATTACK_INTERVAL_MSEC := 650
 const POTION_INTERVAL_MSEC := 280
 var registry: PlayerRegistry
@@ -30,16 +30,24 @@ var _next_offense := 0
 var _next_spell := 0
 var _potion_due := 0
 var _last_potion := ""
+var _last_potion_source := "use"
 var _root_due := 0
 var _root_observed := false
 var _defending := false
 var _next_heal := 0
+var _last_red_at := -100000
 var _movement_mode := 1
 var _last_move_direction := -1
 var _axis_run := 0
 var _recent_cells: Array[Vector2i] = []
 var _combo_step := 0
 var _combo_until := 0
+var _combo_rebuilding := false
+var _fallback_used := false
+var _semi_combos := 0
+var _semi_step := 0
+var _semi_until := 0
+var _next_melee := 0
 var _rng := RandomNumberGenerator.new()
 var _next_control := 0
 var _cast_request := 0
@@ -121,7 +129,7 @@ func _start_round(peer_id: int, class_id: int, now: int) -> Dictionary:
 	_cast_request = 0
 	_recovery_request = 0
 	_shot_request = 0
-	_ready_at = _starts_at + _rng.randi_range(600, 850)
+	_ready_at = _starts_at + (_rng.randi_range(450,650) if class_id==1 else _rng.randi_range(600,850))
 	_next_observation = _ready_at
 	_observed_cell = owner.grid_position
 	_observed_rooted = false
@@ -136,7 +144,13 @@ func _start_round(peer_id: int, class_id: int, now: int) -> Dictionary:
 	_recent_cells.clear()
 	_combo_step = 0
 	_combo_until = 0
-	_next_control = _starts_at + _rng.randi_range(10000, 14000)
+	_combo_rebuilding = false
+	_fallback_used = false
+	_semi_combos = 0
+	_semi_step = 0
+	_semi_until = 0
+	_next_melee = _ready_at
+	_next_control = _ready_at if _is_semimagic(bot) else _starts_at + _rng.randi_range(10000, 14000)
 	reset_world.emit()
 	status_changed.emit(status())
 	return {"ok": true}
@@ -153,7 +167,9 @@ func remove_bot(notify: bool = true) -> void:
 	phase = "idle"
 	_defending = false
 	_next_heal = 0
+	_last_red_at = -100000
 	_last_potion = ""
+	_last_potion_source = "use"
 	_potion_due = 0
 	_root_due = 0
 	_root_observed = false
@@ -201,7 +217,7 @@ func tick(now: int = -1) -> Array[Dictionary]:
 		_observed_cell = target.grid_position
 		_observed_rooted = target.active_effects.has("Paralizado") or target.active_effects.has("Inmovilizado")
 		_next_observation = now + _rng.randi_range(THINK_MSEC - 30, THINK_MSEC + 30)
-	var caster := bot.class_id in [1, 2, 5, 6]
+	var caster := bot.class_id in [1, 6]
 	var ranged := caster or bot.class_id == 8
 	var distance := _distance(bot.grid_position, _observed_cell)
 	if not _defending and (bot.current_health < bot.max_health * 0.55 or (caster and bot.current_mana < bot.max_mana * 0.18)):
@@ -212,7 +228,7 @@ func tick(now: int = -1) -> Array[Dictionary]:
 		_next_choice = 0
 	var rooted := bot.active_effects.has("Paralizado") or bot.active_effects.has("Inmovilizado")
 	if rooted and not _root_observed:
-		_root_due = now + _rng.randi_range(650, 850)
+		_root_due = now + _rng.randi_range(520, 700)
 	_root_observed = rooted
 	var removing := rooted and ClassCatalog.can_cast(bot.class_id, 27) and bot.current_mana >= int(SpellCatalog.get_spell(27).mana)
 	if removing and now >= _root_due and now >= _next_spell:
@@ -231,10 +247,13 @@ func tick(now: int = -1) -> Array[Dictionary]:
 	# A defensive spell uses the same global cast interval as an attack.
 	if not removing and now >= _next_offense:
 		var healed := false
-		if now >= _next_heal and bot.current_health < bot.max_health * 0.55:
-			_next_heal = now + _rng.randi_range(1800, 2400)
-			if _rng.randf() < 0.65:
+		# Finish a committed pair unless healing is urgent; do not waste its second cast.
+		var finishing_combo := _combo_step == 1 or _semi_step == 2
+		if now >= _next_heal and bot.current_health < bot.max_health * 0.55 and now >= _next_spell and (not finishing_combo or bot.current_health < bot.max_health * 0.35):
+			_next_heal = now + _rng.randi_range(3400, 4200)
+			if _rng.randf() < 0.60:
 				healed = _cast(31, bot.grid_position, now, actions)
+				if healed: _potion_due = maxi(_potion_due,now+550)
 		if not healed:
 			_attack(bot, ranged, caster, now, actions)
 	if not target.is_alive:
@@ -247,7 +266,7 @@ func tick(now: int = -1) -> Array[Dictionary]:
 		if direction != -1:
 			var moved := registry.try_move_player(BOT_ID, direction, now)
 			if moved != null:
-				_next_move = now + MOVE_INTERVAL_MSEC
+				_next_move = now + _move_interval(bot)
 				_remember_move(direction, moved.grid_position)
 				actions.append({"kind": "move", "state": moved.to_dictionary()})
 	return actions
@@ -273,26 +292,30 @@ func _attack(bot: PlayerState, ranged: bool, caster: bool, now: int, actions: Ar
 		if caster:
 			spell = _combo_spell(bot, now)
 			var choice := _rng.randf()
-			if now >= _next_control and not _observed_rooted and bot.current_mana > 700 and choice < 0.3:
+			if _combo_step == 0 and now >= _next_control and not _observed_rooted and bot.current_mana >= _mana_reserve(bot) and choice < 0.3:
 				spell = 25
 				_next_control = now + _rng.randi_range(14000, 18000)
+			# An empty budget is not a missed shot: reassess after the next
+			# observation instead of wasting a full cast window while blues recover.
+			if spell == 0 and bot.class_id == 1:
+				_next_offense = maxi(_next_spell, now + THINK_MSEC)
+				return
 		var cell := _observed_cell
-		if _rng.randf() < 0.06:
+		if _rng.randf() < (0.04 if bot.class_id==1 else 0.06):
 			cell += MovementRules.get_offset(_rng.randi_range(0, 3))
 		# An inaccurate click costs the opportunity too; no free rapid retries.
 		var interval := maxi(SpellCatalog.CAST_INTERVAL_MSEC, CAST_INTERVAL_MSEC) if caster else maxi(CombatRules.RANGED_ATTACK_COOLDOWN_MSEC, ATTACK_INTERVAL_MSEC)
 		_next_offense = now + interval + _rng.randi_range(0, 100)
 		if caster:
 			if _cast(spell, cell, now, actions) and spell != 25:
-				# Advance only after a real confirmed hit; a missed click cannot unlock
-				# the cheaper follow-up as if the opponent had survived a combo.
-				_combo_step = 1 if spell in [53, 59] else 2 if spell == 51 or (_combo_step == 1 and spell == 3) else 0
-				_combo_until = now + 6000
+				_record_combo_spell(bot, spell, now)
 		else:
 			_shot_request += 1
 			var shot := registry.try_ranged_attack(BOT_ID, cell, _shot_request, now)
 			if shot.ok:
 				actions.append({"kind": "cast", "result": shot})
+	elif _is_semimagic(bot):
+		_semi_attack(bot, now, actions)
 	elif absi(delta.x) + absi(delta.y) == 1:
 		# Leave a real recovery window after a melee hit when health is low.
 		if _defending and _potion_due != 0:
@@ -307,22 +330,29 @@ func _attack(bot: PlayerState, ranged: bool, caster: bool, now: int, actions: Ar
 
 func _tick_potions(bot: PlayerState, now: int, actions: Array[Dictionary]) -> void:
 	var red := bot.max_health - bot.current_health >= 27
-	var blue := bot.max_mana > 0 and bot.current_mana < bot.max_mana * 0.65
+	var blue := bot.max_mana > 0 and bot.current_mana < _mana_reserve(bot)
 	if not red and not blue:
 		_potion_due = 0
 		return
 	if _potion_due == 0:
-		_potion_due = now + _rng.randi_range(100, 160)
+		_potion_due = now + _rng.randi_range(100, 150)
 		return
 	if now < _potion_due:
 		return
 	var action := "health_potion" if red else "mana_potion"
-	if red and blue and bot.current_health >= bot.max_health * 0.65:
+	# Casters keep real blue recovery under moderate pressure, while low HP favors reds.
+	var blue_threshold := 0.55 if bot.class_id in [1,6] else 0.65
+	if red and blue and bot.current_health >= bot.max_health * blue_threshold:
 		if bot.current_mana < bot.max_mana * 0.2 or _last_potion == "health_potion":
 			action = "mana_potion"
 	if _recover(action, now, actions):
 		_last_potion = action
-		_potion_due = now + maxi(RecoveryRules.POTION_INTERVAL_MSEC, POTION_INTERVAL_MSEC)
+		if action == "health_potion":
+			_last_red_at = now
+			# Emergency recovery is a defensive choice; do not weave free offense into it.
+			if bot.current_health < bot.max_health * 0.45:
+				_next_offense = maxi(_next_offense,now+220)
+		_potion_due = now + maxi(RecoveryRules.POTION_COMBINED_MIN_MSEC, POTION_INTERVAL_MSEC)
 	else:
 		# A normal attack/potion gap can block this; retain the pending decision.
 		_potion_due = now + 40
@@ -392,18 +422,132 @@ func _remember_move(direction: int, cell: Vector2i) -> void:
 		_recent_cells.pop_front()
 
 
+func _is_semimagic(bot: PlayerState) -> bool:
+	return bot.max_mana > 0 and bot.class_id not in [1, 6]
+
+func _heavy_spell(bot: PlayerState) -> int:
+	return 53 if bot.class_id == 1 else 59
+
+func _mana_reserve(bot: PlayerState) -> int:
+	if bot.max_mana <= 0: return 0
+	if bot.class_id in [1, 6]:
+		var heavy_cost := int(SpellCatalog.get_spell(_heavy_spell(bot)).mana)
+		var reserve := heavy_cost * (1 if _combo_step == 1 else 2)
+		# Recover a real two-cast budget: 65% could strand the mage below it.
+		return mini(bot.max_mana, reserve + int(SpellCatalog.get_spell(27).mana) + roundi(bot.max_mana * 0.05))
+	var cost := int(SpellCatalog.get_spell(25).mana) + int(SpellCatalog.get_spell(51).mana) + int(SpellCatalog.get_spell(27).mana)
+	return mini(bot.max_mana, maxi(roundi(bot.max_mana * 0.65), cost))
+
+func _affordable(bot: PlayerState, candidates: Array[int]) -> int:
+	for id in candidates:
+		if ClassCatalog.can_cast(bot.class_id,id) and bot.current_mana >= int(SpellCatalog.get_spell(id).mana): return id
+	return 0
+
 func _combo_spell(bot: PlayerState, now: int) -> int:
-	if now > _combo_until:
+	if now > _combo_until and _combo_step == 1:
 		_combo_step = 0
-	var preferred: Array[int] = [53, 51, 59, 3]
+		_combo_rebuilding = true
+	var heavy := _heavy_spell(bot)
+	var cost := int(SpellCatalog.get_spell(heavy).mana)
 	if _combo_step == 1:
-		preferred = [51, 3]
-	elif _combo_step == 2:
-		preferred = [41, 39, 3]
-	for id: int in preferred:
-		if ClassCatalog.can_cast(bot.class_id, id) and bot.current_mana >= int(SpellCatalog.get_spell(id).mana):
-			return id
-	return 3
+		if bot.current_mana >= cost: return heavy
+		_combo_step = 0
+		_combo_rebuilding = true
+	if _combo_step == 0 and bot.current_mana >= cost * 2:
+		_combo_rebuilding = false
+		_fallback_used = false
+		return heavy
+	# After the opening heavy pair, the mage can press with a real
+	# Apocalypse+Discharge budget instead of idling until two Apocalypses.
+	var mixed_cost := cost + int(SpellCatalog.get_spell(51).mana)
+	if bot.class_id==1 and _combo_rebuilding and bot.current_mana>=mixed_cost:
+		_fallback_used=false
+		return heavy
+	_combo_rebuilding = true
+	# One fallback per rebuild: Discharge first, Firestorm only if too low.
+	# Then save blue-potion mana for the next heavy pair, without cheap spam.
+	if _fallback_used: return 0
+	if bot.class_id == 1:
+		return _affordable(bot,[51,41,39,3])
+	return _affordable(bot,[113,43,3])
+
+func _record_combo_spell(bot: PlayerState, spell: int, now: int) -> void:
+	if spell == _heavy_spell(bot):
+		if _combo_step == 1:
+			_combo_step = 0
+			_combo_rebuilding = true
+			_fallback_used = false
+		else: _combo_step = 1
+		_combo_until = now + 6000
+	elif _combo_rebuilding: _fallback_used = true
+
+func _semi_attack(bot: PlayerState, now: int, actions: Array[Dictionary]) -> void:
+	var distance := _distance(bot.grid_position,_observed_cell)
+	var adjacent := absi(bot.grid_position.x-_observed_cell.x)+absi(bot.grid_position.y-_observed_cell.y)==1
+	if now > _semi_until and _semi_step != 0: _semi_step = 0
+	var clear := distance <= 8 and CombatRules.has_clear_shot(registry.get_arena_id(),bot.grid_position,_observed_cell)
+	# A fleeing opponent needs control before more ranged pressure. Preserve a
+	# committed post-melee finisher; otherwise re-root once the reaction clock allows.
+	var chasing := distance >= 2 and not _observed_rooted
+	if clear and (_semi_step == 0 or (chasing and _semi_step != 2)) and now >= _next_control and not _observed_rooted:
+		var opener_cost := int(SpellCatalog.get_spell(25).mana) + int(SpellCatalog.get_spell(27).mana)
+		if bot.current_mana >= mini(bot.max_mana,opener_cost) and _cast(25,_observed_cell,now,actions):
+			_semi_step = 1
+			_semi_until = now + 6000
+			_next_control = now + _rng.randi_range(3000,4000)
+			_next_offense = now + SpellCatalog.SPELL_ATTACK_GAP_MSEC
+			return
+	if _semi_step == 2 and clear:
+		var finish_cost := int(SpellCatalog.get_spell(51).mana)
+		var missing := finish_cost-bot.current_mana
+		# Keep a finishing opportunity when only one/two real blues are missing.
+		if ClassCatalog.can_cast(bot.class_id,51) and missing > 0 and missing <= maxi(1,roundi(bot.max_mana*0.05))*2 and bot.current_health >= bot.max_health*0.55 and now < _semi_until-1000: return
+		var spell := _semi_finish_spell(bot)
+		if spell > 0 and _cast(spell,_observed_cell,now,actions):
+			_semi_combos = _semi_combos+1 if spell==51 else 0
+			_semi_step = 0
+			_next_offense = now + SpellCatalog.SPELL_ATTACK_GAP_MSEC
+			return
+		if now < _next_spell: return
+		_semi_step = 0
+	if adjacent and now >= _next_melee:
+		# A pending potion must not indefinitely cancel the melee/Discharge chain.
+		# Actual attack/recovery gaps are still enforced by PlayerRegistry.
+		if bot.current_health < bot.max_health * 0.30 and _potion_due != 0: return
+		bot.facing_direction = _direction(_observed_cell-bot.grid_position)
+		_next_melee = now + maxi(CombatRules.BASIC_ATTACK_COOLDOWN_MSEC,ATTACK_INTERVAL_MSEC) + _rng.randi_range(0,100)
+		var target := registry.try_basic_attack(BOT_ID,now)
+		if target != null:
+			# A legitimate miss is still an action, never a free retry.
+			actions.append({"kind":"melee","attacker":bot.to_dictionary(),"target":target.to_dictionary()})
+			_semi_step = 2
+			_semi_until = now + 4500
+			_next_offense = now + SpellCatalog.ATTACK_SPELL_GAP_MSEC
+		else: _next_offense = now + 100
+		return
+	if _semi_step == 1 and now < _semi_until-3000: return
+	# Do not spend air-combo mana chasing an unrooted ranged opponent.
+	if chasing:
+		_next_offense = maxi(_next_spell,now+THINK_MSEC)
+		return
+	if clear and distance >= 2 and now >= _next_spell:
+		_next_offense = now + 300
+		if _semi_combos>=2 and _rng.randf() < 0.20:
+			var spell := _semi_finish_spell(bot)
+			if spell > 0 and _cast(spell,_observed_cell,now,actions):
+				if spell!=51: _semi_combos=0
+				_semi_step = 0
+
+
+func _move_interval(bot: PlayerState) -> int:
+	return 140 if _is_semimagic(bot) else MOVE_INTERVAL_MSEC
+
+func _semi_finish_spell(bot: PlayerState) -> int:
+	if _affordable(bot,[51])==51: return 51
+	# Cheap pressure is earned by several actual melee/Discharge chains.
+	# Never substitute Electric Arrow or Magic Missiles for a finisher.
+	return _affordable(bot,[39,41]) if _semi_combos>=3 else 0
+
 
 func _distance(a: Vector2i, b: Vector2i) -> int:
 	return maxi(absi(a.x - b.x), absi(a.y - b.y))
@@ -431,8 +575,13 @@ func _cast(spell_id: int, target: Vector2i, now: int, actions: Array[Dictionary]
 
 func _recover(action: String, now: int, actions: Array[Dictionary]) -> bool:
 	_recovery_request += 1
-	var result := registry.try_recovery_action(BOT_ID, action, _recovery_request, now)
+	# Alternate the same click/Use lanes available to a human. Each lane and
+	# the shared floor remain validated by the authoritative registry.
+	var potion := action.ends_with("potion")
+	var source := ("click" if _last_potion_source == "use" else "use") if potion else "direct"
+	var result := registry.try_recovery_action(BOT_ID, action, _recovery_request, now, source)
 	if result.ok:
+		if potion: _last_potion_source = source
 		actions.append({"kind": "recovery", "result": result})
 	return bool(result.ok)
 

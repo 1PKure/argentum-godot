@@ -1,14 +1,6 @@
 {
   "1": [
     {
-      "name": "Legendaria gris",
-      "body_id": 142,
-      "source_object_id": 1091,
-      "source_name": "Tunica Legendaria Gris",
-      "reference_family": "blue",
-      "style": "robe"
-    },
-    {
       "name": "Roja especial",
       "body_id": 113,
       "source_object_id": 4346,
@@ -17,10 +9,18 @@
       "style": "robe"
     },
     {
-      "name": "Azul",
-      "body_id": 117,
-      "source_object_id": 238,
-      "source_name": "Túnica Azul",
+      "name": "Legendaria gris",
+      "body_id": 142,
+      "source_object_id": 1091,
+      "source_name": "Tunica Legendaria Gris",
+      "reference_family": "blue",
+      "style": "robe"
+    },
+    {
+      "name": "Legendaria",
+      "body_id": 141,
+      "source_object_id": 519,
+      "source_name": "Túnica Legendaria",
       "reference_family": "blue",
       "style": "robe"
     }

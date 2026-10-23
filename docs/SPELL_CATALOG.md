@@ -1,6 +1,6 @@
 # Catálogo AO20 y alcance implementado
 
-Se importaron las 213 entradas del Hechizos.dat original. 39 están habilitadas para el combate de la arena. El libro muestra primero las habilitadas; Ver catálogo completo permite consultar todas, con búsqueda por nombre o ID y un motivo para cada entrada pendiente.
+Se importaron las 213 entradas del Hechizos.dat original. 38 están habilitadas para el combate de la arena. El libro muestra las opciones de combate de cada clase, con búsqueda por nombre o ID. Juicio Final está retirado de la arena por balance; el DAT histórico se conserva.
 
 Un hechizo pendiente no puede armarse, asignarse a un acceso ni gastar recursos. Los hechizos de NPC, recetas y administración no forman parte del PvP de jugadores. No se presenta el catálogo como un port completo de los 213 hechizos.
 
@@ -67,7 +67,7 @@ Iconos, FX y audio conservan los recursos de origen. Siete IDs de sonido referen
 | 53 | Apocalipsis | Habilitado |
 | 54 | Implosión | Habilitado |
 | 55 | Lamento de la Banshee | Habilitado |
-| 56 | Juicio Final | Habilitado |
+| 56 | Juicio Final | Retirado de la arena por balance. |
 | 57 | Ralentizar (PVP) | Requiere portar sus reglas específicas de AO20; todavía no está habilitado. |
 | 58 | TESTEO GRHS | Hechizo de NPC o de administración; fuera de esta arena PvP. |
 | 59 | Rayo Elemental | Habilitado |

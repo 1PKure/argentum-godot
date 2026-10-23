@@ -1,11 +1,14 @@
 class_name PlayerAvatar
 extends Node2D
 
+signal step_landed
+
 const MOVE_DURATION_SECONDS: float = MovementRules.MOVE_INTERVAL_SECONDS
 const TILE_SIZE: float = 48.0
 const VISUAL_MOVEMENT_GRACE_SECONDS: float = 0.05
 var is_ghost: bool
 var _last_visual_direction := Vector2.DOWN
+var _server_facing_direction := Vector2.DOWN
 var _visual_movement_grace_timer := 0.0
 
 const MOVE_SPEED: float = (
@@ -18,7 +21,7 @@ const HUMAN_HEAD_COUNT := 41
 const EFFECT_FOOT_POSITION := Vector2(0, 30)
 const EFFECT_Z_INDEX := 30
 const OVERHEAD_Z_INDEX := 40
-const MEDITATION_SCALE := 1.05 # 30% smaller than the previous 1.5 scale.
+const MEDITATION_SCALE := 1.05
 
 const STATUS_BARS_POSITION := Vector2(
 	-22.0,
@@ -52,7 +55,7 @@ var is_alive: bool
 
 var _name_label: Label
 var _status_bars: PlayerStatusBars
-var _meditation_fx: AnimatedSprite2D
+var _meditation_fx: ArenaMeditationVisual
 var _is_meditating := false
 var _effect_labels: Array[String] = []
 
@@ -90,7 +93,11 @@ func _process(delta: float) -> void:
 		if step >= distance - MOVEMENT_EPSILON:
 			position = waypoint
 			_movement_waypoints.pop_front()
+			if is_alive and not is_ghost: step_landed.emit()
 
+	if _movement_waypoints.is_empty():
+		# A turn-only update can arrive before the last confirmed step finishes.
+		_last_visual_direction = _server_facing_direction
 	if moved_this_frame:
 		_visual_movement_grace_timer = VISUAL_MOVEMENT_GRACE_SECONDS
 		_player_visual.set_movement(_last_visual_direction, true)
@@ -123,6 +130,9 @@ func setup(
 	local_player: bool,
 	world_position: Vector2
 ) -> void:
+	_server_facing_direction = Vector2(MovementRules.get_offset(player_state.facing_direction))
+	_last_visual_direction = _server_facing_direction
+	_player_visual.set_movement(_last_visual_direction, false)
 	peer_id = player_state.peer_id
 	grid_position = player_state.grid_position
 	display_name = player_state.display_name
@@ -174,8 +184,9 @@ func apply_server_stats(
 	is_ghost = player_state.is_ghost
 	_apply_effect_presentation(player_state)
 	_player_visual.set_loadout(player_state.class_id, player_state.equipped_items, player_state.skin_id)
+	_server_facing_direction = Vector2(MovementRules.get_offset(player_state.facing_direction))
 	if _movement_waypoints.is_empty():
-		_last_visual_direction = Vector2(MovementRules.get_offset(player_state.facing_direction))
+		_last_visual_direction = _server_facing_direction
 		_player_visual.set_movement(_last_visual_direction, false)
 
 	_player_visual.set_ghost_mode(
@@ -202,16 +213,12 @@ func _apply_effect_presentation(state: PlayerState) -> void:
 	_is_meditating = state.is_meditating
 	_effect_labels.assign(state.active_effects)
 	if _is_meditating and _meditation_fx == null:
-		# Public MeditationLevelMax uses FX120; lower-level FX153 is missing
-		# from the same public FX table, so this test profile uses the valid FX.
-		_meditation_fx = AOResources.create_fx_sprite(120)
-		if _meditation_fx != null:
-			_meditation_fx.scale = Vector2.ONE * MEDITATION_SCALE
-			_meditation_fx.position = EFFECT_FOOT_POSITION + Vector2(_meditation_fx.get_meta("source_offset", Vector2.ZERO)) * MEDITATION_SCALE
-			_meditation_fx.z_index = EFFECT_Z_INDEX
-			_meditation_fx.modulate.a = 0.72
-			add_child(_meditation_fx)
-			_meditation_fx.play()
+		_meditation_fx = ArenaMeditationVisual.new()
+		_meditation_fx.scale = Vector2.ONE * MEDITATION_SCALE
+		_meditation_fx.position = EFFECT_FOOT_POSITION
+		_meditation_fx.z_index = EFFECT_Z_INDEX
+		_meditation_fx.modulate.a = 0.85
+		add_child(_meditation_fx)
 	if _meditation_fx != null:
 		_meditation_fx.visible = _is_meditating and state.is_alive
 
@@ -281,3 +288,13 @@ func _update_label() -> void:
 
 	_name_label.text = display_name
 	_name_label.modulate = Color("f2d47b") if is_local_player else Color.WHITE
+
+
+func play_melee_swing() -> void:
+	if is_alive and not is_ghost:
+		_player_visual.play_melee_swing()
+
+
+func play_spell_cast() -> void:
+	if is_alive and not is_ghost:
+		_player_visual.play_spell_cast()

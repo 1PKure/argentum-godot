@@ -10,17 +10,21 @@ var action := ""
 var layout: ArenaInventoryLayout
 var _equipped_badge: Label
 var potion_selected := false
+var _finished_item: TextureRect
 
 
 func _ready() -> void:
 	focus_mode = Control.FOCUS_NONE
 	expand_icon = true
-	add_theme_constant_override("icon_max_width", 28)
+	add_theme_constant_override("icon_max_width", 34)
 	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color.TRANSPARENT
+	normal.bg_color = Color("101a28")
+	normal.border_color = Color("2f4054")
+	normal.set_border_width_all(1)
+	normal.set_corner_radius_all(7)
 	add_theme_stylebox_override("normal", normal)
 	var hover := normal.duplicate() as StyleBoxFlat
-	hover.bg_color = Color(0.7, 0.6, 0.3, 0.15)
+	hover.bg_color = Color("26364b")
 	add_theme_stylebox_override("hover", hover)
 	var selected := hover.duplicate() as StyleBoxFlat
 	selected.border_color = Color("b59b61")
@@ -33,7 +37,11 @@ func configure(index: int, inventory: ArenaInventoryLayout) -> void:
 	slot_index = index
 	layout = inventory
 	action = inventory.actions[index]
+	set_meta("ui_click_silent", action in ["health_potion", "mana_potion"])
 	icon = null
+	if _finished_item != null: _finished_item.hide()
+	for state: String in ["icon_normal_color","icon_hover_color","icon_pressed_color","icon_focus_color"]:
+		add_theme_color_override(state,Color.WHITE)
 	tooltip_text = "Casillero %d · Vacío" % (index + 1)
 	mouse_default_cursor_shape = Control.CURSOR_ARROW if action.is_empty() else Control.CURSOR_POINTING_HAND
 	if _equipped_badge != null:
@@ -42,6 +50,22 @@ func configure(index: int, inventory: ArenaInventoryLayout) -> void:
 		var item_id := inventory.item_id(index)
 		var item := ClassCatalog.get_item(item_id)
 		icon = AOResources.get_equipment_icon(item_id)
+		if _finished_item == null:
+			_finished_item = TextureRect.new()
+			_finished_item.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			_finished_item.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			_finished_item.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			add_child(_finished_item)
+			_finished_item.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+			_finished_item.offset_left = -17
+			_finished_item.offset_top = -17
+			_finished_item.offset_right = 17
+			_finished_item.offset_bottom = 17
+		_finished_item.texture = icon
+		_finished_item.show()
+		ArenaSpriteFinish.apply(_finished_item,icon,0.28)
+		for state: String in ["icon_normal_color","icon_hover_color","icon_pressed_color","icon_focus_color"]:
+			add_theme_color_override(state,Color.TRANSPARENT)
 		var equipped := inventory.equipped_ids.has(item_id)
 		tooltip_text = "%s · %s\nClic: equipar / desequipar · Arrastrar con botón derecho: mover" % [item.get("Name", "Objeto"), "Equipado" if equipped else "En inventario"]
 		if _equipped_badge == null:
@@ -52,15 +76,14 @@ func configure(index: int, inventory: ArenaInventoryLayout) -> void:
 			_equipped_badge.add_theme_color_override("font_shadow_color", Color.BLACK)
 			_equipped_badge.add_theme_constant_override("shadow_offset_x", 1)
 			_equipped_badge.add_theme_constant_override("shadow_offset_y", 1)
-			_equipped_badge.position = Vector2(23, 18)
+			_equipped_badge.position = Vector2(29, 25)
 			_equipped_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			add_child(_equipped_badge)
 		_equipped_badge.visible = equipped
 	elif not action.is_empty():
 		var potion := RecoveryRules.get_potion(action)
-		icon = AOResources.get_icon_texture(int(potion.get("icon_grh", 0)))
-		tooltip_text = "%s · Provisión de arena ilimitada\nClic: seleccionar y beber · Espacio: usar seleccionada
-Arrastrá con botón derecho para mover o intercambiar" % potion.get("name", "Poción")
+		icon = ArenaIcons.potion(action)
+		tooltip_text = "%s · Provisión de arena ilimitada\nClic: seleccionar y beber · %s: usar seleccionada\nArrastrá con botón derecho para mover o intercambiar" % [potion.get("name", "Poción"),InputBindings.label_for("use_selected")]
 
 
 func _on_pressed() -> void:

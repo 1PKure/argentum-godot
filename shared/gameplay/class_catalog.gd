@@ -7,10 +7,17 @@ const RANGED_RANGE := 8
 const EQUIPMENT_SLOTS := ["armor", "weapon", "helmet", "shield", "accessory", "ammunition"]
 const ATTACK_BINDING := -1
 const MACRO_VERSION := 2
+const MAGE_DAMAGE_MULTIPLIER := 0.88
+# Curated combat presentation. Keep imported DAT/rules intact for reference and
+# regression fixtures; beginner spells no longer appear in the arena book/macros.
+const COMBAT_BOOK_ORDER := [25,27,51,59,31,53,41,113,26,29,350,11,269,242,243,263,112,122,131,141,54,55,132,133,28,268,4]
 const PRESET_LEVEL := 50
 const PRESET_STRENGTH := 28 # Arena-ready attribute; explicit PvP tuning, not a racial base.
 const PRESET_CONSTITUTION := 20 # Human: 18 + 2.
 const PRESET_INTELLIGENCE := 18
+# Explicit arena avoidance tuning. Magical effects never consult these rates.
+const EVASION_PERCENT := {1: 6, 2: 6, 3: 12, 4: 12, 5: 8, 6: 4, 7: 10, 8: 14, 12: 10}
+const SHIELD_BLOCK_PERCENT := {2: 10, 3: 15, 4: 8, 5: 8, 7: 13, 12: 10}
 static var _classes: Dictionary = {}
 static var _equipment: Dictionary = {}
 
@@ -35,6 +42,17 @@ static func get_item(id: int) -> Dictionary:
 static func can_cast(class_id: int, spell_id: int) -> bool:
 	var profile := get_profile(class_id)
 	return not profile.is_empty() and profile.spells.has(spell_id) and SpellCatalog.is_available(spell_id)
+
+
+static func combat_book_ids(class_id: int) -> Array[int]:
+	var result: Array[int] = []
+	for spell_id: int in COMBAT_BOOK_ORDER:
+		if can_cast(class_id,spell_id): result.append(spell_id)
+	return result
+
+
+static func can_assign_spell(class_id: int, spell_id: int) -> bool:
+	return COMBAT_BOOK_ORDER.has(spell_id) and can_cast(class_id,spell_id)
 
 
 static func default_equipment(class_id: int) -> Dictionary:
@@ -67,9 +85,36 @@ static func physical_damage_range(attacker_class: int, target_class: int, attack
 	return Vector2i(maxi(1, roundi(float(attack.physical_min) - float(defense.armor_points))), maxi(1, roundi(float(attack.physical_max) - float(defense.armor_points))))
 
 
-static func roll_physical_damage(attacker_class: int, target_class: int, attacker_equipment: Dictionary, target_equipment: Dictionary) -> int:
+static func roll_physical_damage(attacker_class: int, target_class: int, attacker_equipment: Dictionary, target_equipment: Dictionary, rng: RandomNumberGenerator = null) -> int:
 	var damage_range := physical_damage_range(attacker_class, target_class, attacker_equipment, target_equipment)
-	return randi_range(damage_range.x, damage_range.y)
+	return randi_range(damage_range.x, damage_range.y) if rng == null else rng.randi_range(damage_range.x, damage_range.y)
+
+
+static func physical_avoidance_outcome(target_class: int, equipped: Dictionary, evasion_roll: float, block_roll: float) -> String:
+	var target := get_equipped_profile(target_class, equipped)
+	if evasion_roll < float(target.get("evasion_percent", 0)):
+		return "evaded"
+	if block_roll < float(target.get("shield_block_percent", 0)):
+		return "blocked"
+	return "hit"
+
+
+static func has_legal_shield(class_id: int, equipped: Dictionary) -> bool:
+	return _has_legal_shield(get_profile(class_id), equipped)
+
+
+static func _has_legal_shield(profile: Dictionary, equipped: Dictionary) -> bool:
+	var shield_id := int(equipped.get("shield", 0))
+	if profile.is_empty() or shield_id <= 0 or shield_id != int(profile.get("shield", 0)):
+		return false
+	var item: Dictionary = _equipment.get(shield_id, {})
+	if int(item.get("ObjType", 0)) != 16:
+		return false
+	var class_key := str(profile.get("key", "")).to_upper()
+	for key: String in item:
+		if key.begins_with("CP") and str(item[key]).to_upper() == class_key:
+			return false
+	return true
 
 
 static func magic_damage(amount: int, caster_class: int, target_class: int, caster_equipment: Variant = null, target_equipment: Variant = null, scale_by_level: bool = true, ignore_resistance: bool = false) -> int:
@@ -79,7 +124,8 @@ static func magic_damage(amount: int, caster_class: int, target_class: int, cast
 	# EOT tick powers use their own DAT values, without this direct-hit bonus.
 	var level_bonus := 1.0 + 0.03 * float(caster.level) if scale_by_level else 1.0
 	var resistance := 0.0 if ignore_resistance else float(target.get("resistance_percent", 0))
-	return maxi(1, roundi(amount * level_bonus * (1.0 + float(caster.get("magic_bonus", 0)) / 100.0) * (1.0 - resistance / 100.0)))
+	var class_tuning := MAGE_DAMAGE_MULTIPLIER if caster_class == 1 else 1.0
+	return maxi(1, roundi(amount * class_tuning * level_bonus * (1.0 + float(caster.get("magic_bonus", 0)) / 100.0) * (1.0 - resistance / 100.0)))
 
 
 static func equipment_slot(class_id: int, item_id: int) -> String:
@@ -113,9 +159,13 @@ static func _ensure_loaded() -> void:
 		entry.intelligence = PRESET_INTELLIGENCE
 		entry.max_health = roundi((float(balance.MODVIDA[key]) - (21.0 - PRESET_CONSTITUTION) * 0.5) * (PRESET_LEVEL - 1) + PRESET_CONSTITUTION)
 		entry.max_mana = roundi(PRESET_INTELLIGENCE * float(balance.MANA_INICIAL[key]) + mana_factor * PRESET_INTELLIGENCE * (PRESET_LEVEL - 1))
+		# Explicit arena tuning overrides the imported reference, shared by humans/bots.
+		entry.max_health = int(entry.get("arena_health",entry.max_health))
+		entry.max_mana = int(entry.get("arena_mana",entry.max_mana))
 		entry.base_hit = 35.0 * float(balance.GOLPE_PRE_36[key]) + (PRESET_LEVEL - 36) * float(balance.GOLPE_POST_36[key])
 		entry.wrestling_modifier = float(balance.MODDANOWRESTLING[key])
 		entry.resistance_skill = 100
+		entry.evasion_percent = int(EVASION_PERCENT.get(id, 0))
 		entry.base_resistance = 100.0 * float(balance.MODRESISTENCIAMAGICA[key]) + float(entry.resistance_skill) * float(balance.EXTRA.MagicResistanceSkillProtectionModifier)
 		entry.range = RANGED_RANGE if id == 8 else 1
 		var spells: Array = []
@@ -129,6 +179,8 @@ static func _ensure_loaded() -> void:
 				spells.append_array([50, 51, 53, 112, 242, 263, 269])
 			elif id == 6:
 				spells.append_array([59, 113, 242, 243, 263, 269, 350])
+			elif id in [4, 7, 12]:
+				spells.append(51)
 			spells.erase(247) # NPC projectile entry; bow attacks use the physical rules.
 			for index in range(spells.size() - 1, -1, -1):
 				if int(SpellCatalog.get_spell(spells[index]).mana) > int(entry.max_mana):
@@ -136,9 +188,9 @@ static func _ensure_loaded() -> void:
 		entry.spells = spells
 		entry.bindings = [0, 0, ATTACK_BINDING, 0, 0, 0, 0, 0, 0, 0]
 		if mana_factor > 0:
-			entry.bindings = [25, 27, 51 if spells.has(51) else 3, 31, 53, 26, 11, 269 if spells.has(269) else 268, 12, 0]
+			entry.bindings = [25, 27, 51 if spells.has(51) else (59 if spells.has(59) else ATTACK_BINDING), 31, 53 if spells.has(53) else (113 if spells.has(113) else 0), 26, 11, 269 if spells.has(269) else 268, 112 if spells.has(112) else (263 if spells.has(263) else 29), 41 if spells.has(41) else (242 if spells.has(242) else 0)]
 			for index in range(entry.bindings.size()):
-				if not spells.has(entry.bindings[index]):
+				if entry.bindings[index] != ATTACK_BINDING and not spells.has(entry.bindings[index]):
 					entry.bindings[index] = 0
 		entry.damage_modifier = float(balance["MODDANOPROYECTILES" if id == 8 else "MODDANOARMAS"][key])
 		var equipped: Dictionary = {}
@@ -179,4 +231,6 @@ static func _calculate_equipment(profile: Dictionary, equipped: Dictionary) -> D
 	profile.weapon_animation = int(weapon.get("Anim", 0))
 	profile.shield_animation = int(_equipment.get(int(equipped.get("shield", 0)), {}).get("Anim", 0))
 	profile.helmet_animation = int(_equipment.get(int(equipped.get("helmet", 0)), {}).get("Anim", 0))
+	# A visual item or a foreign class shield cannot grant defensive block rolls.
+	profile.shield_block_percent = int(SHIELD_BLOCK_PERCENT.get(int(profile.id), 0)) if _has_legal_shield(profile, equipped) else 0
 	return profile

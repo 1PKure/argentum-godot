@@ -46,7 +46,7 @@ func _ready() -> void:
 	selector.select(selector.get_item_index(3))
 	content.add_child(selector)
 	var note := Label.new()
-	note.text = "Cada ronda comienza con una cuenta de 3 segundos.\nCambiar clase reinicia la ronda. Otro jugador retira al bot."
+	note.text = "Reiniciá o quitá el bot en cualquier momento.\nCada nueva práctica comienza con una cuenta de 3 segundos."
 	note.add_theme_font_size_override("font_size", 13)
 	content.add_child(note)
 	message = Label.new()

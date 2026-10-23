@@ -1,60 +1,64 @@
-# argentum-godot
-My first Argentum Online mini server.
+# Argentum · Arena PvP
 
-## Web export preparation
+Prototipo multijugador real en Godot 4.7 Standard, con cliente web y dedicado autoritativo por WebSocket/WSS. Se concentra en duelos 1v1 y práctica opcional contra bot. PvE está descartado.
 
-The `Web` export preset packages the current Godot arena and its AO data files. The browser client has a connection panel; native editor builds keep the automatic development server and F2 client shortcut.
+## Probar desde GitHub Desktop
 
-See [the first Web test guide](docs/WEB_TEST.md) for local testing, export instructions, and the runtime checks required before merging.
+1. Fetch origin → elegir `work/arena-lobbies` → Pull origin.
+2. Cerrar el dedicado anterior y ejecutar `tools/Start-PrivateWebTest.cmd`.
+3. Recargar la [web privada](https://argentum-arena-mati.smartpine8.chatgpt.site) con Ctrl+F5 y conectar. `wss://127.0.0.1:7777` sigue precargado.
+4. Crear una sala con nombre/arena, o unirse a una disponible. Cada sala tiene dos plazas.
+5. Elegir clase, ver el preset y equipar skins. Si falta un humano, añadir un bot y elegir su clase.
+6. Ambos humanos marcan Listo; en práctica, basta el dueño con bot habilitado. Cuenta 3→2→1→¡YA!, combate, resultado y revancha.
+7. Menú → Salir de la sala vuelve al directorio conservando conexión. El botón Desconectar del HUD o del directorio cierra la conexión.
 
-## AO20 combat interface
+Cliente y dedicado deben usar la misma revisión y **protocolo 24**. `tools/Start-PrivateWebTest.cmd` importa el proyecto antes de iniciar WSS. [Guía WSS](docs/WEB_TEST.md).
 
-The AO20 frame includes inventory/spell panels, synchronized health/mana, arena minimap and a bounded combat console. The book imports all 213 original AO20 entries and enables 39 spells with implemented PvP rules: select → Launch → target click, or a numeric hotkey → target click. Drag spells onto the hotkey bar to reassign them. Escape/right click cancels aiming; WASD stays active and CTRL remains a physical attack without a mana cost.
+## Salas y escenarios
 
-Use the same branch for the dedicated server and restart it after updating. `tools/Start-PrivateWebTest.cmd` imports the project before launching WSS. The spell protocol checks server support with protocol 15; player updates now redact enemy mana and physical hits use participant-only feedback.
+Cada lobby posee PlayerRegistry, ArenaPracticeBot y ArenaSession propios. Snapshots, movimiento, daño, estadísticas y efectos sólo llegan a sus participantes. Se rechazan salas llenas, acciones ajenas, versiones antiguas y repeticiones. Salir/transmitir anfitrión y eliminar salas vacías se resuelve en servidor.
 
-See [the interface scope and Windows test guide](docs/COMBAT_UI.md). AO20 artwork attribution, provenance and its separate license are in `assets/argentum/interface/ao20/`.
+Bosque, Desierto, Lava y Sala de Duelos conservan pisos interiores y colisiones 20×12, cuatro adornos simétricos transitables y spawns separados. El anfitrión puede cambiar escenario durante preparación/resultado. Cambiar escenario o clase invalida Listo; no se permite durante el duelo. El bot se retira al entrar otro humano. Una ronda interrumpida no concede premios.
 
-See [the PvP priorities and integration workflow](docs/ROADMAP.md). New task branches and PRs start directly from the updated `Alpha`.
+[Flujo de lobbies y validación](docs/LOBBIES.md) · [Escenarios](docs/ARENAS.md).
 
-See [spell data, rules and test scope](docs/SPELLS.md) and [movement timing](docs/MOVEMENT.md). This remains a small PvP prototype, not the complete AO20 combat server.
+## Combate y presentación
+
+Nueve presets AO20 con estadísticas, equipo visible en inventario y macros por clase. Trabajador/Pirata/Ladrón quedan excluidos. Balance y dificultad del bot aprobados conservados, salvo el intervalo de golpe cuerpo a cuerpo ajustado a 1200 ms. [Clases y balance](docs/CLASSES.md) · [Intervalos](docs/ACTION_INTERVALS.md).
+
+El libro ampliado muestra sólo hechizos relevantes de combate de la clase; al volver a Inventario reaparece el minimapa. Los básicos no ocupan libro ni macros. Seleccionar hechizo → Lanzar → objetivo, o macro 1–0 → objetivo. Cazador: CTRL/3 prepara el arco y clic dispara con intervalo autoritativo. M medita; Q/E recuperan; clic selecciona/bebe y Espacio usa la poción seleccionada, mantenido para repetir. Macros conservan pestaña/apuntado; arrastre derecho reorganiza objetos. Equipo se equipa/desequipa con clic. [Hechizos](docs/SPELLS.md) · [Recuperación](docs/RECOVERY.md).
+
+HUD propio azul noche/marfil/dorado, consola superior, minimapa ampliado y barras de vida/maná, en ese orden, sobre Menú/Desconectar; todas las ventanas, incluida clases/presets, usan el mismo tema. Pociones e iconos SVG originales, props detallados y lava exterior de escala fija. Efectos procedurales nuevos para los38 conceptos activos, con Descarga de esferas convergentes, Tormenta de partículas abiertas y Apocalipsis grande; iconos individuales y meditación de remolino dorado/blanco. Se conservan anclaje, seguimiento, flecha/sangre/audio y reglas. Personajes, equipo y skins mantienen animaciones AO20. [Identidad visual y límites](docs/VISUAL_IDENTITY.md).
+
+Menú → Controles y atajos permite cambiar teclas y restaurarlas, guardadas por perfil local en el dispositivo/navegador. Clic derecho sobre un macro vacía ese acceso de la clase, sin perderlo al cambiar preset. Lanzar seleccionado usa L por defecto; CTRL mantiene el golpe/arco. Abrir Menú o una ventana de opciones pausa de forma autoritativa sólo la práctica individual contra bot (también reloj, estados y recargas); cerrar reanuda. El PvP humano continúa. Los 42 espacios de inventario se conservan con menos filas visibles y desplazamiento.
+
+La cámara sigue al personaje y el zoom 1×/2× mantiene escala de píxel entera. Base de diseño 1280×800 y revisión en cuatro resoluciones. La consola sólo muestra eventos propios; el servidor omite maná rival y costes privados. [Interfaz](docs/COMBAT_UI.md) · [Movimiento](docs/MOVEMENT.md).
+
+## Skins, acceso y presupuesto
+
+Skins por clase a 1/3/5 victorias reales contra bot, sin duplicar recompensas por ronda. Selección y progreso se guardan localmente en el navegador, sin cuentas/DB ni sincronización entre dispositivos. Cambiar atuendo no altera equipo ni estadísticas. [Bot](docs/BOTS.md).
+
+Sólo opciones gratuitas. La web mantiene acceso privado y necesita el dedicado local encendido. Hosting independiente, cuentas opcionales y especialidades avanzadas de clases quedan pendientes. [Presupuesto](docs/HOSTING_BUDGET.md) · [Prioridades](docs/ROADMAP.md).
+
+## Recursos y pruebas
+
+Se conservan procedencia y licencia AO20 en `assets/argentum/interface/ao20/` y datos de origen bajo `assets/argentum/source/`. Los nuevos SVG y FX son originales del proyecto. Menú distingue al desarrollador Matias Pulido (1PKure) de los créditos de recursos AO20/Noland Studios.
+
+Las pruebas de lobbies incluyen dos salas con cuatro clientes y práctica solo+bot. `tests/run_lobby_network.py` genera logs/resultados separados y rechaza errores de servidor/cliente. Los smoke cubren aislamiento, capacidad, permisos, Listo, cuenta, resultados, salida/reentrada, cambio de mapa/clase, progreso y navegación. La revisión visual de HUD/ventanas y efectos usa Godot nativo GL Compatibility; sensación/audio en navegador Windows siguen siendo parte de la prueba manual.
+
+Última revisión: giro contra casillas ocupadas sin desplazamiento; orden del libro con arrastre derecho persistente por perfil/clase; Juicio Final retirado de la arena. Créditos: Matias Pulido. Gestos de espada y báculo sólo al resolver acciones confirmadas. La apariencia 2D conserva las hojas AO20, con reconstrucción de diagonales y acabado de color por shader en personajes/equipo/íconos; no es un reemplazo por modelos 3D. Biomas con partículas ambientales leves, pausables. Mago: Azul inicial, Roja a 1 victoria, Gris a 3 y Legendaria a 5, conservando estadísticas y progreso por clase.
+
+Revisión de control y sonido:140ms por tile en humanos/bot, prioridad a última dirección presionada. Meditación más grande e intensa sólo dorado/marfil; ambiente con caída visible por bioma. Pisadas posicionales distintas para bosque, arena, roca/ceniza y piedra de sala, dos variantes por superficie. Importación PCM sin compresión con pérdida y reproducción con margen de mezcla. Sangre de melee sólo al daño confirmado, reutilizando el efecto de flecha.
+
+Revisión actual: meditación500ms/5% con daño no letal compatible; bot132ms frente a jugador140ms. Mago busca53→53, recurre51/41 y recupera presupuesto para volver al par; Druida59→59; semimágicos25→golpe→51 con gaps600ms. Evasión y rechazo físico autoritativos por clase/equipo; no esquiva magia ni evita recargas.
+
+Sonidos originales de AO20 sin procesamiento. Golpe original del adjunto completo(1s), idéntico byte por byte, a0dB. Pisadas originales alternadas: bosque201/69, desierto197/198 y piedra23/24 para lava/sala; sin variación de tono ni volumen. Se conserva audio webStream, índice explícito,48kHz y búfer80ms sólo como transporte. Capturas verificadas contra la fuente; escucha final en navegador Windows pendiente del usuario.
+
+Ranking desde el lobby:100puntos por victoria confirmada PvP/bot, contadores separados y milusita primera honorífica con9.999.999.999puntos. Identidad local de invitado y puntos persistentes en el dedicado; refresco30s y al ganar. Mago con6% de evasión. Protocolo23: actualizar cliente y reiniciar dedicado juntos. [Ranking e integración web](docs/RANKING.md).
 
 
-## Arena recovery and camera
+Chat de sala integrado: panel lateral en el lobby y Enter/botónChat en combate; Enter envía y Escape cancela. Al escribir se bloquean movimiento, macros y pociones sin pausar al rival. Mensajes sobre personaje4s, separados cuando se acercan y reemplazados por las palabras del hechizo confirmado. Historial temporal de30mensajes por sala, nombre tomado del servidor,160caracteres, límite800ms y aislamiento por sala incluso para solicitudes atrasadas. Protocolo24; actualizar cliente/dedicado juntos. [Chat](docs/CHAT.md).
 
-M toggles meditation; Q/E drink health/mana potions (original +27 HP / +5% maximum MP). The default mage testing preset has 363 HP / 2487 MP (human, level 50); other classes use their own profiles, with unlimited arena potions and Respawn after death. The camera follows the local interpolated avatar, while the HUD fills the window from a 1280×800 design base. The book supports name/ID search and a full-catalog filter with reasons for entries that require unported systems. See [recovery rules](docs/RECOVERY.md), [the exact catalog](docs/SPELL_CATALOG.md) and [movement/camera validation](docs/MOVEMENT.md).
+Revisión para cerrar gameplay alpha y pasar a la web: [estado, límites y prioridades](docs/ALPHA_READINESS.md). Último ajuste de bot/pociones/clics: [detalles](docs/FINAL_COMBAT_DETAILS.md#cierre-de-gameplay-alpha-presión-y-recuperación).
 
-Both potions can be used during meditation without resetting its timing; filling mana ends it. The meditation FX is 30% smaller and grounded at the feet in front of the body. Spell impacts/results follow the target and words follow the caster. Drag inventory supplies into empty slots or onto each other to rearrange them; the server keeps this session layout and dragging never consumes a potion.
-
-## Class presets
-
-The **Clases** button opens nine AO20-based arena presets with visible armor, weapon, shield and helmet, server-enforced stats and spell permissions, and separate class hotkeys. Hunter uses CTRL/3 to aim, then clicks a rival for an eight-tile physical bow attack without magic. See [class rules, adaptations and test steps](docs/CLASSES.md). These are provisional arena presets; advanced class specialties remain pending.
-
-Only free infrastructure is in scope. Accounts are optional; the private web client still connects to the local WSS dedicated. See [the zero-cost policy](docs/HOSTING_BUDGET.md).
-
-Equipment now lives in the server inventory: drag to move/swap, click to equip/unequip, E marks equipped items. Presets can be switched or reset freely during practice. Initial macros follow control/remover/damage/healing categories. The Zoom 1×/2× control (default 1×) renders the world at integer source-pixel scale; see [CLASSES.md](docs/CLASSES.md).
-
-## Practice bot
-
-Use **Bot** in the combat HUD while alone: choose one of the nine classes and activate, restart or remove the server-driven opponent. It uses existing movement/combat/recovery rules. Starting or restarting prepares both presets; death stops the practice. A second human joining or the owner's disconnect removes the bot. No lobby isolation is added yet. See [BOTS.md](docs/BOTS.md) for controls, behavior, tests and limits. Class statistics keep the accepted baseline; Apocalypse and Discharge have an explicit 8% arena damage reduction. Hunters use a separate 1200 ms arrow interval. Nonmagical presets contain no blue potions. The bot uses the same 120 ms movement steps and slightly slower action decisions and varied continuous bursts while attacking or recovering; see [ACTION_INTERVALS.md](docs/ACTION_INTERVALS.md) for the slightly faster player cadence. Restart the dedicated server after updating; protocol 15 is required.
-
-Numeric macros and clicked hotkeys preserve the chosen inventory/spell tab. Drinking red/blue potions by click or Q/E keeps the target cursor armed, so manual Launch and macros can be used independently.
-
-
-Clicking a potion selects and drinks it; its golden marker follows inventory rearrangement. **Use / Space** drinks the selected potion, and holding repeats. Click plus Use deliberately combines two 280 ms lanes with a shared 200 ms floor; Q/E aliases Use. Spells/macros remain armed. Text entry, modals, death, focus loss and disconnect stop repeated use. See [RECOVERY.md](docs/RECOVERY.md).
-
-The practice bot now moves at the same 120 ms cadence as the player, uses confirmed Apocalypse/Discharge combos with a legal cheaper follow-up, breaks repeated movement axes and shares a 1250–1350 ms clock for attack/Remove/healing. Inventory items move by right-button drag; left click remains Use/equip. Character names sit below resource bars, and confirmed arrows play the original AO20 impact audio.
-
-### Skins and round preparation
-
-**Bot** starts each practice with a server-enforced **3 → 2 → 1 → GO** countdown, tweens and generated tones. Confirmed victories unlock cosmetic outfits at **1, 3 and 5 wins per class**, with three distinct class-appropriate outfits for each of the nine classes. Open **Skins** to preview/equip; the original class outfit remains available. Cosmetics preserve stats and equipped items and are replicated to other players. Changing class/reappearing restarts both presets and the countdown. Bot balance is unchanged.
-
-Progress is saved locally in the same browser/device, without accounts or paid services; clearing browser data removes it. See [BOTS.md](docs/BOTS.md). Arrow impact now uses the supplied **Arrow hit 2.wav**, with source/hash recorded under `assets/argentum/custom/audio/`.
-
-Class-aware rewards retain the previous local wins and selected tier. Mage/Druid rewards remain robes; Hunter and every other class avoid their starter body and duplicate rewards. Confirmed arrow impacts add a brief target-following pixel blood burst while preserving the supplied sound. See docs/BOTS.md for the class reward table and migration details.
-
-Outfits use the original animated body atlases, with 27 distinct rewards across classes and Mage variants close to the Legendary robe. The arrow blood burst now lasts 500 ms, holds its contrast before fading, and is checked through rendered pixel differences at real 1x scale. Gameplay loadouts/restrictions remain unchanged.
-
-Skins now unlock at 1/3/5 victories **per class**, with independent equipped selections. All 27 reward animations differ across collections. Mage robes follow the Legendary silhouette; other classes have varied themed outfits. The first extra victory on a completed collection invites another incomplete class and opens its selector without applying automatically. Existing global saves migrate once to Mage (their old format stored no winning class); all other collections start independently. Client/server use protocol 15.
-
-The compact HUD footer keeps health/mana, status and Menu. Meditation/potion/Use buttons are removed; M, Q/E, held Space and inventory clicks remain active. Respawn is available inside Menu only while dead. The Mage fifth-win reward is the original AO20 blue robe (body117 / OBJ238), preserving the first two robes and all per-class progression.
+Preparación de la página: [conexión configurable y contrato del ranking independiente](docs/WEB_DEPLOYMENT.md). Los adornos de esquina ya no bloquean el paso ni disparos; pisadas+3dB y Mago sin espera mágica ficticia al recuperar presupuesto de combo.

@@ -1,6 +1,6 @@
 # Hechizos y Lanzar
 
-La arena continúa la interfaz validada de AO20, sin incorporar la prueba retirada de `work/pvp-spells`. El libro importa las 213 entradas de Hechizos.dat y habilita 39 que tienen resolución de servidor. La lista exacta, con cada dependencia pendiente, está en [SPELL_CATALOG.md](SPELL_CATALOG.md).
+La arena continúa la interfaz validada de AO20, sin incorporar la prueba retirada de `work/pvp-spells`. El libro importa las 213 entradas de Hechizos.dat y habilita 38 que tienen resolución de servidor. La lista exacta, con cada dependencia pendiente, está en [SPELL_CATALOG.md](SPELL_CATALOG.md).
 
 ## Controles
 
@@ -16,7 +16,7 @@ El servidor identifica al lanzador por su conexión y valida personaje vivo, lib
 
 Los objetivos se admiten dentro de toda la arena 20×12. Falta portar visión, línea de visión y las reglas completas de mapas de AO. Las nueve clases aplican sus permisos y modificadores del equipo actual; Mago usa 363 vida/2487 maná como humano de nivel 50. No representa el balance final ni progresión de nivel. Skills, estamina y especialidades completas siguen pendientes. Los hechizos cuyo efecto depende de esos sistemas quedan pendientes. Invocaciones, bot y lobbies siguen pendientes; PvE está fuera del alcance acordado.
 
-PlayerNetwork incorpora resultados de golpe por participante y estados con maná privado. SpellNetwork usa un protocolo separado, versión 15, y comprueba soporte. Un servidor anterior a ese protocolo deshabilita Lanzar/recuperación y muestra una instrucción de actualización. Para probar cada cambio hay que actualizar y reiniciar el servidor desde la misma rama/revisión que el cliente; la compatibilidad del protocolo no garantiza reglas idénticas entre revisiones.
+PlayerNetwork incorpora resultados de golpe por participante y estados con maná privado. SpellNetwork usa un protocolo separado, versión 17, y comprueba soporte. Un servidor anterior a ese protocolo deshabilita Lanzar/recuperación y muestra una instrucción de actualización. Para probar cada cambio hay que actualizar y reiniciar el servidor desde la misma rama/revisión que el cliente; la compatibilidad del protocolo no garantiza reglas idénticas entre revisiones.
 
 ## Procedencia y adaptaciones visuales
 

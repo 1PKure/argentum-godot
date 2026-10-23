@@ -2,11 +2,11 @@ class_name RecoveryRules
 extends RefCounted
 
 # Class resources come from ClassCatalog.
-const MEDITATION_WARMUP_MSEC := 2000
-const MEDITATION_INTERVAL_MSEC := 1000
+const MEDITATION_WARMUP_MSEC := 500
+const MEDITATION_INTERVAL_MSEC := 500
 const MEDITATION_PERCENT := 5
-const POTION_INTERVAL_MSEC := 280 # Per input lane, shared between colors.
-const POTION_COMBINED_MIN_MSEC := 200 # Shared floor when alternating click and Use.
+const POTION_INTERVAL_MSEC := 320 # Per input lane, shared between colors.
+const POTION_COMBINED_MIN_MSEC := 240 # Shared floor when alternating click and Use.
 const ATTACK_POTION_GAP_MSEC := 600 # Shared by click, Use and direct hotkeys.
 const POTION_FILE := "res://assets/argentum/source/data/arena_consumables.ini"
 

@@ -1,0 +1,523 @@
+{
+	"fps": 24,
+	"spells": {
+		"1": {
+			"concept": "arcane_dart",
+			"count": 27,
+			"file": "res://client/effects/modern_atlas/spell_1.png",
+			"lifetime": 1.12,
+			"offset": [
+				-29,
+				-136
+			],
+			"size": [
+				58,
+				136
+			]
+		},
+		"11": {
+			"concept": "cleanse_poison",
+			"count": 31,
+			"file": "res://client/effects/modern_atlas/spell_11.png",
+			"lifetime": 1.28,
+			"offset": [
+				-47,
+				-86
+			],
+			"size": [
+				94,
+				88
+			]
+		},
+		"112": {
+			"concept": "dispel_magic",
+			"count": 27,
+			"file": "res://client/effects/modern_atlas/spell_112.png",
+			"lifetime": 1.12,
+			"offset": [
+				-54,
+				-90
+			],
+			"size": [
+				108,
+				108
+			]
+		},
+		"113": {
+			"concept": "thorn_burst",
+			"count": 27,
+			"file": "res://client/effects/modern_atlas/spell_113.png",
+			"lifetime": 1.12,
+			"offset": [
+				-60,
+				-72
+			],
+			"size": [
+				120,
+				86
+			]
+		},
+		"12": {
+			"concept": "minor_healing",
+			"count": 31,
+			"file": "res://client/effects/modern_atlas/spell_12.png",
+			"lifetime": 1.28,
+			"offset": [
+				-31,
+				-82
+			],
+			"size": [
+				56,
+				94
+			]
+		},
+		"122": {
+			"concept": "mortal_word",
+			"count": 31,
+			"file": "res://client/effects/modern_atlas/spell_122.png",
+			"lifetime": 1.28,
+			"offset": [
+				-29,
+				-90
+			],
+			"size": [
+				57,
+				91
+			]
+		},
+		"13": {
+			"concept": "major_healing",
+			"count": 31,
+			"file": "res://client/effects/modern_atlas/spell_13.png",
+			"lifetime": 1.28,
+			"offset": [
+				-41,
+				-114
+			],
+			"size": [
+				82,
+				128
+			]
+		},
+		"131": {
+			"concept": "banishment_gate",
+			"count": 31,
+			"file": "res://client/effects/modern_atlas/spell_131.png",
+			"lifetime": 1.28,
+			"offset": [
+				-54,
+				-93
+			],
+			"size": [
+				108,
+				106
+			]
+		},
+		"132": {
+			"concept": "divine_prayer",
+			"count": 27,
+			"file": "res://client/effects/modern_atlas/spell_132.png",
+			"lifetime": 1.12,
+			"offset": [
+				-53,
+				-99
+			],
+			"size": [
+				106,
+				87
+			]
+		},
+		"133": {
+			"concept": "supplication",
+			"count": 27,
+			"file": "res://client/effects/modern_atlas/spell_133.png",
+			"lifetime": 1.12,
+			"offset": [
+				-27,
+				-98
+			],
+			"size": [
+				55,
+				99
+			]
+		},
+		"141": {
+			"concept": "abyssal_vortex",
+			"count": 31,
+			"file": "res://client/effects/modern_atlas/spell_141.png",
+			"lifetime": 1.28,
+			"offset": [
+				-58,
+				-91
+			],
+			"size": [
+				116,
+				102
+			]
+		},
+		"2": {
+			"concept": "arcane_arrow",
+			"count": 27,
+			"file": "res://client/effects/modern_atlas/spell_2.png",
+			"lifetime": 1.12,
+			"offset": [
+				-29,
+				-139
+			],
+			"size": [
+				58,
+				139
+			]
+		},
+		"242": {
+			"concept": "greater_restoration",
+			"count": 31,
+			"file": "res://client/effects/modern_atlas/spell_242.png",
+			"lifetime": 1.28,
+			"offset": [
+				-42,
+				-116
+			],
+			"size": [
+				84,
+				130
+			]
+		},
+		"243": {
+			"concept": "putrefaction",
+			"count": 27,
+			"file": "res://client/effects/modern_atlas/spell_243.png",
+			"lifetime": 1.12,
+			"offset": [
+				-34,
+				-91
+			],
+			"size": [
+				68,
+				90
+			]
+		},
+		"25": {
+			"concept": "paralysis_cage",
+			"count": 27,
+			"file": "res://client/effects/modern_atlas/spell_25.png",
+			"lifetime": 1.12,
+			"offset": [
+				-33,
+				-86
+			],
+			"size": [
+				66,
+				102
+			]
+		},
+		"26": {
+			"concept": "binding_vines",
+			"count": 27,
+			"file": "res://client/effects/modern_atlas/spell_26.png",
+			"lifetime": 1.12,
+			"offset": [
+				-43,
+				-69
+			],
+			"size": [
+				86,
+				78
+			]
+		},
+		"263": {
+			"concept": "blessing_shield",
+			"count": 27,
+			"file": "res://client/effects/modern_atlas/spell_263.png",
+			"lifetime": 1.12,
+			"offset": [
+				-34,
+				-95
+			],
+			"size": [
+				67,
+				95
+			]
+		},
+		"268": {
+			"concept": "lesser_restoration",
+			"count": 31,
+			"file": "res://client/effects/modern_atlas/spell_268.png",
+			"lifetime": 1.28,
+			"offset": [
+				-41,
+				-114
+			],
+			"size": [
+				82,
+				128
+			]
+		},
+		"269": {
+			"concept": "restoration",
+			"count": 31,
+			"file": "res://client/effects/modern_atlas/spell_269.png",
+			"lifetime": 1.28,
+			"offset": [
+				-41,
+				-114
+			],
+			"size": [
+				82,
+				128
+			]
+		},
+		"27": {
+			"concept": "shatter_paralysis",
+			"count": 27,
+			"file": "res://client/effects/modern_atlas/spell_27.png",
+			"lifetime": 1.12,
+			"offset": [
+				-68,
+				-100
+			],
+			"size": [
+				136,
+				130
+			]
+		},
+		"28": {
+			"concept": "dizzy_stars",
+			"count": 27,
+			"file": "res://client/effects/modern_atlas/spell_28.png",
+			"lifetime": 1.12,
+			"offset": [
+				-32,
+				-91
+			],
+			"size": [
+				64,
+				34
+			]
+		},
+		"29": {
+			"concept": "restore_motion",
+			"count": 27,
+			"file": "res://client/effects/modern_atlas/spell_29.png",
+			"lifetime": 1.12,
+			"offset": [
+				-35,
+				-96
+			],
+			"size": [
+				70,
+				110
+			]
+		},
+		"291": {
+			"concept": "arcane_wave",
+			"count": 27,
+			"file": "res://client/effects/modern_atlas/spell_291.png",
+			"lifetime": 1.12,
+			"offset": [
+				-80,
+				-92
+			],
+			"size": [
+				160,
+				84
+			]
+		},
+		"3": {
+			"concept": "arcane_missiles",
+			"count": 27,
+			"file": "res://client/effects/modern_atlas/spell_3.png",
+			"lifetime": 1.12,
+			"offset": [
+				-31,
+				-128
+			],
+			"size": [
+				62,
+				128
+			]
+		},
+		"31": {
+			"concept": "critical_healing",
+			"count": 31,
+			"file": "res://client/effects/modern_atlas/spell_31.png",
+			"lifetime": 1.28,
+			"offset": [
+				-42,
+				-116
+			],
+			"size": [
+				84,
+				130
+			]
+		},
+		"350": {
+			"concept": "entangling_roots",
+			"count": 27,
+			"file": "res://client/effects/modern_atlas/spell_350.png",
+			"lifetime": 1.12,
+			"offset": [
+				-43,
+				-78
+			],
+			"size": [
+				86,
+				87
+			]
+		},
+		"39": {
+			"concept": "flying_ember",
+			"count": 27,
+			"file": "res://client/effects/modern_atlas/spell_39.png",
+			"lifetime": 1.12,
+			"offset": [
+				-96,
+				-124
+			],
+			"size": [
+				130,
+				125
+			]
+		},
+		"4": {
+			"concept": "dragon_breath",
+			"count": 27,
+			"file": "res://client/effects/modern_atlas/spell_4.png",
+			"lifetime": 1.12,
+			"offset": [
+				-51,
+				-172
+			],
+			"size": [
+				106,
+				173
+			]
+		},
+		"40": {
+			"concept": "igneous_flare",
+			"count": 27,
+			"file": "res://client/effects/modern_atlas/spell_40.png",
+			"lifetime": 1.12,
+			"offset": [
+				-59,
+				-98
+			],
+			"size": [
+				118,
+				118
+			]
+		},
+		"41": {
+			"concept": "opening_fire_cloud",
+			"count": 27,
+			"file": "res://client/effects/modern_atlas/spell_41.png",
+			"lifetime": 1.12,
+			"offset": [
+				-106,
+				-147
+			],
+			"size": [
+				231,
+				191
+			]
+		},
+		"43": {
+			"concept": "electric_arrow",
+			"count": 27,
+			"file": "res://client/effects/modern_atlas/spell_43.png",
+			"lifetime": 1.12,
+			"offset": [
+				-30,
+				-159
+			],
+			"size": [
+				59,
+				161
+			]
+		},
+		"50": {
+			"concept": "electric_impact",
+			"count": 27,
+			"file": "res://client/effects/modern_atlas/spell_50.png",
+			"lifetime": 1.12,
+			"offset": [
+				-56,
+				-89
+			],
+			"size": [
+				112,
+				112
+			]
+		},
+		"51": {
+			"concept": "converging_electric_orbs",
+			"count": 29,
+			"file": "res://client/effects/modern_atlas/spell_51.png",
+			"lifetime": 1.2,
+			"offset": [
+				-93,
+				-133
+			],
+			"size": [
+				187,
+				146
+			]
+		},
+		"53": {
+			"concept": "apocalypse_skull_burst",
+			"count": 36,
+			"file": "res://client/effects/modern_atlas/spell_53.png",
+			"lifetime": 1.5,
+			"offset": [
+				-112,
+				-235
+			],
+			"size": [
+				226,
+				273
+			]
+		},
+		"54": {
+			"concept": "implosion",
+			"count": 31,
+			"file": "res://client/effects/modern_atlas/spell_54.png",
+			"lifetime": 1.28,
+			"offset": [
+				-110,
+				-129
+			],
+			"size": [
+				220,
+				178
+			]
+		},
+		"55": {
+			"concept": "banshee_wail",
+			"count": 31,
+			"file": "res://client/effects/modern_atlas/spell_55.png",
+			"lifetime": 1.28,
+			"offset": [
+				-74,
+				-120
+			],
+			"size": [
+				148,
+				130
+			]
+		},
+		"59": {
+			"concept": "elemental_ray",
+			"count": 27,
+			"file": "res://client/effects/modern_atlas/spell_59.png",
+			"lifetime": 1.12,
+			"offset": [
+				-40,
+				-156
+			],
+			"size": [
+				85,
+				166
+			]
+		}
+	}
+}

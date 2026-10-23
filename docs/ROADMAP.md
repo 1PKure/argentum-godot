@@ -1,23 +1,26 @@
-# Prioridades de la arena PvP
+# Próximos PR del prototipo PvP
 
-Base integrada: `Alpha`, con clases/balance/HUD (PR8) y conexión dorada/blanca (PR9) fusionados. Sólo PvP; sin inversión monetaria, sin servicios de pago y sin cuentas obligatorias.
+Alpha incluye clases/presets, combate manual/macros, pociones/meditación, cámara, bot calibrado, cuenta de ronda y skins por clase. Ese balance queda cerrado por ahora. PvE está descartado.
 
-| Orden | Trabajo | Criterio de cierre |
+| Orden | Objetivo | Resultado comprobable |
 | --- | --- | --- |
-| Hecho | Interfaz AO20, consola, Lanzar/macros, recuperación, efectos siguiendo al personaje, cámara e intervalos. | Conservar las regresiones de dos clientes. |
-| Hecho | Nueve clases/presets, equipo e inventario autoritativo, arco dirigido y balance base aceptado. | PR8 integrado y reglas conservadas. |
-| 1 · Actual | Bot opcional para práctica a solas, con los nueve presets, combate y recuperación del servidor. | Activar/reiniciar/quitar; muerte detiene IA; desconectar al dueño o entrar otro humano elimina el bot; validación con dos clientes. |
-| 2 · Siguiente | Lobby PvP de invitados, sin cuentas ni DB: crear/unirse, elegir clase, listo, iniciar, victoria/derrota, revancha y salir. Bot como rival opcional de la sala. | Dos lobbies simultáneos aislados: sin daño, jugadores o eventos cruzados. Una desconexión resuelve la partida. Usar el preset validado, bloqueado durante el duelo. |
-| 3 | Pulido de movimiento/red y combate con duelos repetibles, latencia y giros; proyectil del arco, señales de golpe y especialidades, incluyendo apuñalada del Asesino desde atrás. | Evaluar fluidez real. La velocidad de movimiento actual se conserva por ahora. |
-| 4 | Diseño propio de interfaz y balance. | Mejorar legibilidad, sonido y diferencias entre clases con partidas reproducibles. |
-| Opcional | Acceso remoto gratuito, cuentas y persistencia sólo si tienen utilidad y una alternativa gratuita adecuada. | Ningún cargo, nueva contratación ni ampliación de visibilidad. Se puede seguir sin cuentas y con dedicado local. |
+| 1 | Escenarios (implementado) | Bosque, Desierto, Lava y Sala de Duelos; selección sincronizada y reinicio válido. Rama `work/arena-environments`. |
+| 2 | Lobbies 1v1 (en revisión) | Después de conectar: Crear/Unirse, nombre y capacidad de dos, arena al crear y cambio por anfitrión, clase, Listo de ambos, cuenta y duelo. Salas aisladas. |
+| 3 | Interfaz propia (primera pasada implementada) | Presentación, lista de salas y HUD con base dorado/blanco, jerarquía limpia, controles, inventario/libro/macros, consola y opciones coherentes. |
+| 4 | Efectos y gráficos (magia/meditación implementadas) | Renovar Descarga, Tormenta, fuego y curaciones primero; luego todos los demás. Conservar lectura, anclaje y tiempos; unificar escenarios, personajes y equipo. |
 
-Los presets actuales y sus fórmulas adaptadas están en [CLASSES.md](CLASSES.md). No equivalen al port completo de las especialidades de AO20. El orden local de pociones no es un inventario persistente con propiedad y comercio. No se añade PvE, progresión o mundo persistente.
+## Incluir con los lobbies
 
-Una rama por tarea desde `Alpha` actualizado; PR directamente a `Alpha`. Servidor y clientes deben usar la misma revisión. Se valida e integra cada tanda antes de iniciar la siguiente; no se apilan PR sobre ramas abiertas.
+- Cada sala posee registro de jugadores, bot y estado propios. Snapshots, daño, movimiento, efectos y resultados sólo llegan a sus participantes; probar dos salas simultáneas con mapas distintos.
+- Bot opcional sólo cuando falta el segundo humano; se retira al entrar otro jugador.
+- Cambiar arena o clase en preparación invalida Listo. El inicio depende del servidor; no se permite cambiar mapa durante el duelo.
+- Resultado, revancha, salida/desconexión durante espera, cuenta o combate; transferencia del anfitrión y limpieza de salas vacías.
+- Rechazar salas llenas/eliminadas, acciones cruzadas entre salas y recompensas por abandonar/reiniciar una práctica.
 
-La web permanece privada. Se descarta cualquier alternativa de pago: [política de costo cero](HOSTING_BUDGET.md).
+## Pendientes adicionales
 
-Durante la práctica se cambia libremente de preset. El lobby definirá selección previa, cuenta regresiva y reinicio de ronda; ese flujo todavía no está implementado. El equipo es movible/equipable en inventario autoritativo de sesión.
+**Hosting del dedicado** para jugar sin mantener la PC de Mati encendida: evaluar sólo opciones gratuitas y WSS. La web actual conserva su audiencia privada. Cuentas y base de datos siguen siendo opcionales; los lobbies no las requieren.
 
-La práctica con bot anterior al lobby está detallada en [BOTS.md](BOTS.md). La prioridad bot antes de lobby sigue el orden solicitado; no sustituye la futura implementación de salas.
+**Especialidades de clase**: la apuñalada del Asesino ya está implementada (8% normal/28% espalda,×1,35 sobre impacto). Otras especialidades pueden definirse después del test web.
+
+**Pruebas con jugadores y red real**: bot, lectura de efectos, movimiento/latencia, recuperación, resultados y rendimiento en navegador.

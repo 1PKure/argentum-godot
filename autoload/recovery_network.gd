@@ -98,7 +98,7 @@ func _process(_delta: float) -> void:
 	_drain()
 
 func _input(event: InputEvent) -> void:
-	if event is InputEventKey and not event.pressed and (event.keycode == KEY_SPACE or event.physical_keycode == KEY_SPACE):
+	if InputBindings.is_release(event, "use_selected"):
 		stop_using_selected("keyboard")
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
 		stop_using_selected("button")

@@ -82,11 +82,10 @@ func apply_damage(amount: int) -> bool:
 		current_health - amount,
 		0
 	)
-	is_meditating = false
-
 	if current_health <= 0:
 		current_health = 0
 		is_alive = false
+		is_meditating = false
 
 	return true
 

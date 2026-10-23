@@ -120,7 +120,7 @@ func send_player_despawned_to(
 
 
 func broadcast_player_moved(
-	player_data: Dictionary
+	player_data: Dictionary, recipients: Array = []
 ) -> void:
 	if not multiplayer.is_server():
 		push_error(
@@ -128,12 +128,12 @@ func broadcast_player_moved(
 		)
 		return
 
-	for recipient: int in multiplayer.get_peers():
+	for recipient: int in (multiplayer.get_peers() if recipients.is_empty() else recipients):
 		_receive_player_moved.rpc_id(recipient, for_recipient(player_data, recipient))
 
 
 func broadcast_player_stats_updated(
-	player_data: Dictionary
+	player_data: Dictionary, recipients: Array = []
 ) -> void:
 	if not multiplayer.is_server():
 		push_error(
@@ -141,7 +141,7 @@ func broadcast_player_stats_updated(
 		)
 		return
 
-	for recipient: int in multiplayer.get_peers():
+	for recipient: int in (multiplayer.get_peers() if recipients.is_empty() else recipients):
 		_receive_player_stats_updated.rpc_id(recipient, for_recipient(player_data, recipient))
 
 

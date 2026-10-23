@@ -1,0 +1,11 @@
+# Arena visible entre rondas
+
+La muerte mantiene la arena y los avatares visibles. El derrotado usa un sprite espectral propio, sin cabeza/equipo de vivo; desaparecen sus barras y pisadas. El recurso clásico de fantasma no está incluido en los atlas disponibles, por lo que se añadió un SVG propio. No se alteran vida ni colisiones para simular el fantasma.
+
+La franja de resultado ofrece Revancha · Listo, Clases y Arenas. Ambos humanos deben marcar Listo; a solas con bot basta el humano. Countdown y reinicio siguen siendo autoritativos, con recursos/presets restaurados y nuevo ID de ronda. El fantasma vuelve al aspecto/equipo de su clase. Cambiar clase o arena invalida los listos y conserva la vista de arena. Sólo el anfitrión cambia el escenario. Las ediciones siguen limitadas a waiting/result; no se permiten en combate. Menú → Volver al lobby abre la preparación de la misma sala; Salir de la sala y Desconectar conservan sus acciones anteriores.
+
+HUD: nombre/clase, barra completa de preset nivel50, puesto y puntos reales si el perfil aparece en el ranking público. No se simula progresión de XP ni posición para jugadores ausentes de la tabla. El minimapa pasa debajo de recursos/acciones, en la parte inferior derecha; se oculta al abrir el libro para conservar espacio. Libro con seis filas compactas de38px.
+
+Pruebas:127 GUI sobre pack exportado con dos humanos y un cliente solo, incluidos muerte real, fantasma visto por ambos, clics reales de revancha y vuelta a combate sin lobby;121 de red con5clientes/2salas, aislamiento y permisos;16 de vista/estado, selección de clase muerto y cambio de arena por anfitrión fantasma. Capturas nativas revisadas. No es una prueba en navegador.
+
+Pisadas: cuatro variantes por bioma, césped natural, arena suave, lava más grave y piedra más seca con reflexiones cortas de45/90ms. Nivel de fuente normalizado (pico≤0,30), volumen por emisor−8dB y Pasos85% de fábrica, respetando preferencias ya guardadas. Los originales CC0 y el generador/procedencia se conservan. No hay pasos en reposo, giro, fantasma o pausa. Medidas de duración/pico/RMS en docs/hosting/footsteps-levels.json. La escucha final en el navegador del usuario queda pendiente.

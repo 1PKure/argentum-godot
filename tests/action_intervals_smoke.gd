@@ -24,8 +24,9 @@ func _run() -> void:
 
 
 func _fixture() -> Dictionary:
-	var registry = load("res://server/systems/player_registry.gd").new()
+	var registry = load("res://tests/physical_avoidance_probe.gd").new()
 	root.add_child(registry)
+	registry.forced_outcome = "hit" # Cooldown fixture; real avoidance has dedicated seeded coverage.
 	registries.append(registry)
 	var attacker: PlayerState = registry.add_player(901)
 	var target: PlayerState = registry.add_player(902)
@@ -42,21 +43,21 @@ func _test_potions() -> void:
 	var registry = f.registry
 	var player: PlayerState = f.attacker
 	_check(registry.try_recovery_action(901, "health_potion", 1, 10000).ok and player.current_health == 127, "First red potion retains its original 27 HP gain")
-	var early: Dictionary = registry.try_recovery_action(901, "mana_potion", 2, 10279)
-	_check(not early.ok and player.current_mana == 2000, "Switching color cannot drink one millisecond before 280 ms")
-	_check(registry.try_recovery_action(901, "mana_potion", 3, 10280).ok and player.current_mana == 2124, "Blue potion is accepted exactly at the new 280 ms boundary")
-	_check(not registry.try_recovery_action(901, "mana_potion", 3, 10560).ok and player.current_mana == 2124, "Shorter intervals cannot replay the same potion request")
-	_check(registry.try_recovery_action(901, "health_potion", 4, 10560).ok and player.current_health == 154, "Shared cooldown permits the next color at the next 280 ms boundary")
+	var early: Dictionary = registry.try_recovery_action(901, "mana_potion", 2, 10319)
+	_check(not early.ok and player.current_mana == 2000, "Switching color cannot drink one millisecond before 320 ms")
+	_check(registry.try_recovery_action(901, "mana_potion", 3, 10320).ok and player.current_mana == 2130, "Blue potion is accepted exactly at the new 320 ms boundary")
+	_check(not registry.try_recovery_action(901, "mana_potion", 3, 10640).ok and player.current_mana == 2130, "Shorter intervals cannot replay the same potion request")
+	_check(registry.try_recovery_action(901, "health_potion", 4, 10640).ok and player.current_health == 154, "Shared cooldown permits the next color at the next 320 ms boundary")
 
 
 func _test_attacks() -> void:
 	var f := _fixture()
 	var registry = f.registry
 	var target: PlayerState = f.target
-	_check(registry.try_basic_attack(901, 10000) == target and target.current_health == 362, "First mage attack applies the equipped armor profile")
-	_check(registry.try_basic_attack(901, 10549) == null and target.current_health == 362, "Physical attack rejects one millisecond before 550 ms")
-	_check(registry.try_basic_attack(901, 10550) == target and target.current_health == 361, "Physical attack is accepted exactly at the new 550 ms boundary")
-	_check(f.attacker.current_mana == 2000, "Faster physical attacks never consume mana")
+	_check(registry.try_basic_attack(901, 10000) == target and target.current_health == 354, "First mage attack applies the equipped armor profile")
+	_check(registry.try_basic_attack(901, 11199) == null and target.current_health == 354, "Physical attack rejects one millisecond before 1200 ms")
+	_check(registry.try_basic_attack(901, 11200) == target and target.current_health == 353, "Physical attack is accepted exactly at the new 1200 ms boundary")
+	_check(f.attacker.current_mana == 2000, "Physical attacks never consume mana")
 
 
 func _test_arrows() -> void:
@@ -125,7 +126,7 @@ func _test_combinations() -> void:
 	_check(not registry.try_recovery_action(901, "health_potion", 1, 11799).ok and f.attacker.current_health == 100, "Attack-to-potion rejects one millisecond before 600 ms")
 	_check(registry.try_recovery_action(901, "health_potion", 2, 11800).ok and f.attacker.current_health == 127, "Attack-to-potion accepts exactly at 600 ms")
 	_check(registry.try_cast_spell(901, 1, target.grid_position, 3, 11800).ok, "Using a potion does not add a new potion-to-spell lock")
-	_check(registry.try_recovery_action(901, "mana_potion", 3, 12080).ok, "Casting does not add a new spell-to-potion lock")
+	_check(registry.try_recovery_action(901, "mana_potion", 3, 12120).ok, "Casting does not add a new spell-to-potion lock")
 	f = _fixture()
 	registry = f.registry
 	registry.try_recovery_action(901, "health_potion", 1, 10000)
@@ -139,13 +140,13 @@ func _test_click_use() -> void:
 	player.current_mana = 1000
 	_check(registry.try_recovery_action(901, "health_potion", 1, 10000, "use").ok, "Use starts a normal potion lane")
 	var health := player.current_health
-	var early := registry.try_recovery_action(901, "mana_potion", 2, 10199, "click")
+	var early := registry.try_recovery_action(901, "mana_potion", 2, 10239, "click")
 	_check(not early.ok and early.remaining_msec == 1 and player.current_mana == 1000, "Click cannot bypass the common floor one millisecond early")
-	_check(registry.try_recovery_action(901, "mana_potion", 3, 10200, "click").ok, "A click can supplement Use at the explicit 200 ms combined boundary")
-	_check(not registry.try_recovery_action(901, "health_potion", 4, 10280, "use").ok and player.current_health == health, "A ready Use lane still respects the last click's shared floor")
-	_check(registry.try_recovery_action(901, "health_potion", 5, 10400, "direct").ok, "Direct hotkeys share the Use lane while alternating with click")
-	_check(not registry.try_recovery_action(901, "health_potion", 6, 10600, "use").ok, "Q/E cannot create a third independent potion lane")
-	_check(registry.try_recovery_action(901, "mana_potion", 7, 10600, "click").ok, "Switching color keeps click's own per-lane interval")
+	_check(registry.try_recovery_action(901, "mana_potion", 3, 10240, "click").ok, "A click can supplement Use at the explicit 240 ms combined boundary")
+	_check(not registry.try_recovery_action(901, "health_potion", 4, 10320, "use").ok and player.current_health == health, "A ready Use lane still respects the last click's shared floor")
+	_check(registry.try_recovery_action(901, "health_potion", 5, 10480, "direct").ok, "Direct hotkeys share the Use lane while alternating with click")
+	_check(not registry.try_recovery_action(901, "health_potion", 6, 10720, "use").ok, "Q/E cannot create a third independent potion lane")
+	_check(registry.try_recovery_action(901, "mana_potion", 7, 10720, "click").ok, "Switching color keeps click's own per-lane interval")
 	_check(not registry.try_recovery_action(901, "health_potion", 7, 11000, "use").ok, "Switching lanes cannot replay a nonce")
 	_check(not registry.try_recovery_action(901, "health_potion", 8, 11000, "extra").ok, "Unknown lanes cannot add potion capacity")
 	# Compare equal windows with enough missing health to avoid clipping.
@@ -159,7 +160,7 @@ func _test_click_use() -> void:
 		var accepted := 0
 		for index in range(11):
 			var channel := "click" if combined and index % 2 == 1 else "use"
-			if registry.try_recovery_action(901, "health_potion", index + 1, 20000 + index * 200, channel).ok:
+			if registry.try_recovery_action(901, "health_potion", index + 1, 20000 + index * 240, channel).ok:
 				accepted += 1
 		counts.append(accepted)
 	_check(counts[1] > counts[0] and counts[1] == 11, "Click plus Use is measurably faster in the same server-controlled window")

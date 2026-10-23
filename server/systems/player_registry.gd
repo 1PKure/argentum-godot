@@ -18,6 +18,16 @@ var _last_inventory_request: Dictionary[int, int] = {}
 var _last_shot_request: Dictionary[int, int] = {}
 var _status_system := ArenaStatusSystem.new()
 var _round_locks: Dictionary[int, bool] = {}
+var _physical_rng := RandomNumberGenerator.new()
+
+
+func _init() -> void:
+	_physical_rng.randomize()
+
+
+func _roll_physical_outcome(target: PlayerState) -> String:
+	return ClassCatalog.physical_avoidance_outcome(target.class_id, target.equipped_items,
+		_physical_rng.randf() * 100.0, _physical_rng.randf() * 100.0)
 
 func set_round_locked(peer_id: int, locked: bool) -> void:
 	if locked:
@@ -149,80 +159,36 @@ func try_move_player(
 	direction: int,
 	current_time: int = -1
 ) -> PlayerState:
-	if is_round_locked(peer_id):
+	if is_round_locked(peer_id) or not _players.has(peer_id) or not MovementRules.is_valid_direction(direction):
 		return null
-	if not _players.has(peer_id):
+	var player: PlayerState = _players[peer_id]
+	if not player.is_alive and not player.is_ghost:
 		return null
-
-	if not MovementRules.is_valid_direction(
-		direction
-	):
-		return null
-	
-	var player: PlayerState = (
-		_players[peer_id]
-	)
-
-	if (
-		not player.is_alive
-		and not player.is_ghost
-	):
-		return null
-
 	if current_time < 0:
 		current_time = Time.get_ticks_msec()
-
-	var last_move_time: int = (
-		_last_move_time.get(
-			peer_id,
-			0
-		)
-	)
-
-	if _status_system.is_rooted(peer_id, current_time):
-		return null
-	if not MovementRules.is_move_ready(current_time, last_move_time):
+	var last_move_time: int = _last_move_time.get(peer_id, 0)
+	var interval := MovementRules.PRACTICE_BOT_MOVE_INTERVAL_MSEC if player.is_bot else MovementRules.MOVE_INTERVAL_MSEC
+	if not MovementRules.is_move_ready(current_time, last_move_time, interval):
 		return null
 
-	var offset: Vector2i = (
-		MovementRules.get_offset(
-			direction
-		)
-	)
-
-	var new_position: Vector2i = (
-		player.grid_position
-		+ offset
-	)
-
-	if not ArenaData.is_walkable(
-		_arena_id,
-		new_position
-	):
-		return null
-
-	if (
-		player.is_alive
-		and _is_position_blocked(
-			new_position,
-			peer_id
-		)
-	):
-		print(
-		"Movement blocked -> Player: %d | Position: %s"
-		% [
-			peer_id,
-			new_position
-		]
-	)
-		return null
+	var new_position := player.grid_position + MovementRules.get_offset(direction)
+	var blocked := _status_system.is_rooted(peer_id, current_time) or not ArenaData.is_walkable(_arena_id, new_position)
+	if not blocked and player.is_alive:
+		blocked = _is_position_blocked(new_position, peer_id)
+	if blocked:
+		# Pressing toward an adjacent opponent must still aim the melee attack.
+		# A rooted player can turn, but cannot translate; turns and steps share
+		# the same cadence so alternating them cannot bypass movement limits.
+		if player.facing_direction == direction:
+			return null
+		player.facing_direction = direction
+		_last_move_time[peer_id] = MovementRules.get_accepted_move_time(current_time, last_move_time, interval)
+		return player
 
 	player.is_meditating = false
 	player.grid_position = new_position
 	player.facing_direction = direction
-
-	_last_move_time[peer_id] = MovementRules.get_accepted_move_time(current_time, last_move_time)
-
+	_last_move_time[peer_id] = MovementRules.get_accepted_move_time(current_time, last_move_time, interval)
 	return player
 
 
@@ -291,9 +257,20 @@ func try_basic_attack(
 	if target == null:
 		return null
 
-	var damage := ClassCatalog.roll_physical_damage(attacker.class_id, target.class_id, attacker.equipped_items, target.equipped_items)
-	if not target.apply_damage(damage):
-		return null
+	var outcome := _roll_physical_outcome(target)
+	var previous_health := target.current_health
+	var stabbed := false
+	var rear_attack := false
+	if outcome == "hit":
+		var rolled := ClassCatalog.roll_physical_damage(attacker.class_id, target.class_id, attacker.equipped_items, target.equipped_items, _physical_rng)
+		var chance := CombatRules.stab_chance(attacker.class_id,int(attacker.equipped_items.get("weapon",0)),attacker.grid_position,target.grid_position,target.facing_direction)
+		if chance>0 and _physical_rng.randf()*100.0<chance:
+			stabbed = true
+			rear_attack = CombatRules.is_behind(attacker.grid_position,target.grid_position,target.facing_direction)
+			rolled = maxi(1,roundi(rolled*CombatRules.ASSASSIN_STAB_DAMAGE_MULTIPLIER))
+		if not target.apply_damage(rolled):
+			return null
+	var damage := previous_health - target.current_health
 
 	print(
 		"%s attacked %s for %d damage. HP: %d/%d"
@@ -307,12 +284,13 @@ func try_basic_attack(
 	)
 
 	if target.is_ghost:
+		_status_system.clear_player(target)
 		print(
 			"%s died and became a ghost."
 			% target.display_name
 		)
 
-	basic_attack_resolved.emit({"caster_id": attacker.peer_id, "caster_name": attacker.display_name, "target_id": target.peer_id, "target_name": target.display_name, "amount": damage})
+	basic_attack_resolved.emit({"caster_id": attacker.peer_id, "caster_name": attacker.display_name, "target_id": target.peer_id, "target_name": target.display_name, "amount": damage, "outcome": outcome, "stabbed": stabbed, "rear_attack": rear_attack})
 	return target
 
 
@@ -343,9 +321,10 @@ func try_ranged_attack(peer_id: int, position: Vector2i, request_id: int, now: i
 	remaining = SpellCatalog.SPELL_ATTACK_GAP_MSEC - (now - _last_spell_time.get(peer_id, -SpellCatalog.SPELL_ATTACK_GAP_MSEC))
 	if remaining > 0:
 		return _spell_error("Esperá el intervalo entre magia y golpe.", remaining)
-	var damage := ClassCatalog.roll_physical_damage(attacker.class_id, target.class_id, attacker.equipped_items, target.equipped_items)
+	var outcome := _roll_physical_outcome(target)
 	var previous := target.current_health
-	target.apply_damage(damage)
+	if outcome == "hit":
+		target.apply_damage(ClassCatalog.roll_physical_damage(attacker.class_id, target.class_id, attacker.equipped_items, target.equipped_items, _physical_rng))
 	attacker.is_meditating = false
 	attacker.facing_direction = (MovementRules.Direction.EAST if delta.x > 0 else MovementRules.Direction.WEST) if absi(delta.x) > absi(delta.y) else (MovementRules.Direction.SOUTH if delta.y > 0 else MovementRules.Direction.NORTH)
 	_last_attack_time[peer_id] = now
@@ -354,7 +333,7 @@ func try_ranged_attack(peer_id: int, position: Vector2i, request_id: int, now: i
 	return {"ok": true, "caster_state": attacker.to_dictionary(), "target_state": target.to_dictionary(), "event": {
 		"action": "shot", "request_id": request_id, "caster_id": peer_id, "target_id": target.peer_id,
 		"caster_name": attacker.display_name, "target_name": target.display_name, "spell_id": 247,
-		"spell_name": "Disparo de arco", "words": "", "effect": "damage", "amount": previous - target.current_health,
+		"spell_name": "Disparo de arco", "words": "", "effect": "damage", "amount": previous - target.current_health, "outcome": outcome,
 		"mana_cost": 0, "origin_x": attacker.grid_position.x, "origin_y": attacker.grid_position.y,
 		"target_x": position.x, "target_y": position.y}}
 

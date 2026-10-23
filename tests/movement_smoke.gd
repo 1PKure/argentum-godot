@@ -35,7 +35,7 @@ func _test_input_cadence() -> void:
 			if MovementRules.is_move_ready(now, last_accepted):
 				accepted += 1
 				last_accepted = MovementRules.get_accepted_move_time(now, last_accepted)
-	_check(request_times.size() >= 25 and request_times.size() <= 26, "Held input keeps 120 ms cadence at 60 FPS without frame drift")
+	_check(request_times.size() >= 21 and request_times.size() <= 22, "Held input keeps 140 ms cadence at 60 FPS without frame drift")
 	_check(accepted == request_times.size(), "Normal frame quantization does not silently discard held steps")
 	_check(controller.request_directions[0] == MovementRules.Direction.EAST, "Held input sends the actual pressed direction")
 	for frame_rate: int in [20, 30, 75, 144]:
@@ -70,6 +70,24 @@ func _test_input_cadence() -> void:
 	controller._process(0.016)
 	_check(controller.request_directions.size() == count_before + 1, "A long/background frame does not replay a burst of old inputs")
 	Input.action_release("move_up")
+	var up := InputEventAction.new()
+	up.action = "move_up"
+	up.pressed = true
+	Input.action_press("move_up")
+	controller._input(up)
+	var left := InputEventAction.new()
+	left.action = "move_left"
+	left.pressed = true
+	Input.action_press("move_left")
+	controller._input(left)
+	_check(controller._get_input_direction()==MovementRules.Direction.WEST,"newly pressed left immediately takes priority over held up")
+	left.pressed = false
+	Input.action_release("move_left")
+	controller._input(left)
+	_check(controller._get_input_direction()==MovementRules.Direction.NORTH,"releasing latest direction returns to the earlier held key")
+	Input.action_release("move_up")
+	controller._get_input_direction()
+	_check(controller._pressed_order.is_empty(),"released inputs leave no stale direction")
 	controller.queue_free()
 
 
@@ -87,8 +105,8 @@ func _test_authoritative_timing() -> void:
 		if MovementRules.is_move_ready(now, last_time):
 			accepted_times.append(now)
 			last_time = MovementRules.get_accepted_move_time(now, last_time)
-	_check(accepted_times.size() == 100, "Spamming one request every millisecond does not increase 120 ms movement speed")
-	_check(last_time == 13000, "Jitter tolerance cannot accumulate into a faster logical clock")
+	_check(accepted_times.size() == 85, "Spamming one request every millisecond does not increase 140 ms movement speed")
+	_check(last_time == 12900, "Jitter tolerance cannot accumulate into a faster logical clock")
 	var directions := [MovementRules.Direction.NORTH, MovementRules.Direction.EAST, MovementRules.Direction.SOUTH, MovementRules.Direction.WEST]
 	var position := Vector2i(5, 5)
 	last_time = 1000
@@ -121,11 +139,11 @@ func _test_registry_collisions() -> void:
 	player.grid_position = Vector2i(1, 2)
 	registry._last_move_time[71] = Time.get_ticks_msec() - MovementRules.MOVE_INTERVAL_MSEC
 	result = registry.try_move_player(71, MovementRules.Direction.EAST)
-	_check(result == null and player.grid_position == Vector2i(1, 2), "Smoothing preserves the arena obstacle at tile2,2")
+	_check(player.grid_position == Vector2i(2, 2) and player.facing_direction == MovementRules.Direction.EAST, "Movement crosses the former invisible decoration obstacle at tile2,2")
 	player.grid_position = Vector2i(0, 5)
 	registry._last_move_time[71] = Time.get_ticks_msec() - MovementRules.MOVE_INTERVAL_MSEC
 	result = registry.try_move_player(71, MovementRules.Direction.WEST)
-	_check(result == null and player.grid_position == Vector2i(0, 5), "Smoothing preserves map boundaries")
+	_check(result != null and player.grid_position == Vector2i(0, 5) and player.facing_direction == MovementRules.Direction.WEST, "Map boundaries block translation while allowing an authoritative turn")
 	registry.queue_free()
 
 
@@ -141,19 +159,19 @@ func _test_avatar() -> void:
 	avatar._process(MovementRules.MOVE_INTERVAL_SECONDS / 2.0)
 	_check(avatar.position.is_equal_approx(start + Vector2(24, 0)), "A confirmed tile is interpolated rather than teleported")
 	avatar._process(MovementRules.MOVE_INTERVAL_SECONDS / 2.0)
-	_check(avatar.position.is_equal_approx(start + Vector2(48, 0)), "Visual movement finishes on the same 120 ms cadence as the server")
+	_check(avatar.position.is_equal_approx(start + Vector2(48, 0)), "Visual movement finishes on the same 140 ms cadence as the server")
 	avatar._process(0.25)
 	_check(avatar.position.is_equal_approx(start + Vector2(48, 0)), "The avatar never moves beyond its last confirmed tile")
 	state.is_bot = true
 	avatar.setup(state, false, start)
 	avatar.apply_server_position(Vector2i(5, 5), start + Vector2(48, 0))
-	avatar._process(0.06)
-	_check(avatar.position.is_equal_approx(start + Vector2(24, 0)), "Bot presentation uses the same 120 ms tile interpolation as the human")
-	avatar._process(0.06)
-	_check(avatar.position.is_equal_approx(start + Vector2(48, 0)), "Bot reaches its exact confirmed tile on the same cadence as the player")
+	avatar._process(MovementRules.PRACTICE_BOT_MOVE_INTERVAL_MSEC / 2000.0)
+	_check(avatar.position.is_equal_approx(start + Vector2(24, 0)), "Bot presentation uses its132 ms authoritative interpolation")
+	avatar._process(MovementRules.PRACTICE_BOT_MOVE_INTERVAL_MSEC / 2000.0)
+	_check(avatar.position.is_equal_approx(start + Vector2(48, 0)), "Bot reaches its exact confirmed tile on its own slightly faster cadence")
 	state.is_bot = false
 	avatar.apply_server_stats(state)
-	_check(is_equal_approx(avatar._move_speed, avatar.MOVE_SPEED), "A human state restores the unchanged 120 ms interpolation")
+	_check(is_equal_approx(avatar._move_speed, avatar.MOVE_SPEED), "A human state restores the unchanged 140 ms interpolation")
 	avatar.queue_free()
 	await process_frame
 

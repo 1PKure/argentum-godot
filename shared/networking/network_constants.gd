@@ -13,12 +13,23 @@ const SERVER_PEER_ID: int = 1
 
 
 static func get_server_url() -> String:
-	return resolve_server_url(str(
+	return server_url_from_arguments(OS.get_cmdline_user_args(), str(
 		ProjectSettings.get_setting(
 			SERVER_URL_SETTING,
 			LOCAL_WEBSOCKET_URL
 		)
 	), OS.has_feature("web"))
+
+
+# The web shell supplies a validated deployment URL via Engine.startGame args.
+# Native development keeps ProjectSettings unless an explicit launch override is supplied.
+static func server_url_from_arguments(arguments: PackedStringArray, configured: String, web_client: bool) -> String:
+	for argument: String in arguments:
+		if argument.begins_with("--server-url="):
+			var candidate := argument.trim_prefix("--server-url=").strip_edges()
+			if candidate.begins_with("wss://") or (not web_client and candidate.begins_with("ws://")):
+				return candidate
+	return resolve_server_url(configured, web_client)
 
 
 static func resolve_server_url(configured_url: String, web_client: bool) -> String:

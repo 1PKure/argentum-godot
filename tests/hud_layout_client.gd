@@ -108,6 +108,26 @@ func _run() -> void:
 	hud._fit_interface()
 	await process_frame
 	await process_frame
+	for window: String in ["classes","bot","arenas"]:
+		if window == "classes": hud._open_classes()
+		elif window == "bot": hud._open_bot()
+		else: hud._open_arenas()
+		var layer: CanvasLayer = hud._class_panel if window == "classes" else hud._bot_panel if window == "bot" else hud._arena_panel
+		await process_frame
+		await _capture("modern-window-%s.png" % window)
+		var panel: Control = layer.get_child(1).get_child(0) if window != "arenas" else hud._arena_panel.card
+		for resolution: Vector2i in [Vector2i(1280,800),Vector2i(1280,720),Vector2i(1920,1080),Vector2i(800,600)]:
+			root.size = resolution
+			hud._fit_interface()
+			await process_frame
+			await process_frame
+			_check(Rect2(Vector2.ZERO,root.get_visible_rect().size).encloses(panel.get_global_rect()),"%s window fits %s" % [window,resolution])
+		_key(KEY_ESCAPE,true)
+		_key(KEY_ESCAPE,false)
+		await process_frame
+		_check(not layer.visible and main._local_input.is_processing(),"%s closes and restores keyboard controls" % window)
+	root.size = Vector2i(1280,800)
+	hud._fit_interface()
 	hud.set_menu_opened(true)
 	await process_frame
 	await process_frame

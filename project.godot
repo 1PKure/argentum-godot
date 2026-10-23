@@ -10,10 +10,22 @@ config_version=5
 
 [application]
 
-config/name="ArgentumGodot"
+config/name="AO Mini"
+config/description="PvP Arena · Entrá a la arena. Que hable tu habilidad."
+config/use_custom_user_dir=true
+config/custom_user_dir_name="Godot/app_userdata/ArgentumGodot"
+config/custom_user_dir_name.linux="godot/app_userdata/ArgentumGodot"
 run/main_scene="uid://crpuji0hxix8t"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
+
+[audio]
+
+general/default_playback_type=0
+general/default_playback_type.web=1
+driver/output_latency.web=80
+driver/mix_rate=48000
+driver/mix_rate.web=48000
 
 [autoload]
 
@@ -26,6 +38,13 @@ RecoveryNetwork="*res://autoload/recovery_network.gd"
 InventoryNetwork="*res://autoload/inventory_network.gd"
 BotNetwork="*res://autoload/bot_network.gd"
 Skins="*res://autoload/skins.gd"
+ArenaNetwork="*res://autoload/arena_network.gd"
+LobbyNetwork="*res://autoload/lobby_network.gd"
+InputBindings="*res://autoload/input_bindings.gd"
+RankingNetwork="*res://autoload/ranking_network.gd"
+ChatNetwork="*res://autoload/chat_network.gd"
+
+UIClickAudio="*res://autoload/ui_click_audio.gd"
 
 [display]
 
@@ -33,6 +52,12 @@ window/size/viewport_width=1280
 window/size/viewport_height=800
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
+
+[importer_defaults]
+
+wav={
+"compress/mode": 0
+}
 
 [input]
 
