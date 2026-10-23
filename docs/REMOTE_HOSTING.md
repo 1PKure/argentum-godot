@@ -37,3 +37,9 @@ Las pruebas cubren SQL real con PostgreSQL WASM, permisos, conflictos, reintento
 Validar el contenedor real, HTTPS/WSS, conexión desde dos redes externas, dos salas simultáneas, reconexión, apodos, chat, rondas, ranking tras reiniciar el servicio y una sesión sostenida con hasta ocho conexiones. Medir latencia, memoria y CPU con jugadores de Argentina. Probar sonido y FPS en navegadores reales. Si estos controles fallan, mantener el piloto y corregir la causa antes de ampliar el acceso.
 
 Free no equivale a disponibilidad continua: Render puede suspender el servicio por inactividad y aplicar límites de uso; Supabase también tiene cuotas y políticas de pausa. Verificar los paneles y condiciones vigentes antes de abrir invitaciones. No crear recursos pagos ni escalar automáticamente. La capacidad de ocho conexiones es un límite inicial de prueba, no una capacidad certificada.
+
+## Resultado del piloto — 23 de octubre de 2026
+
+Render construyó y desplegó el contenedor Free en Virginia. HTTPS respondió correctamente y cinco clientes nativos de Godot completaron las 121 comprobaciones de salas y combate contra el WSS público. Para salir desde el entorno Work se usó su proxy HTTPS mediante un puente WebSocket de prueba; el recorrido remoto sí atravesó TLS y el gateway real. No equivale a una prueba de renderizado o audio en navegador.
+
+Supabase real confirmó una victoria, rechazó su duplicación y restauró 100 puntos en otro proceso con caché local vacía. Las 105 comprobaciones locales anteriores de ranking, reinicio y pausa también pasaron, al igual que las 21 pruebas de la web. Quedan pendientes la prueba humana desde dos redes, la sesión sostenida con ocho clientes y la medición desde Argentina.

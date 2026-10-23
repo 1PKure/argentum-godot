@@ -4,7 +4,7 @@ export function verifyPublicWebSocket(host,ticket){
   let attempts=0;
   const attempt=()=>{
     attempts++;
-    const socket=new WebSocket(`wss://${host}/game?ticket=${encodeURIComponent(ticket||'')}`,['binary']);
+    const socket=new WebSocket(`wss://${host}/game?ticket=${encodeURIComponent(ticket||'')}`);
     let opened=false;
     const timer=setTimeout(()=>socket.close(),12000);timer.unref();
     socket.addEventListener('open',()=>{opened=true;console.log('Public WSS deployment check passed.');socket.close();});
