@@ -43,6 +43,10 @@ func start_server(
 	if tls_config["enabled"]:
 		bind_address = tls_config["bind_address"]
 
+	# A hosted gateway is the only public entry point.
+	if not OS.get_environment("AO_STORE_URL").is_empty():
+		bind_address = "127.0.0.1"
+
 	peer = WebSocketMultiplayerPeer.new()
 
 	var error: Error = peer.create_server(
