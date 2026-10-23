@@ -65,7 +65,7 @@ func _run() -> void:
 	_check(not registry.try_recovery_action(801, "meditate", 2, 10000).ok, "Hunter cannot meditate")
 	player.grid_position = Vector2i(1, 2)
 	target.grid_position = Vector2i(3, 2)
-	_check(not registry.try_ranged_attack(801, target.grid_position, 1, 10000).ok, "Aimed arrows are blocked by terrain")
+	_check(CombatRules.has_clear_shot(registry.get_arena_id(), player.grid_position, target.grid_position), "Aimed arrows cross decorative terrain")
 	player.grid_position = Vector2i(4, 5)
 	target.grid_position = Vector2i(13, 5)
 	_check(not registry.try_ranged_attack(801, target.grid_position, 2, 10000).ok, "Aimed arrows respect eight-tile range")

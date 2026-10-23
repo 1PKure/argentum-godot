@@ -43,7 +43,7 @@ func _draw() -> void:
 	elif arena_id == ArenaData.DESERT:
 		for y in [2,7,10]:
 			draw_polyline(PackedVector2Array([point_for(Vector2i(0,y)),point_for(Vector2i(6,y-1)),point_for(Vector2i(13,y)),point_for(Vector2i(19,y-1))]),Color(0.95,0.81,0.5,0.16),1,true)
-	for blocked: Vector2i in definition.blocked_cells:
+	for blocked: Vector2i in definition.scenery_cells:
 		var at := point_for(blocked)
 		draw_circle(at+Vector2(0,1),cell.y*0.65,Color(0,0,0,0.35))
 		if arena_id == ArenaData.FOREST:

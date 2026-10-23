@@ -166,7 +166,7 @@ func _test_range_and_obstacles() -> void:
 	actions.clear()
 	manager._attack(f.bot,true,true,12000,actions)
 	var direction := manager._movement_step(f.bot,f.human.grid_position,true,12000)
-	_check(not CombatRules.has_clear_shot(f.registry.get_arena_id(),f.bot.grid_position,f.human.grid_position) and actions.is_empty() and direction!=-1 and ArenaData.is_walkable(f.registry.get_arena_id(),f.bot.grid_position+MovementRules.get_offset(direction)),"Blocked line of sight triggers legal repositioning rather than casting through a tree")
+	_check(CombatRules.has_clear_shot(f.registry.get_arena_id(),f.bot.grid_position,f.human.grid_position) and not actions.is_empty() and direction!=-1 and ArenaData.is_walkable(f.registry.get_arena_id(),f.bot.grid_position+MovementRules.get_offset(direction)),"Decorative trees do not block bot spells or legal repositioning")
 	f.bot.current_mana=999
 	manager._combo_step=1
 	var spell := manager._combo_spell(f.bot,12000)

@@ -295,6 +295,11 @@ func _attack(bot: PlayerState, ranged: bool, caster: bool, now: int, actions: Ar
 			if _combo_step == 0 and now >= _next_control and not _observed_rooted and bot.current_mana >= _mana_reserve(bot) and choice < 0.3:
 				spell = 25
 				_next_control = now + _rng.randi_range(14000, 18000)
+			# An empty budget is not a missed shot: reassess after the next
+			# observation instead of wasting a full cast window while blues recover.
+			if spell == 0 and bot.class_id == 1:
+				_next_offense = maxi(_next_spell, now + THINK_MSEC)
+				return
 		var cell := _observed_cell
 		if _rng.randf() < (0.04 if bot.class_id==1 else 0.06):
 			cell += MovementRules.get_offset(_rng.randi_range(0, 3))

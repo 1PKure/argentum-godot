@@ -10,7 +10,7 @@ func _draw() -> void:
 	var area := Rect2(Vector2(10,5),size-Vector2(20,10))
 	draw_rect(area,definition.ground_color)
 	var cell := area.size/Vector2(20,12)
-	for point: Vector2i in definition.blocked_cells:
+	for point: Vector2i in definition.scenery_cells:
 		draw_rect(Rect2(area.position+Vector2(point)*cell,cell),definition.accent)
 	for point: Vector2i in definition.spawn_points:
 		draw_circle(area.position+(Vector2(point)+Vector2(0.5,0.5))*cell,3,Color("f3f0e8"))

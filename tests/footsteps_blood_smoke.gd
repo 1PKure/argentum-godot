@@ -27,6 +27,7 @@ func _run() -> void:
 	actor._process(MovementRules.MOVE_INTERVAL_SECONDS*0.5)
 	check(world._footstep_count.get(7,0)==1 and world._footstep_audio[7].playing,"one real completed tile plays one footfall")
 	var audio: AudioStreamPlayer2D = world._footstep_audio[7]
+	check(is_equal_approx(audio.volume_db,-5),"footstep emitter is3dB louder without modifying recordings or saved volume")
 	check(audio.get_parent()==actor and audio.max_distance==world.TILE_SIZE*8 and audio.panning_strength<1.0,"footfalls are spatial with bounded distance and moderate panning")
 	actor._process(1)
 	check(world._footstep_count[7]==1,"idle/grace frames do not repeat the footfall")

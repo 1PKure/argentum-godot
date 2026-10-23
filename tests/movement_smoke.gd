@@ -139,7 +139,7 @@ func _test_registry_collisions() -> void:
 	player.grid_position = Vector2i(1, 2)
 	registry._last_move_time[71] = Time.get_ticks_msec() - MovementRules.MOVE_INTERVAL_MSEC
 	result = registry.try_move_player(71, MovementRules.Direction.EAST)
-	_check(player.grid_position == Vector2i(1, 2) and player.facing_direction == MovementRules.Direction.EAST, "Smoothing preserves the arena obstacle while permitting facing toward tile2,2")
+	_check(player.grid_position == Vector2i(2, 2) and player.facing_direction == MovementRules.Direction.EAST, "Movement crosses the former invisible decoration obstacle at tile2,2")
 	player.grid_position = Vector2i(0, 5)
 	registry._last_move_time[71] = Time.get_ticks_msec() - MovementRules.MOVE_INTERVAL_MSEC
 	result = registry.try_move_player(71, MovementRules.Direction.WEST)

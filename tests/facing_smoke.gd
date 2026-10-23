@@ -30,10 +30,10 @@ func _run() -> void:
 	actor.grid_position = Vector2i(0,5)
 	actor.facing_direction = MovementRules.Direction.SOUTH
 	_check(registry.try_move_player(71,MovementRules.Direction.WEST,1280) == actor and actor.grid_position == Vector2i(0,5),"boundary turn does not leave map")
-	actor.grid_position = Vector2i(1,2)
-	_check(registry.try_move_player(71,MovementRules.Direction.EAST,1420) == actor and actor.grid_position == Vector2i(1,2),"wall turn preserves collision")
+	actor.grid_position = Vector2i(19,2)
+	_check(registry.try_move_player(71,MovementRules.Direction.EAST,1420) == actor and actor.grid_position == Vector2i(19,2),"outer wall turn preserves collision")
 	registry._status_system.effects[71] = [{"kind":"root","expires":20000}]
-	_check(registry.try_move_player(71,MovementRules.Direction.NORTH,1560) == actor and actor.grid_position == Vector2i(1,2),"rooted actor can rotate but cannot step onto open tile")
+	_check(registry.try_move_player(71,MovementRules.Direction.NORTH,1560) == actor and actor.grid_position == Vector2i(19,2),"rooted actor can rotate but cannot step onto open tile")
 	_check(registry._status_system.is_rooted(71,1560),"turn does not remove paralysis")
 	registry.set_round_locked(71,true)
 	_check(registry.try_move_player(71,MovementRules.Direction.SOUTH,1700) == null and actor.facing_direction == MovementRules.Direction.NORTH,"countdown/map transition lock forbids turning")

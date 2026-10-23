@@ -271,7 +271,7 @@ func _create_arena_props() -> void:
 
 	var definition := ArenaData.get_definition(_arena_id)
 	if definition.props.is_empty():
-		for cell: Vector2i in definition.blocked_cells:
+		for cell: Vector2i in definition.scenery_cells:
 			_create_scenery(str(definition.obstacle_kind),cell)
 	var index := 0
 	for cell: Vector2i in definition.decorations:
@@ -519,7 +519,7 @@ func _on_avatar_step(avatar: PlayerAvatar) -> void:
 	if audio == null:
 		audio = AudioStreamPlayer2D.new()
 		audio.name = "Footsteps"
-		audio.volume_db = -8.0
+		audio.volume_db = -5.0
 		audio.max_distance = TILE_SIZE * 8.0
 		audio.attenuation = 1.4
 		audio.panning_strength = 0.45

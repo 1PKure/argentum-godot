@@ -56,3 +56,6 @@ su contenido actual, también después de moverlos; la acción de beber y su
 feedback propio se conservan. Equipar objetos y los demás menús mantienen
 el clic. La prueba GUI usa un clic real sobre una azul para comprobar ambos
 resultados: recuperar maná y no disparar UIClickAudio.
+
+
+Preparación web: las cuatro casillas decorativas de cada mapa quedan abiertas, conservando sus gráficos y límites exteriores. Pisadas suben3dB en el emisor (−8→−5), sin modificar WAV ni preferencias guardadas. El Mago reevalúa un presupuesto de combo vacío cada120ms en lugar de esperar1150ms, sin adelantar lanzamientos reales. Detalles de conexión/ranking opcional en WEB_DEPLOYMENT.md.

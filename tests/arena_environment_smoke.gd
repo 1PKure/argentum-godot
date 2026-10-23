@@ -17,14 +17,14 @@ func _run() -> void:
 				if ArenaData.is_walkable(id,next) and not reached.has(next):
 					reached[next] = true
 					open.append(next)
-		_check(reached.size() == 236,"%s walkable area is connected" % id)
-		for cell: Vector2i in definition.blocked_cells:
-			_check(definition.blocked_cells.has(Vector2i(19-cell.x,cell.y)) and not ArenaData.is_walkable(id,cell),"%s obstacle is mirrored and blocked" % id)
+		_check(reached.size() == 240,"%s walkable area is connected" % id)
+		for cell: Vector2i in definition.scenery_cells:
+			_check(definition.scenery_cells.has(Vector2i(19-cell.x,cell.y)) and ArenaData.is_walkable(id,cell),"%s decoration is mirrored and walkable" % id)
 		_check(not ArenaData.is_walkable(id,Vector2i(-1,5)) and not ArenaData.is_walkable(id,Vector2i(20,5)),"%s has server bounds" % id)
 		for x in range(20):
 			_check(ArenaData.is_walkable(id,Vector2i(x,5)),"%s central lane %d is clear" % [id,x])
-		definition.blocked_cells.clear()
-		_check(ArenaData.get_definition(id).blocked_cells.size() == 4,"%s returns independent definitions" % id)
+		definition.scenery_cells.clear()
+		_check(ArenaData.get_definition(id).scenery_cells.size() == 4,"%s returns independent definitions" % id)
 	_check(not ArenaData.is_walkable("invalid",Vector2i(4,5)),"Unknown arena is not walkable")
 	registry = PlayerRegistry.new()
 	root.add_child(registry)

@@ -18,7 +18,7 @@ Cliente y dedicado deben usar la misma revisión y **protocolo 24**. `tools/Star
 
 Cada lobby posee PlayerRegistry, ArenaPracticeBot y ArenaSession propios. Snapshots, movimiento, daño, estadísticas y efectos sólo llegan a sus participantes. Se rechazan salas llenas, acciones ajenas, versiones antiguas y repeticiones. Salir/transmitir anfitrión y eliminar salas vacías se resuelve en servidor.
 
-Bosque, Desierto, Lava y Sala de Duelos conservan pisos interiores y colisiones 20×12, cuatro obstáculos simétricos y spawns separados. El anfitrión puede cambiar escenario durante preparación/resultado. Cambiar escenario o clase invalida Listo; no se permite durante el duelo. El bot se retira al entrar otro humano. Una ronda interrumpida no concede premios.
+Bosque, Desierto, Lava y Sala de Duelos conservan pisos interiores y colisiones 20×12, cuatro adornos simétricos transitables y spawns separados. El anfitrión puede cambiar escenario durante preparación/resultado. Cambiar escenario o clase invalida Listo; no se permite durante el duelo. El bot se retira al entrar otro humano. Una ronda interrumpida no concede premios.
 
 [Flujo de lobbies y validación](docs/LOBBIES.md) · [Escenarios](docs/ARENAS.md).
 
@@ -60,3 +60,5 @@ Ranking desde el lobby:100puntos por victoria confirmada PvP/bot, contadores sep
 Chat de sala integrado: panel lateral en el lobby y Enter/botónChat en combate; Enter envía y Escape cancela. Al escribir se bloquean movimiento, macros y pociones sin pausar al rival. Mensajes sobre personaje4s, separados cuando se acercan y reemplazados por las palabras del hechizo confirmado. Historial temporal de30mensajes por sala, nombre tomado del servidor,160caracteres, límite800ms y aislamiento por sala incluso para solicitudes atrasadas. Protocolo24; actualizar cliente/dedicado juntos. [Chat](docs/CHAT.md).
 
 Revisión para cerrar gameplay alpha y pasar a la web: [estado, límites y prioridades](docs/ALPHA_READINESS.md). Último ajuste de bot/pociones/clics: [detalles](docs/FINAL_COMBAT_DETAILS.md#cierre-de-gameplay-alpha-presión-y-recuperación).
+
+Preparación de la página: [conexión configurable y contrato del ranking independiente](docs/WEB_DEPLOYMENT.md). Los adornos de esquina ya no bloquean el paso ni disparos; pisadas+3dB y Mago sin espera mágica ficticia al recuperar presupuesto de combo.
