@@ -56,6 +56,9 @@ var _spell_list: VBoxContainer
 var _status_label: Label
 var _menu_button: Button
 var _disconnect_button: Button
+var _play_style_button: Button
+var _quick_controls_button: Button
+var _classic_layout := false
 var _controls_button: Button
 var _controls_panel: ControlsPanel
 var _pause_label: Label
@@ -127,6 +130,7 @@ func _ready() -> void:
 	RecoveryNetwork.action_resolved.connect(_on_recovery_event)
 	RecoveryNetwork.selection_changed.connect(_refresh_potion_selection)
 	InputBindings.changed.connect(_on_bindings_changed)
+	InputBindings.save_failed.connect(console.append_message)
 	BotNetwork.changed.connect(_on_bot_status)
 	ArenaNetwork.changed.connect(_on_arena_status)
 	Skins.victory_awarded.connect(func(result: Dictionary) -> void:
@@ -289,17 +293,17 @@ func end_session(message: String) -> void:
 
 func show_inventory() -> void:
 	_inventory_panel.show()
-	_spell_panel.hide()
+	_spell_panel.visible = InputBindings.classic_mode
 	_inventory_button.button_pressed = true
-	_spell_button.button_pressed = false
+	_spell_button.button_pressed = InputBindings.classic_mode
 	_fit_interface()
 
 
 func show_spells() -> void:
 	_cancel_inventory_move()
-	_inventory_panel.hide()
+	_inventory_panel.visible = InputBindings.classic_mode
 	_spell_panel.show()
-	_inventory_button.button_pressed = false
+	_inventory_button.button_pressed = InputBindings.classic_mode
 	_spell_button.button_pressed = true
 	_fit_interface()
 
@@ -508,6 +512,13 @@ func _build_interface() -> void:
 	_controls_panel = ControlsPanel.new()
 	add_child(_controls_panel)
 	_controls_panel.opened_changed.connect(func(_opened: bool) -> void: _notify_modal_state())
+	_play_style_button = _text_button(_frame,"Jugar clásico",Rect2())
+	_play_style_button.tooltip_text = "Objetos y hechizos juntos · Elegí hechizo, Lanzar y clic en el objetivo"
+	_play_style_button.pressed.connect(func() -> void:
+		InputBindings.set_classic_mode(not InputBindings.classic_mode)
+	)
+	_quick_controls_button = _text_button(_frame,"Controles",Rect2())
+	_quick_controls_button.pressed.connect(_controls_panel.open_panel)
 	_pause_label = _label(game_area,"EN PAUSA",Rect2(),18)
 	_pause_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_pause_label.add_theme_color_override("font_color",PALETTE.GOLD)
@@ -696,6 +707,12 @@ func _sync_bot_pause() -> void:
 
 
 func _on_bindings_changed() -> void:
+	_play_style_button.text = "Usar macros" if InputBindings.classic_mode else "Jugar clásico"
+	_macro_back.visible = not InputBindings.classic_mode
+	for button: Button in _hotkey_buttons: button.visible = not InputBindings.classic_mode
+	if _classic_layout != InputBindings.classic_mode:
+		_classic_layout = InputBindings.classic_mode
+		show_inventory()
 	for index in range(_inventory_slots.size()):
 		_inventory_slots[index].configure(index,_inventory_layout)
 	_compact_inventory_slots()
@@ -885,7 +902,7 @@ func _fit_interface() -> void:
 	_header_art.position = Vector2(16,12)
 	_header_art.size = Vector2(width-32,64)
 	_world_art.position = Vector2(16,228)
-	_world_art.size = Vector2(side_x-32,height-332)
+	_world_art.size = Vector2(side_x-32,height-(260 if InputBindings.classic_mode else 332))
 	_side_art.position = Vector2(side_x,88)
 	_side_art.size = Vector2(296,height-104)
 	game_area.position = _world_art.position+Vector2(2,2)
@@ -899,6 +916,10 @@ func _fit_interface() -> void:
 		_filter_buttons[index].size = Vector2(78,27)
 	console.position = Vector2(32,132)
 	console.size = Vector2(side_x-64,36 if _chat_input.visible else 72)
+	_play_style_button.position = Vector2(side_x-328,96)
+	_play_style_button.size = Vector2(128,27)
+	_quick_controls_button.position = Vector2(side_x-192,96)
+	_quick_controls_button.size = Vector2(74,27)
 	_chat_button.position = Vector2(side_x-110,96)
 	_chat_button.size = Vector2(78,27)
 	_chat_input.position = Vector2(32,170)
@@ -1328,10 +1349,21 @@ func _build_visual_controls(parent: VBoxContainer) -> void:
 	var metrics := CheckBox.new()
 	metrics.name = "PerformanceMetrics"
 	metrics.focus_mode = Control.FOCUS_NONE
-	metrics.text = "Mostrar rendimiento"
+	metrics.text = "FPS y ping"
 	metrics.button_pressed = ArenaVisualSettings.metrics
 	metrics.toggled.connect(func(enabled: bool) -> void: ArenaVisualSettings.metrics = enabled)
 	row.add_child(metrics)
+	var details := CheckBox.new()
+	details.name = "PerformanceDetails"
+	details.text = "Diagnóstico detallado"
+	details.focus_mode = Control.FOCUS_NONE
+	details.tooltip_text = "Datos técnicos para reportar un problema de rendimiento o conexión"
+	details.button_pressed = ArenaVisualSettings.diagnostic_details
+	details.toggled.connect(func(enabled: bool) -> void:
+		ArenaVisualSettings.diagnostic_details = enabled
+		if enabled: metrics.button_pressed = true
+	)
+	parent.add_child(details)
 
 
 func _compact_inventory_slots() -> void:
@@ -1352,6 +1384,10 @@ func _layout_resource_panels() -> void:
 	var map_height := 144.0 if not _spell_panel.visible else 0.0
 	var resource_y := bottom-50.0-12.0-resource_height-(map_height+12.0 if map_height>0 else 0.0)
 	panel.size.y = maxf(128,resource_y-12.0-panel.position.y)
+	if InputBindings.classic_mode:
+		_inventory_panel.size.y = 88
+		_spell_panel.position.y = _inventory_panel.position.y + 100
+		_spell_panel.size.y = maxf(180,resource_y-12.0-_spell_panel.position.y)
 	_compact_inventory_slots()
 	if _spell_panel.visible: _layout_spellbook()
 	var bar_offset := 26.0 if has_status else 8.0

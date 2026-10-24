@@ -28,3 +28,5 @@ static func prewarm(tree: SceneTree)->void:
   if not _frames.has(id) and not entry(id).is_empty():
    frames(id)
    await tree.process_frame
+
+ ArenaMeditationVisual.modern_frames() # Warm the shared gold loop before combat.

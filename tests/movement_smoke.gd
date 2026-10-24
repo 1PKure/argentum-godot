@@ -35,7 +35,7 @@ func _test_input_cadence() -> void:
 			if MovementRules.is_move_ready(now, last_accepted):
 				accepted += 1
 				last_accepted = MovementRules.get_accepted_move_time(now, last_accepted)
-	_check(request_times.size() >= 21 and request_times.size() <= 22, "Held input keeps 140 ms cadence at 60 FPS without frame drift")
+	_check(request_times.size() >= 19 and request_times.size() <= 20, "Held input keeps 155 ms cadence at 60 FPS without frame drift")
 	_check(accepted == request_times.size(), "Normal frame quantization does not silently discard held steps")
 	_check(controller.request_directions[0] == MovementRules.Direction.EAST, "Held input sends the actual pressed direction")
 	for frame_rate: int in [20, 30, 75, 144]:
@@ -105,16 +105,16 @@ func _test_authoritative_timing() -> void:
 		if MovementRules.is_move_ready(now, last_time):
 			accepted_times.append(now)
 			last_time = MovementRules.get_accepted_move_time(now, last_time)
-	_check(accepted_times.size() == 85, "Spamming one request every millisecond does not increase 140 ms movement speed")
-	_check(last_time == 12900, "Jitter tolerance cannot accumulate into a faster logical clock")
+	_check(accepted_times.size() == 77, "Spamming one request every millisecond does not increase 155 ms movement speed")
+	_check(last_time == 12935, "Jitter tolerance cannot accumulate into a faster logical clock")
 	var directions := [MovementRules.Direction.NORTH, MovementRules.Direction.EAST, MovementRules.Direction.SOUTH, MovementRules.Direction.WEST]
 	var position := Vector2i(5, 5)
 	last_time = 1000
 	var same_time_moves := 0
 	for direction: int in directions:
-		if MovementRules.is_move_ready(1120, last_time):
+		if MovementRules.is_move_ready(1135, last_time):
 			position += MovementRules.get_offset(direction)
-			last_time = MovementRules.get_accepted_move_time(1120, last_time)
+			last_time = MovementRules.get_accepted_move_time(1135, last_time)
 			same_time_moves += 1
 	_check(same_time_moves == 1 and position == Vector2i(5, 4), "Rapid direction changes share the same authoritative movement limit")
 
@@ -159,7 +159,7 @@ func _test_avatar() -> void:
 	avatar._process(MovementRules.MOVE_INTERVAL_SECONDS / 2.0)
 	_check(avatar.position.is_equal_approx(start + Vector2(24, 0)), "A confirmed tile is interpolated rather than teleported")
 	avatar._process(MovementRules.MOVE_INTERVAL_SECONDS / 2.0)
-	_check(avatar.position.is_equal_approx(start + Vector2(48, 0)), "Visual movement finishes on the same 140 ms cadence as the server")
+	_check(avatar.position.is_equal_approx(start + Vector2(48, 0)), "Visual movement finishes on the same 155 ms cadence as the server")
 	avatar._process(0.25)
 	_check(avatar.position.is_equal_approx(start + Vector2(48, 0)), "The avatar never moves beyond its last confirmed tile")
 	state.is_bot = true
@@ -171,7 +171,7 @@ func _test_avatar() -> void:
 	_check(avatar.position.is_equal_approx(start + Vector2(48, 0)), "Bot reaches its exact confirmed tile on its own slightly faster cadence")
 	state.is_bot = false
 	avatar.apply_server_stats(state)
-	_check(is_equal_approx(avatar._move_speed, avatar.MOVE_SPEED), "A human state restores the unchanged 140 ms interpolation")
+	_check(is_equal_approx(avatar._move_speed, avatar.MOVE_SPEED), "A human state restores the unchanged 155 ms interpolation")
 	avatar.queue_free()
 	await process_frame
 

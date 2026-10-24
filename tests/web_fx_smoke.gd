@@ -46,11 +46,12 @@ func _run() -> void:
 	var meditation = Meditation.new();root.add_child(meditation)
 	check(meditation._legacy!=null and meditation._legacy.sprite_frames.get_animation_loop("default"),"Original looping meditation")
 	meditation.hide();check(not meditation.is_processing(),"Hidden meditation wrapper stops")
-	var overlay := ArenaPerformanceOverlay.new();root.add_child(overlay)
+	var overlay = load("res://client/ui/arena_performance_overlay.gd").new();root.add_child(overlay)
 	ArenaVisualSettings.metrics=true
+	ArenaVisualSettings.diagnostic_details=true
 	for i in range(650): overlay._process(0.016)
 	check(overlay.intervals.size()==600 and overlay.text.contains("p95"),"Bounded frame meter")
-	ArenaVisualSettings.metrics=false;overlay._process(0.016)
+	ArenaVisualSettings.metrics=false;ArenaVisualSettings.diagnostic_details=false;overlay._process(0.016)
 	check(overlay.intervals.is_empty() and not overlay.visible,"Hidden meter clears samples")
 	effect._audio.stop()
 	effect._audio.stream = null

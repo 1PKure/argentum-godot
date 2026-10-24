@@ -7,6 +7,7 @@ const ACTIONS := ["move_up", "move_down", "move_left", "move_right", "basic_atta
 const TITLES := {"move_up":"Mover arriba", "move_down":"Mover abajo", "move_left":"Mover izquierda", "move_right":"Mover derecha", "basic_attack":"Golpear / apuntar arco", "launch_spell":"Lanzar hechizo seleccionado", "meditate":"Meditar", "health_potion":"Poción de vida", "mana_potion":"Poción de maná", "use_selected":"Usar objeto seleccionado", "menu":"Menú"}
 const DEFAULTS := [KEY_W, KEY_S, KEY_A, KEY_D, KEY_CTRL, KEY_L, KEY_M, KEY_Q, KEY_E, KEY_SPACE, KEY_ESCAPE]
 var profile_id := "local"
+var classic_mode := false
 var _events: Dictionary = {}
 
 func _ready() -> void:
@@ -70,6 +71,17 @@ func _conflicts(a: InputEventKey, b: InputEventKey) -> bool:
 		if modifier.keycode == KEY_META and chord.meta_pressed: return true
 	return false
 
+func set_classic_mode(enabled: bool) -> bool:
+	var previous := classic_mode
+	classic_mode = enabled
+	if _save() != OK:
+		classic_mode = previous
+		save_failed.emit("No se pudo guardar el modo de juego.")
+		return false
+	release_all()
+	changed.emit()
+	return true
+
 func reset_defaults() -> void:
 	var previous := _events.duplicate()
 	_defaults()
@@ -98,9 +110,11 @@ func _defaults() -> void:
 
 func _load() -> void:
 	_defaults()
+	classic_mode = false
 	var config := ConfigFile.new()
 	if config.load(FILE) == OK:
 		var section := "profile:" + profile_id
+		classic_mode = bool(config.get_value(section,"classic_mode",false))
 		var loaded: Dictionary = {}
 		for action in all_actions():
 			if not config.has_section_key(section,action): continue
@@ -120,6 +134,7 @@ func _load() -> void:
 func _save() -> Error:
 	var config := ConfigFile.new()
 	config.load(FILE)
+	config.set_value("profile:" + profile_id,"classic_mode",classic_mode)
 	for action: String in _events: config.set_value("profile:" + profile_id, action, _events[action])
 	return config.save(FILE)
 

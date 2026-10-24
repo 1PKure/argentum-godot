@@ -11,6 +11,13 @@ func is_rooted(peer_id: int, now: int) -> bool:
 	return false
 
 
+func is_paralyzed(peer_id: int, now: int) -> bool:
+	for effect: Dictionary in effects.get(peer_id, []):
+		if effect.get("kind") == "root" and int(effect.expires) > now and bool(effect.get("locks_facing",effect.get("name","") == "Paralizado")):
+			return true
+	return false
+
+
 func apply_spell(caster: PlayerState, target: PlayerState, spell: Dictionary, now: int) -> Dictionary:
 	var raw: Dictionary = spell.raw
 	var message := ""
@@ -41,9 +48,9 @@ func apply_spell(caster: PlayerState, target: PlayerState, spell: Dictionary, no
 		var list: Array = effects.get(target.peer_id, [])
 		var label := "Paralizado" if int(raw.get("Paraliza", "0")) == 1 else "Inmovilizado"
 		for index in range(list.size() - 1, -1, -1):
-			if list[index].kind == "root":
+			if list[index].kind == "root" and bool(list[index].get("locks_facing",list[index].get("name","") == "Paralizado")) == (int(raw.get("Paraliza","0")) == 1):
 				list.remove_at(index)
-		list.append({"kind": "root", "name": label, "negative": true, "expires": now + int(float(spell.duration) * 1000.0)})
+		list.append({"kind": "root", "name": label, "locks_facing": int(raw.get("Paraliza", "0")) == 1, "negative": true, "expires": now + int(float(spell.duration) * 1000.0)})
 		effects[target.peer_id] = list
 		message = label
 	else:

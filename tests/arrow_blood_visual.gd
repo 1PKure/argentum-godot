@@ -13,8 +13,11 @@ func _run() -> void:
 	var world = load("res://client/scenes/client_world.gd").new()
 	root.add_child(world)
 	world.set_process(false)
+	world._biome_ambient.set_process(false)
+	world._biome_ambient.set_age(19)
 	world.configure_viewport(Vector2(1000, 700))
-	world.set_pixel_scale(1)
+	world.scale = Vector2.ONE
+	world.resize_viewport(Vector2(1000,700))
 	for sample: Dictionary in [{"class_id":1,"skin":"explorer"},{"class_id":1,"skin":"light"},{"class_id":3,"skin":"light"}]:
 		var caster := PlayerState.new(1, "Arquero", Vector2i(4,5))
 		var target := PlayerState.new(2, "Objetivo", Vector2i(7,5))
@@ -36,6 +39,9 @@ func _run() -> void:
 		# actual rendered pixels rather than trusting an internal active flag.
 		arrow._blood_active = false
 		arrow.queue_redraw()
+		for avatar in world._avatars.values():
+			avatar._player_visual.set_process(false)
+			avatar._player_visual.body.pause()
 		var baseline: Image = await _frame()
 		arrow._blood_active = true
 		arrow.queue_redraw()

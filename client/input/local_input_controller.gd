@@ -60,7 +60,8 @@ func _process(delta: float) -> void:
 
 
 func _send_move_request(direction: int) -> void:
-	PlayerNetwork.request_move(direction)
+	if not NetworkDiagnostics.request_move(direction):
+		PlayerNetwork.request_move(direction)
 
 
 func _get_input_direction() -> int:

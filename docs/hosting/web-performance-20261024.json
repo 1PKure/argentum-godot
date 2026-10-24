@@ -1,0 +1,143 @@
+{
+  "baseline_commit": "060c5a7602564dc3eb0dbed113df98a194c0069e",
+  "environment": "Godot 4.7.2 GL Compatibility, Mesa llvmpipe, 1280x800, native Xvfb; never browser FPS or Argentina ping",
+  "before": {
+    "failures": 5,
+    "samples": [
+      {
+        "arena": "forest",
+        "hud_draw_calls": 200
+      },
+      {
+        "arena": "desert",
+        "hud_draw_calls": 989
+      },
+      {
+        "arena": "lava",
+        "hud_draw_calls": 1211
+      },
+      {
+        "arena": "duel_room",
+        "hud_draw_calls": 2809
+      },
+      {
+        "arena": "duel_room",
+        "mode": "original",
+        "two_spells_draw_calls": 2817
+      },
+      {
+        "arena": "duel_room",
+        "mode": "modern",
+        "two_spells_draw_calls": 2817
+      }
+    ],
+    "scope": "Native GL Compatibility; idle two-player scene and complete HUD; not browser FPS"
+  },
+  "after": {
+    "failures": 0,
+    "samples": [
+      {
+        "arena": "forest",
+        "hud_draw_calls": 181
+      },
+      {
+        "arena": "desert",
+        "hud_draw_calls": 183
+      },
+      {
+        "arena": "lava",
+        "hud_draw_calls": 203
+      },
+      {
+        "arena": "duel_room",
+        "hud_draw_calls": 202
+      },
+      {
+        "arena": "duel_room",
+        "mode": "original",
+        "two_spells_draw_calls": 210
+      },
+      {
+        "arena": "duel_room",
+        "mode": "modern",
+        "two_spells_draw_calls": 210
+      }
+    ],
+    "scope": "Native GL Compatibility; idle two-player scene and complete HUD; not browser FPS"
+  },
+  "idle_world_before": [
+    {
+      "arena": "forest",
+      "draw_calls": 27
+    },
+    {
+      "arena": "desert",
+      "draw_calls": 810
+    },
+    {
+      "arena": "lava",
+      "draw_calls": 557
+    },
+    {
+      "arena": "duel_room",
+      "draw_calls": 2146
+    }
+  ],
+  "idle_world_after": [
+    {
+      "arena": "forest",
+      "draw_calls": 27
+    },
+    {
+      "arena": "desert",
+      "draw_calls": 28
+    },
+    {
+      "arena": "lava",
+      "draw_calls": 43
+    },
+    {
+      "arena": "duel_room",
+      "draw_calls": 36
+    }
+  ],
+  "minimap_draw_calls": {
+    "forest": {
+      "before": 23,
+      "after": 4
+    },
+    "desert": {
+      "before": 28,
+      "after": 4
+    },
+    "lava": {
+      "before": 498,
+      "after": 4
+    },
+    "duel_room": {
+      "before": 501,
+      "after": 4
+    }
+  },
+  "native_exported_ui_checks": 136,
+  "native_exported_ui_failures": 0,
+  "gateway_lobby_checks": 124,
+  "gateway_lobby_failures": 0,
+  "gateway_storage_node_tests": 8,
+  "gateway_storage_node_failures": 0,
+  "diagnostic_network_checks": 7,
+  "diagnostic_network_failures": 0,
+  "live_transport": {
+    "scope": "One read-only WSS session from Work through its supported proxy; not Argentine player ping",
+    "url": "wss://64-176-20-159.sslip.io/game",
+    "registered_profile": false,
+    "joined_room": false,
+    "initial_packet_bytes": 4,
+    "control_ping_samples_ms": [
+      151.2,
+      146.5,
+      147.6
+    ],
+    "connected": true
+  }
+}

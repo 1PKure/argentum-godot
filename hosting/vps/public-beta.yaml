@@ -1,0 +1,7 @@
+# Explicit opt-in for the public beta. The base compose.yaml stays private.
+# Apply alongside compose.yaml only after approval to open player access.
+services:
+  arena:
+    environment:
+      AO_PUBLIC_ACCESS: "true"
+      AO_ALLOWED_ORIGINS: https://ao-mini.pulidomatias.workers.dev,https://argentum-arena-mati.smartpine8.chatgpt.site

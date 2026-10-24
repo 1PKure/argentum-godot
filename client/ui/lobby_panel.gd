@@ -21,6 +21,7 @@ var _feedback := ""
 var _create_button: Button
 var _chat: ArenaChatPanel
 var _ranking: RankingPanel
+var _controls_panel: ControlsPanel
 var _nickname: LineEdit
 var _entering := false
 var _last_profile_nickname := ""
@@ -92,6 +93,9 @@ func _ready() -> void:
 	_ranking = RankingPanel.new()
 	add_child(_ranking)
 	_button(footer,"Ranking",_ranking.open)
+	_controls_panel = ControlsPanel.new()
+	add_child(_controls_panel)
+	_button(footer,"Controles / Jugar clásico",_controls_panel.open_panel)
 	_countdown = RoundCountdown.new()
 	add_child(_countdown)
 	SpellNetwork.server_capabilities_received.connect(func(available: bool) -> void:
@@ -126,6 +130,7 @@ func open_browser() -> void:
 func close_session() -> void:
 	_active = false
 	_countdown.clear()
+	_controls_panel.close_panel()
 	_ranking.close()
 	hide()
 
@@ -139,7 +144,9 @@ func _refresh() -> void:
 		_arena_view = false
 	if phase in ["countdown","fighting"]: _arena_view = true
 	_surface.visible = room.is_empty() or not _arena_view
-	if not _surface.visible: _ranking.close()
+	if not _surface.visible:
+		_ranking.close()
+		_controls_panel.close_panel()
 	_browser.visible = room.is_empty()
 	_create_button.disabled = not LobbyNetwork.available or LobbyNetwork.pending or _entering
 	_room_content.visible = not room.is_empty()

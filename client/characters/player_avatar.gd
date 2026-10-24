@@ -21,7 +21,7 @@ const HUMAN_HEAD_COUNT := 41
 const EFFECT_FOOT_POSITION := Vector2(0, 30)
 const EFFECT_Z_INDEX := 30
 const OVERHEAD_Z_INDEX := 40
-const MEDITATION_SCALE := 1.05
+const MEDITATION_SCALE := 1.0
 
 const STATUS_BARS_POSITION := Vector2(
 	-22.0,
@@ -71,6 +71,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if is_local_player: NetworkDiagnostics.record_queue(_movement_waypoints.size())
 	var remaining_distance := _move_speed * maxf(delta, 0.0)
 	var moved_this_frame := false
 	# Preserve each confirmed turn. Carry unused frame time to the next segment

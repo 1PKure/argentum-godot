@@ -97,7 +97,7 @@ func _run() -> void:
 	controller.server_ready = false
 	controller.aim_hotkey(0)
 	_check(controller.aimed_spell_id == 0, "Unavailable server cannot enable casting")
-	_check(hud._spell_buttons.size() == 213 and hud._hotkey_buttons.size() == 10, "Spellbook and hotkey bar are populated")
+	_check(hud._spell_buttons.has(25) and hud._spell_buttons.has(51) and not hud._spell_buttons.has(4) and hud._hotkey_buttons.size() == 10, "Spellbook and hotkey bar are populated")
 	var player_network = root.get_node("PlayerNetwork")
 	var sample := PlayerState.new(101, "Mati", Vector2i(4, 5))
 	player_network.snapshot_received.emit([sample.to_dictionary()])

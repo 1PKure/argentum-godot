@@ -48,7 +48,7 @@ func _run() -> void:
 	player = f.player
 	registry.try_recovery_action(701, "meditate", 1, 10000)
 	_check(registry.try_recovery_action(701, "mana_potion", 2, 10100).ok and player.is_meditating and player.current_mana == 130, "A blue potion remains available during the new warmup")
-	_check(registry.try_recovery_action(701, "health_potion", 3, 10400).ok and player.is_meditating and player.current_health == 227, "A red potion also preserves active meditation")
+	_check(registry.try_recovery_action(701, "health_potion", 3, 10420).ok and player.is_meditating and player.current_health == 227, "A red potion also preserves active meditation")
 	_check(registry._next_meditation_tick[701] == 10500, "Neither potion resets or advances the meditation deadline")
 	registry.advance_runtime(10500)
 	_check(player.current_mana == 260 and player.is_meditating, "Potion recovery and the first scheduled meditation tick combine normally")

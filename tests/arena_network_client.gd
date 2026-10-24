@@ -244,7 +244,7 @@ func _run() -> void:
 	await _wait_for(func() -> bool: return hud._players[local_id].current_mana >= mana_before + 248)
 	_check(hud._players[local_id].current_mana == mana_before + 248 and hud._players[local_id].is_meditating, "Meditation still regenerates after both potions")
 	_check(world._avatars[local_id]._meditation_fx != null and world._avatars[local_id]._meditation_fx.visible, "Confirmed meditation displays the compact modern aura")
-	_check(world._avatars[local_id]._meditation_fx.scale == Vector2.ONE * 1.05 and world._avatars[local_id]._meditation_fx.z_index > 0, "Live meditation uses the smaller effect in front of the avatar")
+	_check(world._avatars[local_id]._meditation_fx.scale == Vector2.ONE * PlayerAvatar.MEDITATION_SCALE and world._avatars[local_id]._meditation_fx.z_index > 0, "Live meditation uses the smaller effect in front of the avatar")
 	await _capture("arena-meditation.png")
 	_key(KEY_A, true)
 	await create_timer(0.15).timeout

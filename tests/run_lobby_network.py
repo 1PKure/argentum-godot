@@ -11,6 +11,7 @@ import time
 parser = argparse.ArgumentParser()
 parser.add_argument("--godot", default="godot", help="Godot 4.7 Standard executable")
 parser.add_argument("--output", help="Optional directory for logs and fresh coordination markers")
+parser.add_argument("--external-url", help="Use an existing WebSocket gateway instead of starting a dedicated server")
 args = parser.parse_args()
 repo = pathlib.Path(__file__).resolve().parent.parent
 output = pathlib.Path(args.output).resolve() if args.output else pathlib.Path(tempfile.mkdtemp(prefix="ao-lobby-tests-"))
@@ -31,18 +32,20 @@ def spawn(label, command):
     return process, path
 
 try:
-    server, server_log = spawn("server", [args.godot, "--headless", "--path", str(repo), "--log-file", str(output / "engine-server.log"), "--", "--server", "--port=17877"])
-    deadline = time.monotonic() + 10
-    while time.monotonic() < deadline and server.poll() is None:
-        if "Argentum server ready." in server_log.read_text():
-            break
-        time.sleep(0.05)
-    else:
-        raise RuntimeError("Dedicated server did not start on port17877: " + server_log.read_text())
+    server_log = None
+    if not args.external_url:
+        server, server_log = spawn("server", [args.godot, "--headless", "--path", str(repo), "--log-file", str(output / "engine-server.log"), "--", "--server", "--port=17877"])
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline and server.poll() is None:
+            if "Argentum server ready." in server_log.read_text():
+                break
+            time.sleep(0.05)
+        else:
+            raise RuntimeError("Dedicated server did not start on port17877: " + server_log.read_text())
     for roles in [("A", "B", "C", "D"), ("S",)]:
         clients = []
         for role in roles:
-            client, log = spawn(role, [args.godot, "--headless", "--path", str(repo), "--log-file", str(output / f"engine-{role}.log"), "--script", "tests/lobby_network_client.gd", "--", "--no-auto-server", f"--lobby-role={role}", f"--lobby-markers={markers}"])
+            client, log = spawn(role, [args.godot, "--headless", "--path", str(repo), "--log-file", str(output / f"engine-{role}.log"), "--script", "tests/lobby_network_client.gd", "--", "--no-auto-server", f"--lobby-role={role}", f"--lobby-markers={markers}"] + (["--server-url=" + args.external_url] if args.external_url else []))
             clients.append((role, client, log))
             time.sleep(0.15)
         for role, client, log in clients:
@@ -60,7 +63,7 @@ try:
             else:
                 print(f"Lobby network checks [{role}]: {result['checks']}; failures: {result['failures']}")
         time.sleep(0.2)
-    if "ERROR:" in server_log.read_text():
+    if server_log and "ERROR:" in server_log.read_text():
         failures.append("server")
         print(server_log.read_text())
 finally:
