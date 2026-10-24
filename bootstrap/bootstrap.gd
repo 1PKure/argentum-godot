@@ -33,7 +33,17 @@ func _start_server() -> void:
 
 
 func _start_client() -> void:
-	if DevServerLauncher.should_auto_start_server():
+	if LocalDemoSession.should_start():
+		if not await LocalDemoSession.start_session():
+			var dialog := AcceptDialog.new()
+			dialog.title = "AO Mini"
+			dialog.dialog_text = "No se pudo iniciar la práctica local. Cerrá el juego e intentá nuevamente.\nRegistro: " + ProjectSettings.globalize_path("user://local_demo/server.log")
+			dialog.confirmed.connect(func() -> void: get_tree().quit(1))
+			dialog.canceled.connect(func() -> void: get_tree().quit(1))
+			add_child(dialog)
+			dialog.popup_centered(Vector2i(560, 160))
+			return
+	elif DevServerLauncher.should_auto_start_server():
 		var server_pid: int = (
 			DevServerLauncher.ensure_server_running()
 		)

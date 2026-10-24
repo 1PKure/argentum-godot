@@ -11,13 +11,24 @@ var _ranking_reads: Dictionary = {}
 var _ranked_rounds: Dictionary = {}
 var _pending_awards: Dictionary = {}
 var _ranking_retry := 0.0
+var _demo_session_path := ""
+var _demo_parent_check := 0.0
 
 func _ready() -> void:
+	var local_demo := "--local-demo-server" in OS.get_cmdline_user_args()
 	var ranking_path := ArenaRankingStore.DEFAULT_STORAGE_PATH
 	for argument: String in OS.get_cmdline_user_args():
 		if argument.begins_with("--ranking-path="): ranking_path = argument.trim_prefix("--ranking-path=")
+	if local_demo:
+		ranking_path = "user://local_demo/ranking.json"
+		for argument: String in OS.get_cmdline_user_args():
+			if argument.begins_with("--demo-session-file="):
+				_demo_session_path = argument.trim_prefix("--demo-session-file=")
+		if not _demo_session_path.begins_with("user://local_demo/") or ".." in _demo_session_path or not FileAccess.file_exists(_demo_session_path):
+			get_tree().quit(1)
+			return
 	ranking = ArenaRankingStore.new(ranking_path)
-	if not OS.get_environment("AO_STORE_URL").is_empty():
+	if not local_demo and not OS.get_environment("AO_STORE_URL").is_empty():
 		_ranking_remote=ArenaRankingRemote.new()
 		add_child(_ranking_remote)
 		if not await _ranking_remote.initialize(ranking,OS.get_environment("AO_STORE_URL"),OS.get_environment("AO_STORE_TOKEN")):
@@ -71,17 +82,37 @@ func _ready() -> void:
 		push_error("Port must be between 1 and 65535.")
 		get_tree().quit(1)
 		return
-	var error := NetworkManager.start_server(port)
+	var error := NetworkManager.start_server(port, "127.0.0.1" if local_demo else "*")
 	if error != OK:
 		push_error("Server startup failed.")
 		get_tree().quit(1)
 		return
 	print("Argentum server ready.")
+	if local_demo:
+		for argument: String in OS.get_cmdline_user_args():
+			if argument.begins_with("--demo-ready-file="):
+				var ready_path := argument.trim_prefix("--demo-ready-file=")
+				if not ready_path.begins_with("user://local_demo/") or ".." in ready_path:
+					get_tree().quit(1)
+					return
+				var ready_file := FileAccess.open(ready_path, FileAccess.WRITE)
+				if ready_file == null:
+					get_tree().quit(1)
+					return
+				ready_file.store_string("ready")
+				ready_file.close()
 
 func _exit_tree() -> void:
 	lobbies.dispose()
 
 func _process(_delta: float) -> void:
+	if not _demo_session_path.is_empty():
+		_demo_parent_check += _delta
+		if _demo_parent_check >= 1.0:
+			_demo_parent_check = 0.0
+			if not FileAccess.file_exists(_demo_session_path) or Time.get_unix_time_from_system() - FileAccess.get_modified_time(_demo_session_path) > 10.0:
+				get_tree().quit()
+				return
 	_ranking_retry += _delta
 	if _ranking_retry >= 5.0:
 		_ranking_retry = 0

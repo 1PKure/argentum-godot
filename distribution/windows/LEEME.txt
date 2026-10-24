@@ -1,0 +1,24 @@
+AO MINI - DEMO PARA WINDOWS x64
+
+1. Descomprimi toda la carpeta del ZIP.
+2. Abri AO-Mini.exe. No hace falta instalar Godot ni conectarse a internet.
+3. Escribi tu apodo y pulsa Conectar, conservando la direccion local precargada.
+4. Crea una sala, elegi clase y arena, agrega un bot y marca Listo.
+
+No se necesitan permisos de administrador. Conserva AO-Mini.pck junto al EXE.
+El servidor local se inicia con el juego y se cierra al salir. El ranking de
+esta demo es local y esta separado del ranking online.
+
+CONTROLES
+WASD: movimiento. Ctrl: golpe/arco. L: lanzar hechizo seleccionado.
+1-0: macros. M: meditar. Q/E: pociones. Escape: menu/cancelar.
+Podes configurar los controles y elegir el modo clasico desde el menu.
+
+DATOS Y PROBLEMAS
+Preferencias y progreso se guardan en el perfil de usuario de Windows.
+Si falla el inicio, el mensaje del juego indica la ruta del registro local.
+La demo es para Windows x64 con soporte grafico OpenGL 3.3.
+
+Proyecto y codigo: https://github.com/1PKure/argentum-godot
+Desarrollo: Matias Pulido (1PKure).
+Recursos de Argentum Online / AO20 y otros autores: ver THIRD_PARTY_NOTICES.txt.
