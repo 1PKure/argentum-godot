@@ -1,7 +1,9 @@
 class_name ArenaBloodImpact
 extends Node2D
 ## Shared confirmed-impact presentation. Never modifies combat state.
-const SECONDS := 0.50
+const SECONDS := 0.38
+const MAX_DROPLETS := 10
+const PALETTE := [Color("6b0c16"),Color("94121d"),Color("b51c24")]
 const ANCHOR_OFFSET := Vector2(0,4)
 var target_avatar: Node2D
 var direction := Vector2.RIGHT
@@ -28,18 +30,27 @@ func _draw() -> void:
 	draw_burst(self,Vector2.ZERO,direction,age)
 
 static func draw_burst(canvas: Node2D, origin: Vector2, incoming: Vector2, elapsed: float) -> void:
-	var fade := clampf((SECONDS - elapsed) / 0.20,0.0,1.0)
-	if elapsed < 0.18:
-		var tip := origin + incoming * (14.0 + elapsed * 55.0)
-		canvas.draw_line(origin,tip,Color(0.34,0.01,0.03,fade),8.0,false)
-		canvas.draw_line(origin,tip,Color(0.94,0.12,0.19,fade),5.0,false)
-	for index in range(12):
-		var spread := incoming.rotated((index - 5.5) * 0.19)
-		var velocity := spread * (75.0 + (index % 4) * 15.0)
-		var at := origin + spread * 6.0 + velocity * elapsed + Vector2(0,120.0 * elapsed * elapsed)
-		var size_value := 6.0 if index % 3 == 0 else 4.0
-		var rect := Rect2(at.round(),Vector2.ONE * size_value)
-		var color := Color("f45151") if index % 3 == 0 else Color("c5192d")
-		color.a = fade
-		canvas.draw_rect(rect.grow(1.0),Color(0.30,0.01,0.03,fade))
-		canvas.draw_rect(rect,color)
+	if elapsed < 0 or elapsed >= SECONDS:return
+	var axis := incoming.normalized() if not incoming.is_zero_approx() else Vector2.RIGHT
+	var side := axis.orthogonal()
+	var fade := 1.0-smoothstep(0.12,SECONDS,elapsed)
+	var batch := ArenaCanvasBatch.new()
+	# A short, uneven cut, followed by thin directional drops. No pink blocks.
+	if elapsed < 0.09:
+		var flash := 1.0-elapsed/0.09
+		batch.polygon(PackedVector2Array([origin-side*2,origin+axis*8,origin+side*3,origin-axis*3]),Color(PALETTE[0],flash*0.8))
+	for index in range(MAX_DROPLETS):
+		var spread := axis.rotated((index-4.5)*0.21+sin(index*7.1)*0.035)
+		var speed := 65.0+float((index*13)%47)
+		var at := origin+side*float(index%3-1)*1.5+spread*(3.0+speed*elapsed)+Vector2(0,90.0*elapsed*elapsed)
+		var travel := (spread+Vector2(0,elapsed*1.8)).normalized()
+		var perpendicular := travel.orthogonal()
+		var length := (5.0+float(index%4))*lerpf(1.0,0.4,elapsed/SECONDS)
+		var width := 0.90+float(index%3)*0.30
+		var tail := at-travel*length*0.55
+		batch.polygon(PackedVector2Array([at+travel*length,tail+perpendicular*width,tail-travel,tail-perpendicular*width]),Color(PALETTE[index%PALETTE.size()],fade))
+	var geometry := batch.mesh()
+	if geometry != null:
+		# Canvas commands reference RIDs; retain this frame's single mesh.
+		canvas.set_meta("blood_geometry",geometry)
+		canvas.draw_mesh(geometry,null)

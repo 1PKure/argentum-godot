@@ -31,7 +31,7 @@ func _run() -> void:
 				rival_id = id
 				player.display_name = "Observer"
 				player.grid_position = Vector2i(6,5)
-				registry._status_system.effects[id] = [{"kind":"root","expires":Time.get_ticks_msec()+10000}]
+				registry._status_system.effects[id] = [{"kind":"root","name":"Inmovilizado","locks_facing":false,"expires":Time.get_ticks_msec()+10000}]
 				for recipient in [actor_id,rival_id]: network.send_snapshot_to(recipient,registry.get_snapshot())
 		)
 		network.move_requested.connect(func(id: int,direction: int) -> void:

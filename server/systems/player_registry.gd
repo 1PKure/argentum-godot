@@ -154,6 +154,11 @@ func remove_player(
 	_last_shot_request.erase(peer_id)
 
 
+func can_turn_player(peer_id: int, current_time: int = -1) -> bool:
+	if current_time < 0: current_time = Time.get_ticks_msec()
+	return _players.has(peer_id) and not _status_system.is_paralyzed(peer_id,current_time)
+
+
 func try_move_player(
 	peer_id: int,
 	direction: int,
@@ -166,6 +171,7 @@ func try_move_player(
 		return null
 	if current_time < 0:
 		current_time = Time.get_ticks_msec()
+	if not can_turn_player(peer_id,current_time):return null
 	var last_move_time: int = _last_move_time.get(peer_id, 0)
 	var interval := MovementRules.PRACTICE_BOT_MOVE_INTERVAL_MSEC if player.is_bot else MovementRules.MOVE_INTERVAL_MSEC
 	if not MovementRules.is_move_ready(current_time, last_move_time, interval):
@@ -177,7 +183,7 @@ func try_move_player(
 		blocked = _is_position_blocked(new_position, peer_id)
 	if blocked:
 		# Pressing toward an adjacent opponent must still aim the melee attack.
-		# A rooted player can turn, but cannot translate; turns and steps share
+		# Immobilize permits turning without translating; turns and steps share
 		# the same cadence so alternating them cannot bypass movement limits.
 		if player.facing_direction == direction:
 			return null
@@ -326,7 +332,8 @@ func try_ranged_attack(peer_id: int, position: Vector2i, request_id: int, now: i
 	if outcome == "hit":
 		target.apply_damage(ClassCatalog.roll_physical_damage(attacker.class_id, target.class_id, attacker.equipped_items, target.equipped_items, _physical_rng))
 	attacker.is_meditating = false
-	attacker.facing_direction = (MovementRules.Direction.EAST if delta.x > 0 else MovementRules.Direction.WEST) if absi(delta.x) > absi(delta.y) else (MovementRules.Direction.SOUTH if delta.y > 0 else MovementRules.Direction.NORTH)
+	if can_turn_player(peer_id, now):
+		attacker.facing_direction = (MovementRules.Direction.EAST if delta.x > 0 else MovementRules.Direction.WEST) if absi(delta.x) > absi(delta.y) else (MovementRules.Direction.SOUTH if delta.y > 0 else MovementRules.Direction.NORTH)
 	_last_attack_time[peer_id] = now
 	if not target.is_alive:
 		_status_system.clear_player(target)

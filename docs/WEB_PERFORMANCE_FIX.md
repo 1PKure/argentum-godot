@@ -44,3 +44,7 @@ Primero subir el ZIP completo de rendimiento al Worker existente `ao-mini`, cerr
 El ajuste TCP requiere luego actualizar el dedicado al mismo SHA con `hosting/vps/update-game.sh`, durante mantenimiento y conservando la imagen anterior. Se puede evaluar primero la parte web para no confundir ambas variables. El ranking no se reinicia. Mantener ocho conexiones y un único escritor en Chile.
 
 No se publicaron estos cambios automáticamente: el ZIP y el commit quedan preparados para la actualización manual desde los paneles del usuario. La validación final de FPS, audio y latencia de Argentina debe realizarse en su navegador. No contratar otro servidor ni cambiar de región basándose solo en esta captura.
+
+## Feedback posterior
+
+El usuario publicó el paquete de rendimiento y confirmó una mejora considerable. El siguiente ajuste de parálisis, meditación y sangre está en `docs/PARALYSIS_AND_EFFECTS.md`. La publicación del ajuste TCP en Vultr no se da por confirmada solo por esa devolución.

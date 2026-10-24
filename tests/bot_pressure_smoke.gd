@@ -33,12 +33,12 @@ func _run()->void:
  check(registry.try_cast_spell(801,25,bot.grid_position,1,24000).ok,"Player can root bot for reaction test")
  manager._next_offense=100000;manager._next_move=100000
  var removed:=0
- for i in range(100):
+ for i in range(160):
   var now:=24000+i*10
   registry.advance_runtime(now)
   for event:Dictionary in manager.tick(now):
    if event.kind=="cast" and int(event.result.event.spell_id)==27:removed=now
- check(removed>=24650 and removed<=24850,"Remove reacts in650–850ms when the shared spell clock is ready")
+ check(removed>=25100 and removed<=25400,"Remove reacts in1100–1400ms when the shared spell clock is ready")
  # A moderately wounded hybrid with a pending red still lands a real melee follow-up.
  manager.request(801,true,2,3,30000);manager.tick(33000)
  bot=registry.get_player(ArenaPracticeBot.BOT_ID)

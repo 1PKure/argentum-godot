@@ -230,7 +230,7 @@ func tick(now: int = -1) -> Array[Dictionary]:
 		_next_choice = 0
 	var rooted := bot.active_effects.has("Paralizado") or bot.active_effects.has("Inmovilizado")
 	if rooted and not _root_observed:
-		_root_due = now + _rng.randi_range(650, 850)
+		_root_due = now + _rng.randi_range(1100, 1400)
 	_root_observed = rooted
 	var removing := rooted and ClassCatalog.can_cast(bot.class_id, 27) and bot.current_mana >= int(SpellCatalog.get_spell(27).mana)
 	if removing and now >= _root_due and now >= _next_spell:
@@ -263,7 +263,7 @@ func tick(now: int = -1) -> Array[Dictionary]:
 		status_changed.emit(status())
 		return actions
 	# Human movement cadence, with varied bursts independent of spell/potion clocks.
-	if not bot.is_meditating and now >= _next_move:
+	if not bot.is_meditating and not registry._status_system.is_rooted(BOT_ID,now) and now >= _next_move:
 		var direction := _movement_step(bot, _observed_cell, ranged, now)
 		if direction != -1:
 			var moved := registry.try_move_player(BOT_ID, direction, now)
@@ -325,7 +325,8 @@ func _attack(bot: PlayerState, ranged: bool, caster: bool, now: int, actions: Ar
 		_next_offense = now + maxi(CombatRules.BASIC_ATTACK_COOLDOWN_MSEC, ATTACK_INTERVAL_MSEC) + _rng.randi_range(0, 100)
 		if _rng.randf() < 0.06:
 			return
-		bot.facing_direction = _direction(delta)
+		if registry.can_turn_player(BOT_ID,now):
+			bot.facing_direction = _direction(delta)
 		var target_state := registry.try_basic_attack(BOT_ID, now)
 		if target_state != null:
 			actions.append({"kind": "melee", "attacker": bot.to_dictionary(), "target": target_state.to_dictionary()})
@@ -517,7 +518,8 @@ func _semi_attack(bot: PlayerState, now: int, actions: Array[Dictionary]) -> voi
 		# A pending potion must not indefinitely cancel the melee/Discharge chain.
 		# Actual attack/recovery gaps are still enforced by PlayerRegistry.
 		if bot.current_health < bot.max_health * 0.30 and _potion_due != 0: return
-		bot.facing_direction = _direction(_observed_cell-bot.grid_position)
+		if registry.can_turn_player(BOT_ID,now):
+			bot.facing_direction = _direction(_observed_cell-bot.grid_position)
 		_next_melee = now + maxi(CombatRules.BASIC_ATTACK_COOLDOWN_MSEC,ATTACK_INTERVAL_MSEC) + _rng.randi_range(0,100)
 		var target := registry.try_basic_attack(BOT_ID,now)
 		if target != null:

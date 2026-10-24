@@ -53,10 +53,10 @@ func _run() -> void:
 	root.add_child(meditation)
 	meditation.set_process(false)
 	meditation.set_age(1.2)
-	_check(meditation._legacy != null, "Meditation uses the original cached atlas")
+	_check(meditation._modern != null, "Modern meditation restores the baked golden whirlwind")
 	_check(not meditation.get_meta("procedural_only",true), "Meditation avoids procedural per-frame geometry")
-	_check(meditation._legacy.material is ShaderMaterial, "Modern meditation has one shader pass")
-	_check(meditation._legacy.material.get_shader_parameter("warmth")==1.0, "Modern meditation keeps warm golden colors")
+	_check(meditation._modern.sprite_frames == ArenaMeditationVisual.modern_frames(), "Modern meditation shares its cached frames")
+	_check(meditation.get_meta("concept") == "golden_rising_whirlwind", "Modern meditation keeps the recovered golden concept")
 	meditation.visible = false
 	_check(not meditation.is_processing(), "Hidden meditation stops its animation work")
 	meditation.queue_free()

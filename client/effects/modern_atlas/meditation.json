@@ -1,0 +1,16 @@
+{
+	"columns": 8,
+	"concept": "golden_rising_whirlwind",
+	"count": 96,
+	"fps": 24,
+	"loop_seconds": 4.0,
+	"offset": [
+		-29,
+		-111
+	],
+	"size": [
+		59,
+		123
+	],
+	"source_commit": "041426b"
+}
