@@ -5,7 +5,7 @@ El README de `main` presenta el juego. El de `Alpha` añade únicamente cómo ej
 ## Ramas y versiones
 
 - `Alpha`: desarrollo e integración de cambios.
-- `main`: última versión probada y publicable. Actualmente solo contiene la portada inicial; la primera demo validada debe llegar mediante un PR de `Alpha` a `main`.
+- `main`: última versión probada y publicable. Contiene el código completo de la demo aprobada; los cambios siguientes se integran desde `Alpha` mediante PR.
 - Tags como `v0.1.0-alpha.1`: identifican el commit exacto del código y del ZIP de cada release.
 
 Al promocionar una versión a `main`, conservar su README de presentación y el código completo del juego. No mantener dos copias diferentes de los sistemas. Las releases se identifican con tags; no necesitan una rama permanente por versión.
@@ -18,6 +18,6 @@ Elegir tres capturas: combate, preparación de sala y una segunda arena. Añadir
 
 ## Descarga
 
-La construcción, las pruebas y la publicación del ZIP se documentan en [Windows Release](https://github.com/1PKure/argentum-godot/blob/work/public-readme-alpha/docs/WINDOWS_RELEASE.md). Actualizar el enlace a `Alpha` al integrar la preparación de Windows.
+La construcción, las pruebas y la publicación del ZIP se documentan en [Windows Release](https://github.com/1PKure/argentum-godot/blob/Alpha/docs/WINDOWS_RELEASE.md).
 
 Después de publicar la versión comprobada, sustituir el estado de preparación del README por su descarga directa. No dejar en la portada el historial de pruebas ni las instrucciones administrativas de hosting.

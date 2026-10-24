@@ -1,0 +1,5 @@
+# Caddy terminates HTTPS/WSS. Access logging stays disabled (invitation in query).
+{$AO_HOST} {
+    reverse_proxy arena:10000
+    header Referrer-Policy "no-referrer"
+}

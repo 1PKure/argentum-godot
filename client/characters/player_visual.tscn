@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://dcx5uxqnlwtnx"]
+
+[ext_resource type="Script" uid="uid://qgxt0ll2whtn" path="res://client/characters/player_visual.gd" id="1_hwu4n"]
+
+[node name="PlayerVisual" type="Node2D" unique_id=1566365827]
+script = ExtResource("1_hwu4n")
+
+[node name="Body" type="AnimatedSprite2D" parent="." unique_id=1969791236]
+
+[node name="Head" type="Sprite2D" parent="." unique_id=549144478]

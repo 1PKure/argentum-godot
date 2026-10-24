@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: ao-mini-pilot
+    runtime: docker
+    plan: free
+    region: virginia
+    branch: work/remote-hosting
+    dockerfilePath: ./hosting/Dockerfile
+    healthCheckPath: /healthz
+    autoDeployTrigger: off
+    envVars:
+      - key: AO_CAPACITY
+        value: "8"
+      - key: AO_PUBLIC_ACCESS
+        value: "false"
+      - key: AO_ALLOWED_ORIGINS
+        value: https://argentum-arena-mati.smartpine8.chatgpt.site
+      - key: AO_PILOT_KEY
+        generateValue: true
+      - key: SUPABASE_URL
+        sync: false
+      - key: AO_STORE_KEY
+        sync: false
