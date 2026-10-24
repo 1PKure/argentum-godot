@@ -99,9 +99,9 @@ func _test_casts() -> void:
 	var target: PlayerState = f.target
 	_check(registry.try_cast_spell(901, 1, target.grid_position, 1, 10000).ok, "First spell resolves normally")
 	var health_before: int = target.current_health
-	var early: Dictionary = registry.try_cast_spell(901, 1, target.grid_position, 2, 10949)
+	var early: Dictionary = registry.try_cast_spell(901, 1, target.grid_position, 2, 11049)
 	_check(not early.ok and early.remaining_msec == 1 and target.current_health == health_before and f.attacker.current_mana == 1990, "A cast one millisecond early reports the remaining wait without cost or damage")
-	_check(registry.try_cast_spell(901, 1, target.grid_position, 3, 10950).ok and f.attacker.current_mana == 1980, "Spell repetition is accepted at 950 ms rather than the previous 1000 ms")
+	_check(registry.try_cast_spell(901, 1, target.grid_position, 3, 11050).ok and f.attacker.current_mana == 1980, "Spell repetition is accepted at the 1050 ms beta cadence")
 	_check(not registry.try_cast_spell(901, 1, target.grid_position, 3, 12000).ok and f.attacker.current_mana == 1980, "Faster spells cannot replay a successful request")
 	var periodic: Dictionary = registry.try_cast_spell(901, 268, f.attacker.grid_position, 4, 13000)
 	_check(periodic.ok, "Dart's spell ID cannot accidentally lock Restoration's distinct shared group")

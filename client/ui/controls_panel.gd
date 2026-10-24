@@ -8,6 +8,8 @@ var _modifier_pending := 0
 var _content: PanelContainer
 var _status: Label
 var _buttons: Dictionary = {}
+var _classic_button: Button
+var _macro_rows: Array[Control] = []
 
 func _ready() -> void:
 	layer = 30
@@ -33,6 +35,15 @@ func _ready() -> void:
 	_status.text = "Elegí un atajo para cambiarlo. Esc cancela la captura."
 	_status.add_theme_font_size_override("font_size",13)
 	column.add_child(_status)
+	_classic_button = Button.new()
+	_classic_button.toggle_mode = true
+	Presentation.secondary(_classic_button)
+	_classic_button.pressed.connect(func() -> void:
+		_capture = ""
+		InputBindings.set_classic_mode(not InputBindings.classic_mode)
+		_refresh()
+	)
+	column.add_child(_classic_button)
 	var scroll := ScrollContainer.new()
 	scroll.custom_minimum_size = Vector2(0,350)
 	column.add_child(scroll)
@@ -42,6 +53,7 @@ func _ready() -> void:
 	for action in InputBindings.all_actions():
 		var row := HBoxContainer.new()
 		rows.add_child(row)
+		if action.begins_with("macro_"): _macro_rows.append(row)
 		var label := Label.new()
 		label.text = InputBindings.title_for(action)
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -69,6 +81,7 @@ func _ready() -> void:
 	Presentation.primary(close)
 	close.pressed.connect(close_panel)
 	footer.add_child(close)
+	InputBindings.save_failed.connect(func(message: String) -> void: _status.text = message)
 	InputBindings.changed.connect(_refresh)
 	_refresh()
 	hide()
@@ -95,6 +108,9 @@ func _begin_capture(action: String) -> void:
 	_refresh()
 
 func _refresh() -> void:
+	_classic_button.text = "Clásico activo · Volver a macros" if InputBindings.classic_mode else "Jugar clásico · Sin macros"
+	_classic_button.button_pressed = InputBindings.classic_mode
+	for row: Control in _macro_rows: row.visible = not InputBindings.classic_mode
 	for action: String in _buttons:
 		_buttons[action].text = "Presioná una tecla…" if action == _capture else InputBindings.label_for(action)
 

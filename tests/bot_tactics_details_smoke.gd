@@ -11,7 +11,7 @@ func _run()->void:
  for id:int in [2,4,5,7,12]:
   manager.request(701,true,id,id,10000+id*1000);manager.tick(13000+id*1000)
   var bot:=registry.get_player(ArenaPracticeBot.BOT_ID)
-  check(manager._move_interval(bot)==140,"Hybrid%d moves at the human cadence"%id)
+  check(manager._move_interval(bot)==170,"Hybrid%d uses the slower hybrid cadence"%id)
   bot.current_mana=300
   manager._semi_combos=0
   check(manager._semi_finish_spell(bot)==0,"Hybrid%d cannot open with cheap fallback"%id)
@@ -26,7 +26,7 @@ func _run()->void:
  var mage:=registry.get_player(ArenaPracticeBot.BOT_ID)
  mage.current_mana=1500;manager._combo_rebuilding=true
  check(manager._combo_spell(mage,54000)==53,"Recovering mage presses with an Apocalypse+Discharge budget")
- check(manager._move_interval(mage)==124,"Mage keeps its faster movement profile")
+ check(manager._move_interval(mage)==160,"Mage no longer outruns the human movement profile")
  check(manager._ready_at-manager._starts_at>=450 and manager._ready_at-manager._starts_at<=650,"Mage engages earlier after countdown")
  registry.queue_free();await process_frame
  print("Bot detail checks: %d; failures: %d"%[checks,failures]);quit(1 if failures else 0)

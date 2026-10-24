@@ -4,7 +4,7 @@ extends RefCounted
 const DATA_FILE := "res://assets/argentum/source/data/Hechizos.dat"
 const DEFAULT_BINDINGS: Array[int] = [1, 2, 12, 13]
 # Arena cadence is deliberately faster than the imported reference profile.
-const CAST_INTERVAL_MSEC := 950 # Arena tuning; previous: 1000 ms.
+const CAST_INTERVAL_MSEC := 1050 # Public beta: a little more room between casts.
 const ATTACK_SPELL_GAP_MSEC := 600 # Previous: 650 ms.
 const SPELL_ATTACK_GAP_MSEC := 600
 const ARENA_DAMAGE_MULTIPLIERS := {41: 0.90, 51: 0.92, 53: 0.92}
@@ -93,7 +93,7 @@ static func _ensure_loaded() -> void:
 
 
 static func _unsupported_reason(id: int, data: Dictionary) -> String:
-	if id == 56:
+	if id in [4, 56]:
 		return "Retirado de la arena por balance."
 	if not data.has("Nombre"):
 		return "Entrada sin definición de hechizo en el archivo original."

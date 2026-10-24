@@ -38,7 +38,7 @@ func _run()->void:
   registry.advance_runtime(now)
   for event:Dictionary in manager.tick(now):
    if event.kind=="cast" and int(event.result.event.spell_id)==27:removed=now
- check(removed>=24520 and removed<=24700,"Remove reacts in520–700ms when the shared spell clock is ready")
+ check(removed>=24650 and removed<=24850,"Remove reacts in650–850ms when the shared spell clock is ready")
  # A moderately wounded hybrid with a pending red still lands a real melee follow-up.
  manager.request(801,true,2,3,30000);manager.tick(33000)
  bot=registry.get_player(ArenaPracticeBot.BOT_ID)

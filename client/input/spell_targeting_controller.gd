@@ -87,7 +87,7 @@ func can_launch() -> bool:
 
 
 func aim_hotkey(slot: int) -> void:
-	if slot < 0 or slot >= bindings.size():
+	if InputBindings.classic_mode or slot < 0 or slot >= bindings.size():
 		return
 	if bindings[slot] == ClassCatalog.ATTACK_BINDING:
 		aim_basic_attack()
@@ -296,6 +296,7 @@ func _load_bindings() -> void:
 
 
 func _on_controls_changed() -> void:
+	cancel_targeting()
 	if _bindings_profile != InputBindings.profile_id:
 		_bindings_profile = InputBindings.profile_id
 		bindings.assign(ClassCatalog.get_profile(class_id).bindings)

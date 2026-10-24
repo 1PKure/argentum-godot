@@ -7,12 +7,12 @@ signal status_changed(status: Dictionary)
 
 const BOT_ID := -1000 # Entity ID only; never a network recipient or the -1 lookup sentinel.
 const COUNTDOWN_MSEC := 3000
-const THINK_MSEC := 120
+const THINK_MSEC := 160
 const COMMAND_INTERVAL_MSEC := 400
 const MOVE_INTERVAL_MSEC := MovementRules.PRACTICE_BOT_MOVE_INTERVAL_MSEC
-const CAST_INTERVAL_MSEC := 1150
+const CAST_INTERVAL_MSEC := 1300
 const ATTACK_INTERVAL_MSEC := 650
-const POTION_INTERVAL_MSEC := 280
+const POTION_INTERVAL_MSEC := 340
 var registry: PlayerRegistry
 var owner_id := 0
 var phase := "idle"
@@ -29,6 +29,7 @@ var _move_goal := Vector2i(-1, -1)
 var _next_offense := 0
 var _next_spell := 0
 var _potion_due := 0
+var _last_potion_at := 0
 var _last_potion := ""
 var _last_potion_source := "use"
 var _root_due := 0
@@ -171,6 +172,7 @@ func remove_bot(notify: bool = true) -> void:
 	_last_potion = ""
 	_last_potion_source = "use"
 	_potion_due = 0
+	_last_potion_at = 0
 	_root_due = 0
 	_root_observed = false
 	if notify:
@@ -228,7 +230,7 @@ func tick(now: int = -1) -> Array[Dictionary]:
 		_next_choice = 0
 	var rooted := bot.active_effects.has("Paralizado") or bot.active_effects.has("Inmovilizado")
 	if rooted and not _root_observed:
-		_root_due = now + _rng.randi_range(520, 700)
+		_root_due = now + _rng.randi_range(650, 850)
 	_root_observed = rooted
 	var removing := rooted and ClassCatalog.can_cast(bot.class_id, 27) and bot.current_mana >= int(SpellCatalog.get_spell(27).mana)
 	if removing and now >= _root_due and now >= _next_spell:
@@ -337,7 +339,7 @@ func _tick_potions(bot: PlayerState, now: int, actions: Array[Dictionary]) -> vo
 	if _potion_due == 0:
 		_potion_due = now + _rng.randi_range(100, 150)
 		return
-	if now < _potion_due:
+	if now < _potion_due or (_last_potion_at != 0 and now < _last_potion_at + POTION_INTERVAL_MSEC):
 		return
 	var action := "health_potion" if red else "mana_potion"
 	# Casters keep real blue recovery under moderate pressure, while low HP favors reds.
@@ -346,6 +348,7 @@ func _tick_potions(bot: PlayerState, now: int, actions: Array[Dictionary]) -> vo
 		if bot.current_mana < bot.max_mana * 0.2 or _last_potion == "health_potion":
 			action = "mana_potion"
 	if _recover(action, now, actions):
+		_last_potion_at = now
 		_last_potion = action
 		if action == "health_potion":
 			_last_red_at = now
@@ -540,7 +543,7 @@ func _semi_attack(bot: PlayerState, now: int, actions: Array[Dictionary]) -> voi
 
 
 func _move_interval(bot: PlayerState) -> int:
-	return 140 if _is_semimagic(bot) else MOVE_INTERVAL_MSEC
+	return 170 if _is_semimagic(bot) else MOVE_INTERVAL_MSEC
 
 func _semi_finish_spell(bot: PlayerState) -> int:
 	if _affordable(bot,[51])==51: return 51
