@@ -43,3 +43,27 @@ test('Storage setup rejects insecure endpoints and never admits invalid public c
  assert.throws(()=>new SupabaseStore('http://unsafe.example','a'.repeat(40)));
  assert.throws(()=>publicSnapshot({...snapshot(1),entries:[{...snapshot(1).entries[0],points:Infinity}]}));
 });
+
+test('Public beta needs no invitation and only grants browser CORS to its exact origin',async()=>{
+ const origin='https://ao-mini.pulidomatias.workers.dev';
+ const gateway=await createGateway({store:{load:async()=>({public_snapshot:snapshot(12)})},port:0,internalPort:0,publicAccess:true,origins:[origin]});
+ const base=`http://127.0.0.1:${gateway.port}`;
+ try{
+  const response=await fetch(base+'/api/ranking',{headers:{Origin:origin}});
+  assert.equal(response.status,200);
+  assert.equal(response.headers.get('access-control-allow-origin'),origin);
+  const value=await response.json();
+  assert.equal(value.entries[0].nickname,'milusita');
+  assert.equal(JSON.stringify(value).includes('secret_hash'),false);
+  const foreign=await fetch(base+'/api/ranking',{headers:{Origin:origin+'.invalid.example'}});
+  assert.equal(foreign.headers.get('access-control-allow-origin'),null);
+  assert.equal((await read(base+'/internal/state'))[0],404);
+  assert.equal((await read(gateway.internalURL+'/state'))[0],403);
+  gateway.setReady(true);
+  const denied=await new Promise((resolve,reject)=>{
+   const socket=net.connect(gateway.port,'127.0.0.1',()=>socket.write('GET /game HTTP/1.1\r\nHost: local\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nOrigin: https://invalid.example\r\n\r\n'));
+   socket.once('data',data=>{socket.destroy();resolve(data.toString());});socket.once('error',reject);
+  });
+  assert.match(denied,/403 Forbidden/);
+ }finally{await gateway.close();}
+});
