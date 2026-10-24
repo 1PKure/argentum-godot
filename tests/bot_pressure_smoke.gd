@@ -53,5 +53,17 @@ func _run()->void:
  check(manager._semi_step==2,"Melee commits hybrid to its Discharge finisher")
  actions.clear();manager._semi_attack(bot,34600,actions)
  check(actions.any(func(event:Dictionary)->bool:return event.kind=="cast" and int(event.result.event.spell_id)==51),"Wounded hybrid completes legal melee→Discharge")
+ bot.grid_position=Vector2i(9,5);human.grid_position=Vector2i(5,5)
+ bot.current_health=roundi(bot.max_health*.5)
+ manager._defending=true;manager._defense_started_at=35000
+ var direction:=manager._movement_step(bot,human.grid_position,false,35000)
+ check(direction==MovementRules.Direction.WEST,"Wounded hybrid closes a long gap instead of retreating from a stationary caster")
+ bot.grid_position=Vector2i(7,5)
+ direction=manager._movement_step(bot,human.grid_position,false,36600)
+ check(direction==MovementRules.Direction.WEST,"After a short recovery window hybrid returns to melee range")
+ bot.current_health=roundi(bot.max_health*.25)
+ manager._next_choice=0
+ direction=manager._movement_step(bot,human.grid_position,false,37000)
+ check(direction!=MovementRules.Direction.WEST,"Critical health still allows a defensive recovery window")
  registry.queue_free();await process_frame
  print("Bot pressure checks: %d; failures: %d"%[checks,failures]);quit(1 if failures else 0)
