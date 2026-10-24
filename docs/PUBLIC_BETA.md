@@ -29,3 +29,15 @@ Ejecutar el mismo `up -d --no-build` usando únicamente el archivo base `hosting
 ## Estado de esta preparación
 
 La entrada pública todavía no se considera activa hasta verificarla en el VPS. La primera recuperación del acceso administrativo devolvió `Invalid username/password`; no se cambió la configuración remota ni se asumió que el ingreso hubiera funcionado.
+
+El usuario aplicó después la superposición desde su consola. Se verificaron salud 200/capacidad ocho, ranking público 200 con CORS del origen real, WSS sin ticket y paquete inicial de Godot, rechazo WSS 403 para otro origen y API interna no expuesta (404). La prueba de renderizado de Work está limitada por la falta de WebGL2 en ese navegador; el juego requiere verificación final en el navegador del usuario.
+
+## Limpieza de perfiles de prueba
+
+El usuario pidió conservar solo el homenaje a milusita y eligió explícitamente `1kurep` (200 puntos, dos victorias de bot) frente a `1kurelol` (100 puntos). La revisión observada antes del mantenimiento era 19; no se fija esa revisión en el comando: se carga y verifica la vigente cuando el dedicado está detenido.
+
+`bash hosting/vps/clean-ranking.sh` detiene el único escritor, conserva su imagen y usa un contenedor administrativo efímero para ejecutar `hosting/gateway/clean-ranking.mjs`. Antes de guardar, crea un respaldo exclusivo con permisos 0600 en el directorio local `hosting/vps/ranking-backups` (0700, excluido de Git y de la imagen Docker). Mantiene intactos el identificador, hash de propiedad, victorias e historial de premios del perfil elegido. Retira los otros perfiles y solo sus premios, actualiza coherentemente la revisión y la tabla pública, guarda mediante CAS y verifica la respuesta completa.
+
+El bloque EXIT reinicia la misma configuración pública incluso si falla el mantenimiento. Repetir la limpieza cuando ya quedan solo esas dos entradas no vuelve a modificar la revisión. No hay un endpoint público de administración ni credenciales en el comando. Los jugadores descartados pueden registrarse nuevamente al reconectar: esto limpia la clasificación, no constituye un bloqueo de usuarios.
+
+La limpieza queda pendiente hasta que se ejecute el comando en el VPS y se verifique el ranking servido tras el reinicio.

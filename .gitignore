@@ -30,3 +30,4 @@ hosting/.env.local
 
 # Private VPS runtime configuration
 hosting/vps/.env
+hosting/vps/ranking-backups/

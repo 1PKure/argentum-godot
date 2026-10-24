@@ -9,3 +9,4 @@ outputs
 **/node_modules
 **/tests
 docs
+**/ranking-backups
