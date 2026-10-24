@@ -42,8 +42,8 @@ func _test_camera() -> void:
 	var fixed_hud_position := game_area.global_position
 	var start: Vector2 = avatar.position
 	avatar.apply_server_position(Vector2i(5, 5), start + Vector2(48, 0))
-	avatar._process(0.06)
-	world._process(0.06)
+	avatar._process(MovementRules.MOVE_INTERVAL_SECONDS*0.5)
+	world._process(MovementRules.MOVE_INTERVAL_SECONDS*0.5)
 	_check(_is_centered(world, game_area, avatar) and avatar.position == start + Vector2(24, 0), "Camera follows the interpolated half-step without snapping to the target tile")
 	_check(game_area.global_position == fixed_hud_position, "Following the map leaves the HUD parent stationary")
 	var pointer: Vector2 = world.get_global_transform() * (other.position + Vector2(0, -25))
@@ -86,12 +86,12 @@ func _test_confirmed_corners() -> void:
 	var start := Vector2(240, 288)
 	avatar.setup(state, true, start)
 	avatar.apply_server_position(Vector2i(5, 5), start + Vector2(48, 0))
-	avatar._process(0.10)
+	avatar._process(MovementRules.MOVE_INTERVAL_SECONDS*5.0/6.0)
 	avatar.apply_server_position(Vector2i(5, 4), start + Vector2(48, -48))
-	avatar._process(0.03)
+	avatar._process(MovementRules.MOVE_INTERVAL_SECONDS*0.25)
 	_check(avatar.position.is_equal_approx(start + Vector2(48, -4)), "Confirmed turn reaches its orthogonal corner before advancing, using leftover frame time")
-	avatar._process(0.11)
-	_check(avatar.position.is_equal_approx(start + Vector2(48, -48)), "Two confirmed tiles still take exactly 240 ms")
+	avatar._process(MovementRules.MOVE_INTERVAL_SECONDS*11.0/12.0)
+	_check(avatar.position.is_equal_approx(start + Vector2(48, -48)), "Two confirmed tiles follow the configured authoritative cadence")
 	avatar._process(1.0)
 	_check(avatar.position.is_equal_approx(start + Vector2(48, -48)), "Smoothing cannot advance past the last server-confirmed position")
 	avatar.setup(state, true, start)
@@ -109,10 +109,10 @@ func _test_direction_change() -> void:
 	_check(controller.request_directions.size() == 1, "First held direction requests a step immediately")
 	Input.action_release("move_right")
 	Input.action_press("move_up")
-	controller._process(0.06)
+	controller._process(MovementRules.MOVE_INTERVAL_SECONDS*0.5)
 	_check(controller.request_directions.size() == 1, "Turning halfway through a step does not send a request that the server would reject")
-	controller._process(0.06)
-	_check(controller.request_directions.size() == 2 and controller.request_directions[-1] == MovementRules.Direction.NORTH, "Turn is sent at 120 ms instead of delaying until 180 ms after an early rejected request")
+	controller._process(MovementRules.MOVE_INTERVAL_SECONDS*0.5)
+	_check(controller.request_directions.size() == 2 and controller.request_directions[-1] == MovementRules.Direction.NORTH, "Turn is sent at the next authoritative interval without an extra rejected repeat")
 	Input.action_release("move_up")
 	controller.queue_free()
 
@@ -135,7 +135,7 @@ func _test_first_frame_cadence() -> void:
 				last_accepted = MovementRules.get_accepted_move_time(now, last_accepted)
 			else:
 				rejected += 1
-	_check(rejected == 0 and controller.request_directions.size() >= 9, "A 40 ms startup frame does not shorten the first interval and trigger a rejected repeat")
+	_check(rejected == 0 and controller.request_directions.size() >= floori(1.0/MovementRules.MOVE_INTERVAL_SECONDS), "A 40 ms startup frame does not shorten the first interval and trigger a rejected repeat")
 	Input.action_release("move_right")
 	controller.queue_free()
 

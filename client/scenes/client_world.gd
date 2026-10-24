@@ -115,6 +115,8 @@ func _update_camera() -> void:
 	if is_instance_valid(avatar):
 		focus = avatar.position
 	position = _viewport_size * 0.5 - focus * scale
+	if _arena_ground != null:
+		_arena_ground.set_visible_world_rect(Rect2(-position/scale,_viewport_size/scale))
 
 
 func _unhandled_key_input(

@@ -36,7 +36,9 @@ export async function createGateway({store,port=10000,gamePort=7777,internalPort
     if(req.headers.origin && !origins.includes(req.headers.origin))return reject(403,'Forbidden');
     if(!ready)return reject(503,'Unavailable');
     if(sockets.size>=capacity)return reject(503,'Full');
-    const upstream=net.connect({host:'127.0.0.1',port:gamePort});
+    // Interactive packets must not wait for Nagle/delayed-ACK coalescing.
+    socket.setNoDelay(true);
+    const upstream=net.connect({host:'127.0.0.1',port:gamePort,noDelay:true});
     sockets.add(socket);
     const cleanup=()=>{sockets.delete(socket);socket.destroy();upstream.destroy();};
     socket.on('error',cleanup);upstream.on('error',cleanup);socket.on('close',cleanup);upstream.on('close',()=>socket.end());

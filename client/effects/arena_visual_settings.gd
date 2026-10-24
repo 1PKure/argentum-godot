@@ -5,6 +5,7 @@ const PATH := "user://visual_settings_v1.cfg"
 static var _loaded := false
 static var _original := false
 static var metrics := false
+static var diagnostic_details := false
 static func default_original(web: bool) -> bool: return web
 static func uses_original_fx() -> bool:
 	if not _loaded:

@@ -1349,10 +1349,21 @@ func _build_visual_controls(parent: VBoxContainer) -> void:
 	var metrics := CheckBox.new()
 	metrics.name = "PerformanceMetrics"
 	metrics.focus_mode = Control.FOCUS_NONE
-	metrics.text = "Mostrar rendimiento"
+	metrics.text = "FPS y ping"
 	metrics.button_pressed = ArenaVisualSettings.metrics
 	metrics.toggled.connect(func(enabled: bool) -> void: ArenaVisualSettings.metrics = enabled)
 	row.add_child(metrics)
+	var details := CheckBox.new()
+	details.name = "PerformanceDetails"
+	details.text = "Diagnóstico detallado"
+	details.focus_mode = Control.FOCUS_NONE
+	details.tooltip_text = "Datos técnicos para reportar un problema de rendimiento o conexión"
+	details.button_pressed = ArenaVisualSettings.diagnostic_details
+	details.toggled.connect(func(enabled: bool) -> void:
+		ArenaVisualSettings.diagnostic_details = enabled
+		if enabled: metrics.button_pressed = true
+	)
+	parent.add_child(details)
 
 
 func _compact_inventory_slots() -> void:

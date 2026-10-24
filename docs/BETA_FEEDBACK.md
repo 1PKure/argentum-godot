@@ -43,4 +43,4 @@ La rutina no cambia el checkout de trabajo: construye desde `git archive` del co
 
 Después verificar salud HTTPS, ranking conservado y una partida real desde la web tras cerrar y recargar. Probar ambos modos, cambio de teclas, pociones y bot. Si el problema es visual del cliente, volver al ZIP anterior en Cloudflare. Para revertir el dedicado, respaldar la configuración vigente y restaurar el archivo `before-update-...env` de este mantenimiento, luego ejecutar el `up -d --no-build --wait` con los archivos compose base y public-beta; conservar siempre un solo escritor. No eliminar volúmenes ni la base de datos.
 
-Estado: implementación y paquete preparados; el servidor público no se actualiza hasta ejecutar el mantenimiento. No se configura un despliegue automático al publicar cambios en GitHub.
+Estado: el usuario publicó el ZIP y ejecutó el mantenimiento de `060c5a7602564dc3eb0dbed113df98a194c0069e`; la captura y la salud HTTPS confirmaron el dedicado actualizado. No hay despliegue automático al publicar en GitHub. El siguiente ajuste de rendimiento se documenta en `docs/WEB_PERFORMANCE_FIX.md` y permanece pendiente de publicación manual.
