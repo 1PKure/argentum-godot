@@ -1,0 +1,26 @@
+[gd_scene format=3 uid="uid://cdcevowuiwuo"]
+
+[node name="CombatArena" type="Node2D" unique_id=2096086313]
+
+[node name="Enviroment" type="Node2D" parent="." unique_id=1205516521]
+
+[node name="SpawnPoints" type="Node2D" parent="." unique_id=799052175]
+
+[node name="PlayerSpawn1" type="Marker2D" parent="SpawnPoints" unique_id=134801220]
+position = Vector2(1044, 606)
+
+[node name="PlayerSpawn2" type="Marker2D" parent="SpawnPoints" unique_id=1260417838]
+position = Vector2(125, 94)
+
+[node name="MobSpawn01" type="Marker2D" parent="SpawnPoints" unique_id=853409847]
+position = Vector2(88, 538)
+
+[node name="MobSpawn02" type="Marker2D" parent="SpawnPoints" unique_id=758767286]
+position = Vector2(134, 539)
+
+[node name="MobSpawn03" type="Marker2D" parent="SpawnPoints" unique_id=2111403543]
+position = Vector2(180, 538)
+
+[node name="Decorations" type="Node2D" parent="." unique_id=318307251]
+
+[node name="Debug" type="Node2D" parent="." unique_id=1164876790]

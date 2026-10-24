@@ -1,0 +1,37 @@
+{
+	"environment": "Native Linux GL Compatibility / Xvfb software rendering; no audio/network. Not browser performance.",
+	"samples": [
+		{
+			"draw_calls_median": 0.0,
+			"draw_calls_p95": 0.0,
+			"frame_interval_p50_ms": 4.341,
+			"frame_interval_p95_ms": 8.352,
+			"frames": 120,
+			"mode": "baseline"
+		},
+		{
+			"draw_calls_median": 1222.0,
+			"draw_calls_p95": 1222.0,
+			"frame_interval_p50_ms": 19.248,
+			"frame_interval_p95_ms": 26.686,
+			"frames": 120,
+			"mode": "modern"
+		},
+		{
+			"draw_calls_median": 6.0,
+			"draw_calls_p95": 6.0,
+			"frame_interval_p50_ms": 3.752,
+			"frame_interval_p95_ms": 5.686,
+			"frames": 120,
+			"mode": "original"
+		},
+		{
+			"draw_calls_median": 6.0,
+			"draw_calls_p95": 6.0,
+			"frame_interval_p50_ms": 3.055,
+			"frame_interval_p95_ms": 3.941,
+			"frames": 120,
+			"mode": "modern_light"
+		}
+	]
+}

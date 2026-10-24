@@ -1,0 +1,78 @@
+{
+  "repository": "ao-org/Recursos",
+  "commit": "89615f34162d9fa0bf0fae4242cd6639edbf772f",
+  "path": "Dat/obj.dat",
+  "sha256": "99e874ce0df5652b08206b77216fc76bbee45a42886dc85a4b0f683c6ce51d39",
+  "selection": "27 globally distinct animated bodies, each distinct from its own class preset. Mage variants follow the Legendary robe silhouette; other collections vary armor, robe and class-themed appearances. Cosmetics only; equipment restrictions and stats are unchanged.",
+  "reference_sheet": "graphics/112.png",
+  "reference_sheet_sha256": "cf26ebc01a45cab5090e88c70309cc95586076e4576fdca3efb6040541de6be6",
+  "assets": [
+    {
+      "path": "graphics/1002.png",
+      "upstream_path": "Graficos/1002.PNG",
+      "sha256": "c49cd0a29de94e9fe559dfd5fc8ca093b4da713bb90d651b1c04eaee6c87d5f6",
+      "bytes": 106106
+    },
+    {
+      "path": "graphics/1003.png",
+      "upstream_path": "Graficos/1003.png",
+      "sha256": "f2b45379ea650ee9482236559c2577dc6dc2a1f1e9989a5c97559de6a07ace7c",
+      "bytes": 106516
+    },
+    {
+      "path": "graphics/1004.png",
+      "upstream_path": "Graficos/1004.png",
+      "sha256": "84d1ea09d5915acc2c098711df0e1e66ab201e7732f64a3feeea631bd7da1ca7",
+      "bytes": 81211
+    },
+    {
+      "path": "graphics/1008.png",
+      "upstream_path": "Graficos/1008.png",
+      "sha256": "906ec95024d5a7c81c0b09d11077eac742d103c808676d79634bc3e46e75bde1",
+      "bytes": 80891
+    },
+    {
+      "path": "graphics/1010.png",
+      "upstream_path": "Graficos/1010.png",
+      "sha256": "d286af6e9707e7746f00c240ae150b4bb078c706e560766a915f4b99a3d51c48",
+      "bytes": 99750
+    },
+    {
+      "path": "graphics/1012.png",
+      "upstream_path": "Graficos/1012.png",
+      "sha256": "1938f21849e9a6eefe25e54cc4fd5a7c9e3542854b4dbfa9cdda931791eb3311",
+      "bytes": 98483
+    },
+    {
+      "path": "graphics/1013.png",
+      "upstream_path": "Graficos/1013.png",
+      "sha256": "1a2da9e7d8210b8649dc7aa492e3e48d13c94d48140ea67b5db3777321144332",
+      "bytes": 92453
+    },
+    {
+      "path": "graphics/1014.png",
+      "upstream_path": "Graficos/1014.png",
+      "sha256": "f3e3afbff06b190cf842c3403dd63a5b904dae0113fd159ef7e8fbe403892df2",
+      "bytes": 274541
+    },
+    {
+      "path": "graphics/1016.png",
+      "upstream_path": "Graficos/1016.png",
+      "sha256": "5f7d83d9e4a9bf4be10147db3ec6a4c07b89ad2e31f4186fc6dbbaa887924391",
+      "bytes": 80157
+    },
+    {
+      "path": "graphics/1017.png",
+      "upstream_path": "Graficos/1017.png",
+      "sha256": "c7762f41b5e7203e5c92ca73db24f00882833a9b1bc18e6473ac3223964bb949",
+      "bytes": 294667
+    }
+  ],
+  "mage_progression": {
+    "preset": 117,
+    "one_win": 113,
+    "three_wins": 142,
+    "five_wins": 141,
+    "equipment_stats": "unchanged"
+  }
+}

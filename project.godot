@@ -1,0 +1,102 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="AO Mini"
+config/description="PvP Arena · Entrá a la arena. Que hable tu habilidad."
+config/use_custom_user_dir=true
+config/custom_user_dir_name="Godot/app_userdata/ArgentumGodot"
+config/custom_user_dir_name.linux="godot/app_userdata/ArgentumGodot"
+run/main_scene="uid://crpuji0hxix8t"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+config/icon="res://icon.svg"
+
+[audio]
+
+general/default_playback_type=0
+general/default_playback_type.web=1
+driver/output_latency.web=80
+driver/mix_rate=48000
+driver/mix_rate.web=48000
+
+[autoload]
+
+
+NetworkManager="*uid://f63okkehfaww"
+NetworkDiagnostics="*res://autoload/network_diagnostics.gd"
+PlayerNetwork="*uid://q1b820kls4vu"
+DevServerLauncher="*uid://c5lbr7cu8i63u"
+LocalDemoSession="*res://autoload/local_demo_session.gd"
+AOResources="*uid://cqc86kpi0ald7"
+SpellNetwork="*res://autoload/spell_network.gd"
+RecoveryNetwork="*res://autoload/recovery_network.gd"
+InventoryNetwork="*res://autoload/inventory_network.gd"
+BotNetwork="*res://autoload/bot_network.gd"
+Skins="*res://autoload/skins.gd"
+ArenaNetwork="*res://autoload/arena_network.gd"
+LobbyNetwork="*res://autoload/lobby_network.gd"
+InputBindings="*res://autoload/input_bindings.gd"
+RankingNetwork="*res://autoload/ranking_network.gd"
+ChatNetwork="*res://autoload/chat_network.gd"
+
+UIClickAudio="*res://autoload/ui_click_audio.gd"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=800
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[importer_defaults]
+
+wav={
+"compress/mode": 0
+}
+
+[input]
+
+move_up={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":87,"key_label":0,"unicode":119,"location":0,"echo":false,"script":null)
+]
+}
+move_down={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":83,"key_label":0,"unicode":115,"location":0,"echo":false,"script":null)
+]
+}
+move_left={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":65,"key_label":0,"unicode":97,"location":0,"echo":false,"script":null)
+]
+}
+move_right={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":68,"key_label":0,"unicode":100,"location":0,"echo":false,"script":null)
+]
+}
+
+[network]
+
+server_url="ws://127.0.0.1:7777"
+
+[physics]
+
+3d/physics_engine="Jolt Physics"
+
+[rendering]
+
+textures/vram_compression/import_etc2_astc=true
+
+rendering_device/driver.windows="d3d12"
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"

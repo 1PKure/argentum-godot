@@ -1,0 +1,29 @@
+{
+	"environment": "Native GL Compatibility / Mesa llvmpipe; isolated ambient only, not browser FPS",
+	"samples": [
+		{
+			"batches": 2,
+			"biome": "forest",
+			"draw_calls": 2,
+			"particles": 104
+		},
+		{
+			"batches": 2,
+			"biome": "desert",
+			"draw_calls": 2,
+			"particles": 120
+		},
+		{
+			"batches": 2,
+			"biome": "lava",
+			"draw_calls": 2,
+			"particles": 96
+		},
+		{
+			"batches": 2,
+			"biome": "duel_room",
+			"draw_calls": 2,
+			"particles": 80
+		}
+	]
+}

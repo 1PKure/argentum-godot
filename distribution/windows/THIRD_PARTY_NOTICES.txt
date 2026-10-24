@@ -1,0 +1,17 @@
+AO Mini
+
+Codigo del proyecto: GNU Affero General Public License v3 (archivo LICENSE).
+El codigo fuente de esta build corresponde al source_sha de release.json:
+https://github.com/1PKure/argentum-godot/commit/<source_sha>
+Las versiones publicadas deben etiquetar ese mismo commit en GitHub Releases.
+
+Motor: Godot Engine. LICENSES/Godot.json contiene la licencia del motor,
+los avisos de copyright y los textos de licencias de sus dependencias,
+obtenidos del motor usado para exportar.
+
+Recursos Argentum Online / AO20: Noland Studios y autores originales.
+Ver LICENSES/AO20-LICENSE.txt, AO20-CREDITS.md y los registros de procedencia
+en LICENSES/sources. La licencia del codigo no sustituye estas condiciones.
+
+Kenney: ver LICENSES/Kenney-LICENSE.txt y las fuentes de audio.
+Los avisos y registros de procedencia se conservan para los recursos incluidos.

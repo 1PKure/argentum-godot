@@ -1,0 +1,61 @@
+{
+  "repository": "https://github.com/ao-org/Recursos",
+  "commit": "89615f34162d9fa0bf0fae4242cd6639edbf772f",
+  "repository_directory": "wav",
+  "client_repository": "https://github.com/ao-org/argentum-online-client",
+  "client_commit": "4364692d990bab56d2ea56b38ae069030e62bd64",
+  "client_definition": "CODIGO/Recursos.bas:CargarPasos (lines 562-588)",
+  "client_playback": "CODIGO/TileEngine.bas:DoPasosFx alternates the two original step IDs",
+  "arena_ids": {
+    "forest": [
+      201,
+      69
+    ],
+    "desert": [
+      197,
+      198
+    ],
+    "lava": [
+      23,
+      24
+    ],
+    "duel_room": [
+      23,
+      24
+    ]
+  },
+  "mapping_note": "Lava uses the original dungeon footsteps and the duel room uses original floor footsteps; both use 23/24 in AO20.",
+  "processing": "None; exact WAV file bytes, original channels, sample rates, levels and timing. Godot imports without compression or normalization.",
+  "files": [
+    {
+      "file": "201.wav",
+      "sha256": "43ac3a6391b902f5802ae9e476cd2594dd2cbf304675a106c9318a9239819f32",
+      "bytes": 15404
+    },
+    {
+      "file": "69.wav",
+      "sha256": "0242481899ded4f322d931df77f848b1ef5b352b452304ea1ce216539291e888",
+      "bytes": 53292
+    },
+    {
+      "file": "197.wav",
+      "sha256": "ccdc3364732eba63532a1d0383d0a2dcb49b5a9bf83d991b03970a05ce7fa5cf",
+      "bytes": 9260
+    },
+    {
+      "file": "198.wav",
+      "sha256": "aefec13dd2babb45f45f7c1a669890631c9bfc453dcdecb0c8326ac3e81654ea",
+      "bytes": 10284
+    },
+    {
+      "file": "23.wav",
+      "sha256": "43731d4e257941a13d41d223cbaea90ae9374e3646deeae1e0bd663b68c327fb",
+      "bytes": 4930
+    },
+    {
+      "file": "24.wav",
+      "sha256": "f1230f68ec40b9a3a207fd3fde1ffe9bd2929d5e89d5252935f86301f52ab046",
+      "bytes": 6082
+    }
+  ]
+}

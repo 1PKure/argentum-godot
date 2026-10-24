@@ -14,7 +14,7 @@ Arena PvP inspirada en Argentum Online, centrada en duelos rápidos y combate ba
 
 ## Estado
 
-En desarrollo. La web está disponible durante las pruebas online; la demo portable de Windows con práctica local está en preparación para su primera release.
+Versión alpha jugable, con duelos online y práctica local contra bot en Windows.
 
 ## Tecnología
 

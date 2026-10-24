@@ -14,3 +14,21 @@ export_credentials.cfg
 .mono/
 data_*/
 mono_crash.*.json
+
+# Exported builds
+/builds/
+
+
+# Python QA runners
+__pycache__/
+*.py[cod]
+
+# Dedicated runtime secrets and QA dependencies
+hosting/node_modules/
+hosting/.env
+hosting/.env.local
+
+# Private VPS runtime configuration
+hosting/vps/.env
+hosting/vps/ranking-backups/
+hosting/vps/releases/

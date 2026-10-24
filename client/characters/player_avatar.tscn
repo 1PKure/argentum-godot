@@ -1,0 +1,9 @@
+[gd_scene format=3 uid="uid://tt47yu4a6l35"]
+
+[ext_resource type="Script" uid="uid://cwwwbnteo1dj5" path="res://client/characters/player_avatar.gd" id="1_ov7lc"]
+[ext_resource type="PackedScene" uid="uid://dcx5uxqnlwtnx" path="res://client/characters/player_visual.tscn" id="2_q7c3v"]
+
+[node name="PlayerAvatar" type="Node2D" unique_id=1605945481]
+script = ExtResource("1_ov7lc")
+
+[node name="PlayerVisual" parent="." unique_id=1566365827 instance=ExtResource("2_q7c3v")]
