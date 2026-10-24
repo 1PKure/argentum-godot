@@ -14,7 +14,7 @@ El bot espera 1100–1400 ms desde que observa el bloqueo antes de intentar Remo
 
 Se recuperó el remolino de cintas doradas/marfil del commit `041426b`. Su fuente está en `tools/meditation_fx/approved_source.gd`, con fases adaptadas a un ciclo continuo de cuatro segundos y escala de captura reducida. El runtime reproduce un atlas de 96 fotogramas a 24 FPS, no sus curvas procedurales. El PNG pesa 213337 bytes y ocupa 472×1476 píxeles (aproximadamente 2,66 MiB RGBA en GPU), compartido por todas las instancias. Se precarga junto a los efectos modernos.
 
-Ambos modos limitan la altura del sprite a 108 píxeles y el contenedor del personaje mantiene escala 1.0. Se prueban los dos factores para evitar que vuelvan a multiplicarse. La variante original conserva el atlas AO, la moderna usa la animación dorada recuperada. Cambiar de perfil pausa el sprite oculto; ocultar la meditación detiene su reproducción y procesamiento.
+El modo original limita la altura del sprite a 108 píxeles y el moderno a 128 píxeles (18,5 % más grande que su ajuste anterior); el contenedor del personaje mantiene escala 1.0. Se prueban los dos factores para evitar que vuelvan a multiplicarse. La variante original conserva el atlas AO, la moderna usa la animación dorada recuperada. Cambiar de perfil pausa el sprite oculto; ocultar la meditación detiene su reproducción y procesamiento.
 
 Para regenerar: ejecutar `tools/meditation_fx/bake.gd` con Godot 4.7.2 GL Compatibility y una pantalla (por ejemplo Xvfb). Inmediatamente después ejecutar una sola vez `python3 tools/meditation_fx/finalize.py`, que transforma el framebuffer premultiplicado a alfa recta y cuantiza la paleta RGBA. Reimportar el PNG en Godot y verificar `tests/meditation_blood_render.gd`. Las herramientas de generación no se exportan al cliente.
 
@@ -37,3 +37,11 @@ El mismo efecto se usa para contactos confirmados de flecha y cuerpo a cuerpo. S
 El ZIP conserva sitio, motor web, JavaScript, audio y endpoints públicos; cambia PCK y metadatos de versión. Subirlo al Worker existente `ao-mini`. Esta vez también hay que aplicar el mismo commit en Vultr con `hosting/vps/update-game.sh`, porque las reglas de parálisis y el comportamiento del bot son autoritativos. Hacerlo durante mantenimiento, cerrar y recargar clientes y comprobar salud y una ronda. No se reinicia el ranking ni se modifica la base de datos o la audiencia.
 
 Estado: preparado y probado, pendiente de publicación manual. No se actualiza el servidor al subir un commit a GitHub.
+
+## Corrección posterior: detener la interpolación del cliente
+
+Se reprodujo una cola de seis pasos ya confirmados por el servidor: recibir un estado de parálisis o muerte no eliminaba esa cola visual. El cliente seguía recorriéndola aunque el servidor ya no aceptara desplazamientos. Esto explica movimiento aparente durante la parálisis y después de morir sin atribuirlo a una nueva decisión de la IA.
+
+El avatar ahora cancela la cola y la animación de caminar inmediatamente al recibir Paralizado, Inmovilizado o la transición a muerto, y se coloca en el tile confirmado en ese estado. Un bot muerto permanece detenido; los fantasmas humanos pueden volver a desplazarse. El origen de coordenadas se obtiene del spawn, sin asumir una posición fija del mundo. El procesamiento de un paquete de movimiento aplica primero su estado para conservar el primer paso permitido después de Remover.
+
+Pasan 14 comprobaciones nuevas con snapshots y eventos de ClientWorld: cola acumulada, parada, ausencia de pasos/sonidos posteriores, desbloqueo, giro al estar inmovilizado, muerte, fantasma humano y nueva ronda. También pasan 22 de meditación/sangre, 21 de cámara, 33 de movimiento, 18 de orientación, 18 de fin de ronda y 24 de reglas autoritativas. La galería renderizada conserva 26 llamadas de dibujo. Esta corrección es del cliente y no cambia reglas ni tiempos del bot; subir su nuevo ZIP al Worker es suficiente si el servidor ya tiene el ajuste de reglas anterior.

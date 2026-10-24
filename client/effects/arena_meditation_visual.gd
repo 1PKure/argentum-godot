@@ -2,6 +2,7 @@ class_name ArenaMeditationVisual
 extends Node2D
 ## Two bounded sprites: original AO and the recovered gold whirlwind baked offline.
 const MAX_HEIGHT := 108.0
+const MODERN_MAX_HEIGHT := 128.0
 const MODERN_DATA := "res://client/effects/modern_atlas/meditation.json"
 static var _modern_frames: SpriteFrames
 static var _modern_data: Dictionary = {}
@@ -69,11 +70,14 @@ func _sync_profile() -> void:
 	set_meta("concept","golden_rising_whirlwind" if mode == "modern" else "original_ao_whirlwind")
 	_sync_visibility()
 
+func max_height() -> float:
+	return MODERN_MAX_HEIGHT if _mode == "modern" else MAX_HEIGHT
+
 func _fit_sprite(sprite: AnimatedSprite2D) -> void:
 	var height := 1.0
 	for index in range(sprite.sprite_frames.get_frame_count("default")):
 		height = maxf(height,sprite.sprite_frames.get_frame_texture("default",index).get_height())
-	sprite.scale = Vector2.ONE*minf(1.0,MAX_HEIGHT/height)
+	sprite.scale = Vector2.ONE*minf(1.2 if sprite == _modern else 1.0,max_height()/height)
 
 func _sync_visibility() -> void:
 	set_process(visible)

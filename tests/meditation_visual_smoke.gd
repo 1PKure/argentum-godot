@@ -21,7 +21,7 @@ func _run() -> void:
 		var height := 0.0
 		for index in range(sprite.sprite_frames.get_frame_count("default")):
 			height = maxf(height,sprite.sprite_frames.get_frame_texture("default",index).get_height()*sprite.scale.y)
-		check(height <= Visual.MAX_HEIGHT+0.01,"meditation height is bounded to108px")
+		check(height <= first.max_height()+0.01,"meditation height stays within its profile limit")
 		check(not first.get_meta("procedural_only",true),"meditation avoids per-frame procedural geometry")
 		first.set_age(1.0)
 		check(sprite.frame > 0,"cached animation advances")
@@ -29,6 +29,7 @@ func _run() -> void:
 		check(not first.is_processing() and not sprite.is_playing(),"hidden meditation stops its animation")
 		first.show()
 		check(first.is_processing() and sprite.is_playing(),"visible meditation resumes")
+		check(first.max_height() == (108.0 if mode else 128.0),"only the modern profile grows")
 		check((first._legacy != null) == mode and (first._modern != null) != mode,"each mode lazily loads its own distinct artwork")
 		var avatar = load("res://client/characters/player_avatar.tscn").instantiate()
 		root.add_child(avatar)
@@ -39,7 +40,7 @@ func _run() -> void:
 		var attached = avatar._meditation_fx
 		var actual: AnimatedSprite2D = attached.active_sprite()
 		var rendered_height: float = actual.sprite_frames.get_frame_texture("default",0).get_height()*actual.scale.y*attached.scale.y
-		check(rendered_height <= Visual.MAX_HEIGHT+0.01,"the avatar parent cannot multiply meditation above the size cap")
+		check(rendered_height <= attached.max_height()+0.01,"the avatar parent cannot multiply meditation above the size cap")
 		avatar.free()
 		first.free()
 		second.free()
