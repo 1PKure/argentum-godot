@@ -7,7 +7,8 @@ const DEFAULT_BINDINGS: Array[int] = [1, 2, 12, 13]
 const CAST_INTERVAL_MSEC := 1050 # Public beta: a little more room between casts.
 const ATTACK_SPELL_GAP_MSEC := 600 # Previous: 650 ms.
 const SPELL_ATTACK_GAP_MSEC := 600
-const ARENA_DAMAGE_MULTIPLIERS := {41: 0.90, 51: 0.92, 53: 0.92}
+const ARENA_DAMAGE_MULTIPLIERS := {41: 0.90, 51: 0.92, 53: 0.92, 59: 0.88}
+const ARENA_MANA_COSTS := {59: 800}
 # Every enabled entry has a real server handler. Other entries stay consultable.
 const STATUS_HANDLERS := [11, 25, 26, 27, 28, 29, 112, 132, 133, 263, 350]
 const PERIODIC_HANDLERS := [242, 243, 268, 269]
@@ -81,7 +82,7 @@ static func _ensure_loaded() -> void:
 		_spells[id] = {
 			"id": id, "name": data.get("Nombre", "Entrada %d sin definición" % id),
 			"description": data.get("Desc", "Sin descripción en el archivo de origen."),
-			"words": data.get("PalabrasMagicas", ""), "mana": int(data.get("ManaRequerido", "0")),
+			"words": data.get("PalabrasMagicas", ""), "mana": int(ARENA_MANA_COSTS.get(id, int(data.get("ManaRequerido", "0")))),
 			"min_amount": int(data.get("MinHP", "0")), "max_amount": int(data.get("MaxHP", "0")),
 			"effect": effect, "icon_grh": int(data.get("IconoIndex", "0")),
 			# Implosion's DAT stores animation GRH12834; FX4 points to that GRH.

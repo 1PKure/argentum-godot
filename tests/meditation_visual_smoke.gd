@@ -39,13 +39,13 @@ func _run() -> void:
 		var attached = avatar._meditation_fx
 		var actual: AnimatedSprite2D = attached.active_sprite()
 		var rendered_height: float = actual.sprite_frames.get_frame_texture("default",0).get_height()*actual.scale.y*attached.scale.y
-		check(rendered_height <= Visual.MAX_HEIGHT+0.01,"the avatar parent cannot multiply meditation above the size cap")
+		check(rendered_height <= 120.0,"the slightly enlarged meditation stays below120px at gameplay scale")
 		avatar.free()
 		first.free()
 		second.free()
 	ArenaVisualSettings._original = original
 	var Blood = load("res://client/effects/arena_blood_impact.gd")
-	check(Blood.MAX_DROPLETS <= 10 and Blood.SECONDS < 0.5,"blood is brief with a bounded droplet count")
+	check(Blood.MAX_DROPLETS <= 10 and Blood.SECONDS <= 0.55,"blood remains brief with a bounded droplet count")
 	check(Blood.PALETTE.all(func(color: Color) -> bool:return color.r > color.g*3 and color.r > color.b*3 and color.r < 0.8),"blood palette uses dark reds rather than pink")
 	await process_frame
 	print("Meditation/blood visual checks: %d; failures: %d"%[checks,failures])

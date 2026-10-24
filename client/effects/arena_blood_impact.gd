@@ -1,7 +1,7 @@
 class_name ArenaBloodImpact
 extends Node2D
 ## Shared confirmed-impact presentation. Never modifies combat state.
-const SECONDS := 0.38
+const SECONDS := 0.50
 const MAX_DROPLETS := 10
 const PALETTE := [Color("6b0c16"),Color("94121d"),Color("b51c24")]
 const ANCHOR_OFFSET := Vector2(0,4)
@@ -33,7 +33,7 @@ static func draw_burst(canvas: Node2D, origin: Vector2, incoming: Vector2, elaps
 	if elapsed < 0 or elapsed >= SECONDS:return
 	var axis := incoming.normalized() if not incoming.is_zero_approx() else Vector2.RIGHT
 	var side := axis.orthogonal()
-	var fade := 1.0-smoothstep(0.12,SECONDS,elapsed)
+	var fade := 1.0-smoothstep(0.16,SECONDS,elapsed)
 	var batch := ArenaCanvasBatch.new()
 	# A short, uneven cut, followed by thin directional drops. No pink blocks.
 	if elapsed < 0.09:
@@ -45,8 +45,8 @@ static func draw_burst(canvas: Node2D, origin: Vector2, incoming: Vector2, elaps
 		var at := origin+side*float(index%3-1)*1.5+spread*(3.0+speed*elapsed)+Vector2(0,90.0*elapsed*elapsed)
 		var travel := (spread+Vector2(0,elapsed*1.8)).normalized()
 		var perpendicular := travel.orthogonal()
-		var length := (5.0+float(index%4))*lerpf(1.0,0.4,elapsed/SECONDS)
-		var width := 0.90+float(index%3)*0.30
+		var length := (5.0+float(index%4))*1.15*lerpf(1.0,0.4,elapsed/SECONDS)
+		var width := (0.90+float(index%3)*0.30)*1.20
 		var tail := at-travel*length*0.55
 		batch.polygon(PackedVector2Array([at+travel*length,tail+perpendicular*width,tail-travel,tail-perpendicular*width]),Color(PALETTE[index%PALETTE.size()],fade))
 	var geometry := batch.mesh()

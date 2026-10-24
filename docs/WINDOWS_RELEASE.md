@@ -51,3 +51,12 @@ Las pruebas headless en Linux y una exportación correcta no sustituyen esta com
 6. Comprobar la descarga sin autenticación y añadir al README el enlace de esa prerelease concreta.
 
 El ejecutable de esta primera demo no lleva firma digital. No presentar la build como probada en Windows hasta completar el control manual.
+
+## Ajustes de la demo 0.1.0-alpha.2
+
+- Rayo Elemental: 800 de maná (antes600) y daño final reducido12%; Apocalipsis conserva sus valores.
+- Bot semimágico: con al menos35% de vida, retoma la aproximación si el rival queda a tres casillas o más, o tras1.6segundos de recuperación. Conserva la retirada de emergencia y los intervalos de combate/pociones.
+- Sangre: mismas diez gotas,15% más largas y20% más anchas; duración0.50s (antes0.38s).
+- Meditación: escala10% mayor en ambos modos, conservando el anclaje a los pies.
+
+La build incluye cliente y servidor de la misma revisión. Estos ajustes requieren una actualización de cliente y dedicado para trasladarse al juego online.

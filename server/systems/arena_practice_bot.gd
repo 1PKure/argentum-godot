@@ -35,6 +35,7 @@ var _last_potion_source := "use"
 var _root_due := 0
 var _root_observed := false
 var _defending := false
+var _defense_started_at := 0
 var _next_heal := 0
 var _last_red_at := -100000
 var _movement_mode := 1
@@ -167,6 +168,7 @@ func remove_bot(notify: bool = true) -> void:
 	owner_id = 0
 	phase = "idle"
 	_defending = false
+	_defense_started_at = 0
 	_next_heal = 0
 	_last_red_at = -100000
 	_last_potion = ""
@@ -224,6 +226,7 @@ func tick(now: int = -1) -> Array[Dictionary]:
 	var distance := _distance(bot.grid_position, _observed_cell)
 	if not _defending and (bot.current_health < bot.max_health * 0.55 or (caster and bot.current_mana < bot.max_mana * 0.18)):
 		_defending = true
+		_defense_started_at = now
 		_next_choice = 0
 	elif _defending and bot.current_health >= bot.max_health * 0.75 and (not caster or bot.current_mana >= bot.max_mana * 0.35):
 		_defending = false
@@ -363,7 +366,10 @@ func _tick_potions(bot: PlayerState, now: int, actions: Array[Dictionary]) -> vo
 
 func _movement_step(bot: PlayerState, target: Vector2i, ranged: bool, now: int) -> int:
 	var distance := _distance(bot.grid_position, target)
-	if not ranged and not _defending:
+	# Hybrids recover while fighting: a moderate wound must not turn into
+	# an endless retreat from a stationary caster. Keep critical recovery.
+	var reengage := _is_semimagic(bot) and bot.current_health >= bot.max_health * 0.35 and (distance >= 3 or now - _defense_started_at >= 1600)
+	if not ranged and (not _defending or reengage):
 		return _path_step(bot, target, false)
 	if ranged and (distance < 3 or distance > 7 or not CombatRules.has_clear_shot(registry.get_arena_id(), bot.grid_position, target)):
 		return _path_step(bot, target, true)
