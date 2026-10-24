@@ -1,64 +1,50 @@
-# Argentum · Arena PvP
+# AO Mini
 
-Prototipo multijugador real en Godot 4.7 Standard, con cliente web y dedicado autoritativo por WebSocket/WSS. Se concentra en duelos 1v1 y práctica opcional contra bot. PvE está descartado.
+### Arena PvP inspirada en Argentum Online, desarrollada en Godot
 
-## Probar desde GitHub Desktop
+Un proyecto personal de **Matias Pulido (1PKure)** que lleva el combate de Argentum Online a una arena de duelos: elegir una clase, preparar los controles y enfrentarse a otro jugador o practicar contra un bot.
 
-1. Fetch origin → elegir `work/arena-lobbies` → Pull origin.
-2. Cerrar el dedicado anterior y ejecutar `tools/Start-PrivateWebTest.cmd`.
-3. Recargar la [web privada](https://argentum-arena-mati.smartpine8.chatgpt.site) con Ctrl+F5 y conectar. `wss://127.0.0.1:7777` sigue precargado.
-4. Crear una sala con nombre/arena, o unirse a una disponible. Cada sala tiene dos plazas.
-5. Elegir clase, ver el preset y equipar skins. Si falta un humano, añadir un bot y elegir su clase.
-6. Ambos humanos marcan Listo; en práctica, basta el dueño con bot habilitado. Cuenta 3→2→1→¡YA!, combate, resultado y revancha.
-7. Menú → Salir de la sala vuelve al directorio conservando conexión. El botón Desconectar del HUD o del directorio cierra la conexión.
+El foco está en la habilidad del jugador: movimiento, puntería, combinación de hechizos y administración de vida y maná.
 
-Cliente y dedicado deben usar la misma revisión y **protocolo 24**. `tools/Start-PrivateWebTest.cmd` importa el proyecto antes de iniciar WSS. [Guía WSS](docs/WEB_TEST.md).
+**[Visitar la web](https://ao-mini.pulidomatias.workers.dev)** · **[Versiones y descargas](https://github.com/1PKure/argentum-godot/releases)** · **[Explorar el código](https://github.com/1PKure/argentum-godot/tree/Alpha)**
 
-## Salas y escenarios
+> **En desarrollo.** La disponibilidad del juego online depende de las sesiones de prueba y del servidor. Todavía no hay una versión descargable de Windows publicada en Releases.
 
-Cada lobby posee PlayerRegistry, ArenaPracticeBot y ArenaSession propios. Snapshots, movimiento, daño, estadísticas y efectos sólo llegan a sus participantes. Se rechazan salas llenas, acciones ajenas, versiones antiguas y repeticiones. Salir/transmitir anfitrión y eliminar salas vacías se resuelve en servidor.
+## La experiencia
 
-Bosque, Desierto, Lava y Sala de Duelos conservan pisos interiores y colisiones 20×12, cuatro adornos simétricos transitables y spawns separados. El anfitrión puede cambiar escenario durante preparación/resultado. Cambiar escenario o clase invalida Listo; no se permite durante el duelo. El bot se retira al entrar otro humano. Una ronda interrumpida no concede premios.
+- **Duelos 1 contra 1:** salas independientes, preparación, cuenta regresiva, resultados y revancha.
+- **Práctica contra bot:** entrenamiento con distintas clases y controles de pausa y reinicio.
+- **Nueve clases:** presets de equipo y estilos de combate con magia, cuerpo a cuerpo y arco.
+- **Cuatro arenas:** Bosque, Desierto, Lava y Sala de Duelos.
+- **Controles configurables:** juego clásico con selección de hechizos o accesos rápidos mediante macros.
+- **Personalización y comunidad:** skins por clase, chat de sala y ranking.
 
-[Flujo de lobbies y validación](docs/LOBBIES.md) · [Escenarios](docs/ARENAS.md).
+## Jugar y descargar
 
-## Combate y presentación
+### Navegador
 
-Nueve presets AO20 con estadísticas, equipo visible en inventario y macros por clase. Trabajador/Pirata/Ladrón quedan excluidos. Balance y dificultad del bot aprobados conservados, salvo el intervalo de golpe cuerpo a cuerpo ajustado a 1200 ms. [Clases y balance](docs/CLASSES.md) · [Intervalos](docs/ACTION_INTERVALS.md).
+La [web del proyecto](https://ao-mini.pulidomatias.workers.dev) es el punto de entrada para las pruebas online. La página puede seguir disponible aunque el servidor de partidas esté fuera de servicio.
 
-El libro ampliado muestra sólo hechizos relevantes de combate de la clase; al volver a Inventario reaparece el minimapa. Los básicos no ocupan libro ni macros. Seleccionar hechizo → Lanzar → objetivo, o macro 1–0 → objetivo. Cazador: CTRL/3 prepara el arco y clic dispara con intervalo autoritativo. M medita; Q/E recuperan; clic selecciona/bebe y Espacio usa la poción seleccionada, mantenido para repetir. Macros conservan pestaña/apuntado; arrastre derecho reorganiza objetos. Equipo se equipa/desequipa con clic. [Hechizos](docs/SPELLS.md) · [Recuperación](docs/RECOVERY.md).
+### Windows
 
-HUD propio azul noche/marfil/dorado, consola superior, minimapa ampliado y barras de vida/maná, en ese orden, sobre Menú/Desconectar; todas las ventanas, incluida clases/presets, usan el mismo tema. Pociones e iconos SVG originales, props detallados y lava exterior de escala fija. Efectos procedurales nuevos para los38 conceptos activos, con Descarga de esferas convergentes, Tormenta de partículas abiertas y Apocalipsis grande; iconos individuales y meditación de remolino dorado/blanco. Se conservan anclaje, seguimiento, flecha/sangre/audio y reglas. Personajes, equipo y skins mantienen animaciones AO20. [Identidad visual y límites](docs/VISUAL_IDENTITY.md).
+La distribución del cliente se centralizará en [GitHub Releases](https://github.com/1PKure/argentum-godot/releases), con un ZIP, instrucciones y la versión correspondiente. La descarga aún está pendiente de publicación.
 
-Menú → Controles y atajos permite cambiar teclas y restaurarlas, guardadas por perfil local en el dispositivo/navegador. Clic derecho sobre un macro vacía ese acceso de la clase, sin perderlo al cambiar preset. Lanzar seleccionado usa L por defecto; CTRL mantiene el golpe/arco. Abrir Menú o una ventana de opciones pausa de forma autoritativa sólo la práctica individual contra bot (también reloj, estados y recargas); cerrar reanuda. El PvP humano continúa. Los 42 espacios de inventario se conservan con menos filas visibles y desplazamiento.
+**El cliente de Windows también necesita un servidor compatible**, incluso para practicar contra el bot. Una descarga del cliente por sí sola no habilita el juego sin conexión. Para mantener una demo jugable cuando el servidor público esté apagado, la distribución deberá incluir y validar un servidor local.
 
-La cámara sigue al personaje y el zoom 1×/2× mantiene escala de píxel entera. Base de diseño 1280×800 y revisión en cuatro resoluciones. La consola sólo muestra eventos propios; el servidor omite maná rival y costes privados. [Interfaz](docs/COMBAT_UI.md) · [Movimiento](docs/MOVEMENT.md).
+## Desarrollo
 
-## Skins, acceso y presupuesto
+Construido con **Godot 4.7 Standard y GDScript**, con cliente nativo y web, y un servidor dedicado autoritativo conectado por WebSocket/WSS. El servidor valida las acciones de combate y mantiene aisladas las partidas de cada sala.
 
-Skins por clase a 1/3/5 victorias reales contra bot, sin duplicar recompensas por ronda. Selección y progreso se guardan localmente en el navegador, sin cuentas/DB ni sincronización entre dispositivos. Cambiar atuendo no altera equipo ni estadísticas. [Bot](docs/BOTS.md).
+El trabajo incluye sistemas de combate, comportamiento del bot, interfaz, efectos visuales, sincronización multijugador y herramientas de prueba.
 
-Sólo opciones gratuitas. La web mantiene acceso privado y necesita el dedicado local encendido. Hosting independiente, cuentas opcionales y especialidades avanzadas de clases quedan pendientes. [Presupuesto](docs/HOSTING_BUDGET.md) · [Prioridades](docs/ROADMAP.md).
+El código del juego está en la rama [`Alpha`](https://github.com/1PKure/argentum-godot/tree/Alpha). La documentación técnica permite profundizar en [salas](https://github.com/1PKure/argentum-godot/blob/Alpha/docs/LOBBIES.md), [clases](https://github.com/1PKure/argentum-godot/blob/Alpha/docs/CLASSES.md) y [controles](https://github.com/1PKure/argentum-godot/blob/Alpha/docs/CONTROLS.md).
 
-## Recursos y pruebas
+<!-- Presentación visual: insertar aquí una captura real enlazada al video de gameplay cuando ambos estén publicados. Guía editorial: docs/PUBLIC_PRESENTATION.md. No usar enlaces de ejemplo ni imágenes que simulen gameplay. -->
 
-Se conservan procedencia y licencia AO20 en `assets/argentum/interface/ao20/` y datos de origen bajo `assets/argentum/source/`. Los nuevos SVG y FX son originales del proyecto. Menú distingue al desarrollador Matias Pulido (1PKure) de los créditos de recursos AO20/Noland Studios.
+## Autor y créditos
 
-Las pruebas de lobbies incluyen dos salas con cuatro clientes y práctica solo+bot. `tests/run_lobby_network.py` genera logs/resultados separados y rechaza errores de servidor/cliente. Los smoke cubren aislamiento, capacidad, permisos, Listo, cuenta, resultados, salida/reentrada, cambio de mapa/clase, progreso y navegación. La revisión visual de HUD/ventanas y efectos usa Godot nativo GL Compatibility; sensación/audio en navegador Windows siguen siendo parte de la prueba manual.
+**Matias Pulido · [1PKure](https://github.com/1PKure)** — desarrollo del proyecto.
 
-Última revisión: giro contra casillas ocupadas sin desplazamiento; orden del libro con arrastre derecho persistente por perfil/clase; Juicio Final retirado de la arena. Créditos: Matias Pulido. Gestos de espada y báculo sólo al resolver acciones confirmadas. La apariencia 2D conserva las hojas AO20, con reconstrucción de diagonales y acabado de color por shader en personajes/equipo/íconos; no es un reemplazo por modelos 3D. Biomas con partículas ambientales leves, pausables. Mago: Azul inicial, Roja a 1 victoria, Gris a 3 y Legendaria a 5, conservando estadísticas y progreso por clase.
+AO Mini es un proyecto independiente inspirado en Argentum Online. Utiliza recursos de Argentum Online / AO20, con créditos a **Noland Studios** y a sus autores originales. La procedencia y los avisos de los recursos se conservan en el repositorio, incluida la [documentación de recursos AO20](https://github.com/1PKure/argentum-godot/blob/Alpha/assets/argentum/interface/ao20/README.md).
 
-Revisión de control y sonido:140ms por tile en humanos/bot, prioridad a última dirección presionada. Meditación más grande e intensa sólo dorado/marfil; ambiente con caída visible por bioma. Pisadas posicionales distintas para bosque, arena, roca/ceniza y piedra de sala, dos variantes por superficie. Importación PCM sin compresión con pérdida y reproducción con margen de mezcla. Sangre de melee sólo al daño confirmado, reutilizando el efecto de flecha.
-
-Revisión actual: meditación500ms/5% con daño no letal compatible; bot132ms frente a jugador140ms. Mago busca53→53, recurre51/41 y recupera presupuesto para volver al par; Druida59→59; semimágicos25→golpe→51 con gaps600ms. Evasión y rechazo físico autoritativos por clase/equipo; no esquiva magia ni evita recargas.
-
-Sonidos originales de AO20 sin procesamiento. Golpe original del adjunto completo(1s), idéntico byte por byte, a0dB. Pisadas originales alternadas: bosque201/69, desierto197/198 y piedra23/24 para lava/sala; sin variación de tono ni volumen. Se conserva audio webStream, índice explícito,48kHz y búfer80ms sólo como transporte. Capturas verificadas contra la fuente; escucha final en navegador Windows pendiente del usuario.
-
-Ranking desde el lobby:100puntos por victoria confirmada PvP/bot, contadores separados y milusita primera honorífica con9.999.999.999puntos. Identidad local de invitado y puntos persistentes en el dedicado; refresco30s y al ganar. Mago con6% de evasión. Protocolo23: actualizar cliente y reiniciar dedicado juntos. [Ranking e integración web](docs/RANKING.md).
-
-
-Chat de sala integrado: panel lateral en el lobby y Enter/botónChat en combate; Enter envía y Escape cancela. Al escribir se bloquean movimiento, macros y pociones sin pausar al rival. Mensajes sobre personaje4s, separados cuando se acercan y reemplazados por las palabras del hechizo confirmado. Historial temporal de30mensajes por sala, nombre tomado del servidor,160caracteres, límite800ms y aislamiento por sala incluso para solicitudes atrasadas. Protocolo24; actualizar cliente/dedicado juntos. [Chat](docs/CHAT.md).
-
-Revisión para cerrar gameplay alpha y pasar a la web: [estado, límites y prioridades](docs/ALPHA_READINESS.md). Último ajuste de bot/pociones/clics: [detalles](docs/FINAL_COMBAT_DETAILS.md#cierre-de-gameplay-alpha-presión-y-recuperación).
-
-Preparación de la página: [conexión configurable y contrato del ranking independiente](docs/WEB_DEPLOYMENT.md). Los adornos de esquina ya no bloquean el paso ni disparos; pisadas+3dB y Mago sin espera mágica ficticia al recuperar presupuesto de combo.
+El código se publica bajo [GNU AGPL-3.0](LICENSE). Los recursos de terceros conservan sus propias licencias; la licencia del código no reemplaza sus condiciones.
