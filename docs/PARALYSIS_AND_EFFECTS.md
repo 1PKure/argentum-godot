@@ -37,3 +37,11 @@ El mismo efecto se usa para contactos confirmados de flecha y cuerpo a cuerpo. S
 El ZIP conserva sitio, motor web, JavaScript, audio y endpoints públicos; cambia PCK y metadatos de versión. Subirlo al Worker existente `ao-mini`. Esta vez también hay que aplicar el mismo commit en Vultr con `hosting/vps/update-game.sh`, porque las reglas de parálisis y el comportamiento del bot son autoritativos. Hacerlo durante mantenimiento, cerrar y recargar clientes y comprobar salud y una ronda. No se reinicia el ranking ni se modifica la base de datos o la audiencia.
 
 Estado: preparado y probado, pendiente de publicación manual. No se actualiza el servidor al subir un commit a GitHub.
+
+## Corrección de la cola visual al detenerse
+
+La corrección de movimiento de `f918a5c` se integra conservando el balance y las escalas de efectos aprobados en la demo 0.1.0-alpha.2. Esa corrección había quedado fuera de la rama usada para empaquetar dicha demo y la web.
+
+Al recibir Paralizado, Inmovilizado o la transición a muerto, el avatar vacía los pasos pendientes, cancela la animación y se coloca en el tile confirmado. El bot muerto permanece quieto; el fantasma humano puede moverse. Al recibir un paquete que ya permite caminar, se actualiza primero su estado para conservar el primer paso después de Remover.
+
+`tests/movement_stop_sync_smoke.gd` cubre snapshots con cola acumulada, parada, ausencia de pasos posteriores, desbloqueo, giro inmovilizado, muerte, fantasma y nueva ronda. La revisión no cambia reglas del servidor. Si el dedicado ya ejecuta la revisión aprobada `a39af4d`, basta publicar el nuevo ZIP y cerrar/recargar los clientes.
