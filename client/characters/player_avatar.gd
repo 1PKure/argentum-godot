@@ -63,6 +63,8 @@ var _target_position: Vector2
 var _movement_waypoints: Array[Vector2] = []
 var _is_selected := false
 var _move_speed := MOVE_SPEED
+var _grid_world_origin := Vector2.ZERO
+var _movement_blocked := false
 
 
 func _ready() -> void:
@@ -72,6 +74,9 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	if is_local_player: NetworkDiagnostics.record_queue(_movement_waypoints.size())
+	if _movement_blocked:
+		_player_visual.set_movement(_server_facing_direction,false)
+		return
 	var remaining_distance := _move_speed * maxf(delta, 0.0)
 	var moved_this_frame := false
 	# Preserve each confirmed turn. Carry unused frame time to the next segment
@@ -153,6 +158,9 @@ func setup(
 	is_ghost
 	)
 	
+	_grid_world_origin = world_position-Vector2(player_state.grid_position)*TILE_SIZE
+	_movement_blocked = _state_blocks_movement(player_state)
+	_visual_movement_grace_timer = 0.0
 	position = world_position
 	_target_position = world_position
 	_movement_waypoints.clear()
@@ -171,6 +179,7 @@ func apply_server_position(
 	new_grid_position: Vector2i,
 	new_world_position: Vector2
 ) -> void:
+	if _movement_blocked:return
 	grid_position = new_grid_position
 	if not new_world_position.is_equal_approx(_target_position):
 		_movement_waypoints.append(new_world_position)
@@ -180,12 +189,22 @@ func apply_server_position(
 func apply_server_stats(
 	player_state: PlayerState
 ) -> void:
+	var just_died := is_alive and not player_state.is_alive
 	_apply_move_speed(player_state)
 	is_alive = player_state.is_alive
 	is_ghost = player_state.is_ghost
 	_apply_effect_presentation(player_state)
 	_player_visual.set_loadout(player_state.class_id, player_state.equipped_items, player_state.skin_id)
 	_server_facing_direction = Vector2(MovementRules.get_offset(player_state.facing_direction))
+	_movement_blocked = _state_blocks_movement(player_state)
+	if _movement_blocked or just_died:
+		# Stop states supersede interpolation, including steps received before them.
+		grid_position = player_state.grid_position
+		position = _grid_world_origin+Vector2(grid_position)*TILE_SIZE
+		_target_position = position
+		_movement_waypoints.clear()
+		_visual_movement_grace_timer = 0.0
+		if is_local_player:NetworkDiagnostics.record_queue(0)
 	if _movement_waypoints.is_empty():
 		_last_visual_direction = _server_facing_direction
 		_player_visual.set_movement(_last_visual_direction, false)
@@ -204,6 +223,10 @@ func apply_server_stats(
 		)
 
 	_update_label()
+
+
+func _state_blocks_movement(state: PlayerState) -> bool:
+	return state.active_effects.has("Paralizado") or state.active_effects.has("Inmovilizado") or (state.is_bot and not state.is_alive)
 
 
 func _apply_move_speed(state: PlayerState) -> void:

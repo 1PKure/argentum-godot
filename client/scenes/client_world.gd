@@ -420,13 +420,14 @@ func _on_player_moved(
 		]
 	)
 
+	# A Remove in this packet must unlock interpolation before its first step.
+	avatar.apply_server_stats(state)
 	avatar.apply_server_position(
 		state.grid_position,
 		_grid_to_world(
 			state.grid_position
 		)
 	)
-	avatar.apply_server_stats(state)
 
 
 func _on_player_stats_updated(
