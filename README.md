@@ -2,7 +2,9 @@
 
 Arena PvP inspirada en Argentum Online, centrada en duelos rápidos y combate basado en habilidad.
 
-**[Web](https://ao-mini.pulidomatias.workers.dev) · [Releases](https://github.com/1PKure/argentum-godot/releases)**
+**[Descargar para Windows](https://github.com/1PKure/argentum-godot/releases/download/v0.1.0-alpha.3/AO-Mini-0.1.0-alpha.3-Windows-x64.zip) · [Web](https://ao-mini.pulidomatias.workers.dev) · [Releases](https://github.com/1PKure/argentum-godot/releases)**
+
+![Combate en la arena de Bosque de AO Mini](docs/media/gameplay.png)
 
 ## El juego
 
@@ -15,6 +17,8 @@ Arena PvP inspirada en Argentum Online, centrada en duelos rápidos y combate ba
 ## Estado
 
 Versión alpha jugable, con duelos online y práctica local contra bot en Windows.
+
+Para jugar sin internet: descargá el ZIP, descomprimí la carpeta completa y abrí `AO-Mini.exe`. Conectá con la dirección local precargada, creá una sala y agregá un bot.
 
 ## Tecnología
 
