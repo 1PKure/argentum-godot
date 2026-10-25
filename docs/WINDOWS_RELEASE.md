@@ -60,3 +60,10 @@ El ejecutable de esta primera demo no lleva firma digital. No presentar la build
 - Meditación: escala10% mayor en ambos modos, conservando el anclaje a los pies.
 
 La build incluye cliente y servidor de la misma revisión. Estos ajustes requieren una actualización de cliente y dedicado para trasladarse al juego online.
+
+
+## Primera prerelease publicada
+
+[`v0.1.0-alpha.3`](https://github.com/1PKure/argentum-godot/releases/tag/v0.1.0-alpha.3) identifica el commit `3b2cd8674cbdbce221337dff6ab7f5c02aca76b9`. Incluye el ZIP portable de Windows x64 y su `.sha256`. Los archivos de código fuente los genera GitHub; no son la descarga jugable.
+
+Esta versión conserva los ajustes aprobados de balance, bot y efectos, y restaura la detención visual al paralizarse o morir. El enlace de descarga usa el tag concreto porque GitHub no incluye las prereleases en `releases/latest`.

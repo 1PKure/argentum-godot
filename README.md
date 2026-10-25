@@ -2,7 +2,9 @@
 
 Arena PvP inspirada en Argentum Online, centrada en duelos rápidos y combate basado en habilidad.
 
-**[Web](https://ao-mini.pulidomatias.workers.dev) · [Releases](https://github.com/1PKure/argentum-godot/releases)**
+**[Descargar para Windows](https://github.com/1PKure/argentum-godot/releases/download/v0.1.0-alpha.3/AO-Mini-0.1.0-alpha.3-Windows-x64.zip) · [Web](https://ao-mini.pulidomatias.workers.dev) · [Releases](https://github.com/1PKure/argentum-godot/releases)**
+
+![Combate en la arena de Bosque de AO Mini](docs/media/gameplay.png)
 
 ## El juego
 
@@ -25,7 +27,7 @@ El servidor valida el combate y mantiene aisladas las salas. La versión Web nec
 Con Python 3.11+, Git y los export templates de Godot 4.7.2 instalados:
 
 ```bash
-python tools/package_windows.py --godot RUTA_AL_EJECUTABLE_GODOT --version 0.1.0-alpha.1
+python tools/package_windows.py --godot RUTA_AL_EJECUTABLE_GODOT --version 0.1.0-alpha.4
 ```
 
 El empaquetado requiere un checkout limpio y genera el ZIP, las licencias, el manifiesto de versión y su SHA-256 en `builds/releases/`.
